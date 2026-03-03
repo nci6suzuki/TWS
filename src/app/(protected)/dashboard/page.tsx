@@ -18,6 +18,12 @@ export default async function DashboardPage() {
         <KpiCard label="今週イベント" value={data.kpis.weekEventCount} />
       </section>
 
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <KpiCard label="資格期限 30日以内" value={data.kpis.qualification30Count} />
+        <KpiCard label="資格期限 90日以内" value={data.kpis.qualification90Count} />
+        <KpiCard label="資格失効" value={data.kpis.qualificationExpiredCount} />
+      </section>
+
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Box title="直近期限のフォロー">
           <ul className="space-y-2 text-sm">
@@ -61,17 +67,17 @@ export default async function DashboardPage() {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Box title="今週イベント">
+        <Box title="資格期限アラート">
           <ul className="space-y-2 text-sm">
-            {data.weeklyEvents.length === 0 ? (
+            {data.qualificationAlerts.length === 0 ? (
               <li className="text-gray-600">対象なし</li>
             ) : (
-              data.weeklyEvents.map((item) => (
+              data.qualificationAlerts.map((item) => (
                 <li key={item.id} className="border rounded p-3">
-                  <div className="font-medium">{item.title}</div>
-                  <div>対象：{item.employeeName}</div>
-                  <div>日付：{item.scheduledDate}</div>
-                  <div>種別：{item.eventType}</div>
+                  <div className="font-medium">{item.employeeName}</div>
+                  <div>資格：{item.qualificationName}</div>
+                  <div className="text-red-600">期限：{item.expiresOn}</div>
+                  <div>状態：{item.status}</div>
                 </li>
               ))
             )}

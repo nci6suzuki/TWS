@@ -1,6 +1,7 @@
 // src/lib/services/employee-service.ts
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Me } from "@/types/api";
+import { applyAnnualTemplateToEmployee } from "@/lib/services/template-service";
 
 export async function createEmployee({
   me,
@@ -20,6 +21,8 @@ export async function createEmployee({
     managerEmployeeId?: string;
     mentorEmployeeId?: string;
     status: string;
+    templateId?: string;
+    hrEmployeeId?: string;
   };
 }) {
   const supabase = createSupabaseServerClient();
@@ -69,6 +72,17 @@ export async function createEmployee({
 
   if (goalErr) throw goalErr;
 
+  // 年間テンプレート適用
+  if (input.templateId) {
+    await applyAnnualTemplateToEmployee({
+      employeeId: data.id,
+      hireDate: input.hireDate,
+      templateId: input.templateId,
+      managerEmployeeId: input.managerEmployeeId || null,
+      mentorEmployeeId: input.mentorEmployeeId || null,
+      hrEmployeeId: input.hrEmployeeId || null,
+    });
+  }
   return { id: data.id };
 }
 

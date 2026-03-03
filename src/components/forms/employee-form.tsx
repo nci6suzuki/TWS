@@ -8,6 +8,7 @@ import { DepartmentSelect } from "@/components/selects/department-select";
 import { PositionSelect } from "@/components/selects/position-select";
 import { GradeSelect } from "@/components/selects/grade-select";
 import { EmployeePicker } from "@/components/pickers/employee-picker";
+import { TemplateSelect } from "@/components/selects/template-select";
 
 type EmployeeFormData = {
   id?: string;
@@ -23,6 +24,7 @@ type EmployeeFormData = {
   managerEmployeeId: string;
   mentorEmployeeId: string;
   status: string;
+  templateId: string;
 };
 
 export function EmployeeForm({
@@ -52,6 +54,7 @@ export function EmployeeForm({
     managerEmployeeId: initialData?.managerEmployeeId ?? "",
     mentorEmployeeId: initialData?.mentorEmployeeId ?? "",
     status: initialData?.status ?? "active",
+    templateId: initialData?.templateId ?? "",
   });
 
   async function handleSubmit(e: React.FormEvent) {
@@ -170,18 +173,18 @@ export function EmployeeForm({
           onChange={(e) => setForm((v) => ({ ...v, hireDate: e.target.value }))}
         />
       </Field>
-
-<EmployeePicker
-  label="直属上長"
-  value={form.managerEmployeeId}
-  onChange={(value) => setForm((v) => ({ ...v, managerEmployeeId: value }))}
-/>
-
-<EmployeePicker
-  label="メンター"
-  value={form.mentorEmployeeId}
-  onChange={(value) => setForm((v) => ({ ...v, mentorEmployeeId: value }))}
-/>
+      
+      <EmployeePicker
+      label="直属上長"
+      value={form.managerEmployeeId}
+      onChange={(value) => setForm((v) => ({ ...v, managerEmployeeId: value }))}
+      />
+      
+      <EmployeePicker
+      label="メンター"
+      value={form.mentorEmployeeId}
+      onChange={(value) => setForm((v) => ({ ...v, mentorEmployeeId: value }))}
+      />
 
       <Field label="在籍状態">
         <select
@@ -193,6 +196,13 @@ export function EmployeeForm({
           <option value="leave">休職</option>
           <option value="inactive">退職/無効</option>
         </select>
+      </Field>
+
+      <Field label="年間イベントテンプレート">
+        <TemplateSelect
+        value={form.templateId}
+        onChange={(value) => setForm((v) => ({ ...v, templateId: value }))}
+        />
       </Field>
 
       <div className="flex gap-2">

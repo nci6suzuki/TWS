@@ -2,6 +2,7 @@
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAnnualEvents } from "@/lib/queries/annual-events";
 import { AnnualEventsTable } from "@/components/tables/annual-events-table";
+import { AnnualEventFilters } from "@/components/filters/annual-event-filters";
 import Link from "next/link";
 
 export default async function AnnualEventsPage({
@@ -15,6 +16,9 @@ export default async function AnnualEventsPage({
     me,
     employeeId: searchParams.employeeId,
     fiscalYear: searchParams.fiscalYear ? Number(searchParams.fiscalYear) : undefined,
+    eventType: searchParams.eventType,
+    status: searchParams.status,
+    keyword: searchParams.keyword,
     page: Number(searchParams.page ?? 1),
     limit: Number(searchParams.limit ?? 20),
   });
@@ -28,6 +32,7 @@ export default async function AnnualEventsPage({
         </Link>
       </div>
 
+      <AnnualEventFilters />
       <AnnualEventsTable data={result.items} pagination={result.pagination} />
     </div>
   );

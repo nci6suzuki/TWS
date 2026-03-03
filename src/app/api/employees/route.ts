@@ -1,4 +1,3 @@
-// src/app/api/employees/route.ts
 import { NextResponse } from "next/server";
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createEmployee } from "@/lib/services/employee-service";
@@ -15,7 +14,14 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const result = await createEmployee({ me, input: body });
+
+    const result = await createEmployee({
+      me,
+      input: {
+        ...body,
+        hrEmployeeId: me.employeeId,
+      },
+    });
 
     return NextResponse.json({ success: true, data: result });
   } catch (e: any) {
