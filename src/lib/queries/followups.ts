@@ -48,6 +48,21 @@ export async function getFollowups(input: GetFollowupsInput) {
   if (input.assigneeEmployeeId) q = q.eq("assignee_employee_id", input.assigneeEmployeeId);
   if (input.employeeId) q = q.eq("employee_id", input.employeeId);
   if (input.branchId) q = q.eq("employees.branch_id", input.branchId);
+  
+  // getFollowups の query 部分に追加
+  if (input.me.role === "employee") {
+    q = q.eq("employee_id", input.me.employeeId);
+  }
+  
+  if (input.me.role === "mentor" && input.me.scope?.employeeIds?.length) {
+    q = q.in("employee_id", input.me.scope.employeeIds);
+  }
+  
+  if (input.me.role === "manager") {
+  // manager は自分担当分だけにするなら assignee_employee_id = 自分
+  // 部署全体を見るなら employee_id ベースで scope 取得が必要
+  q = q.eq("assignee_employee_id", input.me.employeeId);
+}
 
   // 標準は期限が近い順
   q = q.order("due_date", { ascending: true }).range(from, to);

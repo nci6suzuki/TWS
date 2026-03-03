@@ -4,9 +4,10 @@ import { z } from "zod";
 export const createInterviewSchema = z.object({
   employeeId: z.string().uuid(),
   interviewerEmployeeId: z.string().uuid(),
-  interviewDate: z.string().min(1), // ISOは後で refine でも可
+  interviewDate: z.string().min(1),
   interviewType: z.enum(["retention", "career", "performance", "care", "other"]),
   assignmentId: z.string().uuid().optional(),
+  annualEventId: z.string().uuid().optional(),
   factsObserved: z.string().max(5000).optional(),
   employeeVoice: z.string().max(5000).optional(),
   positivePoints: z.string().max(5000).optional(),
@@ -17,8 +18,8 @@ export const createInterviewSchema = z.object({
   nextInterviewDate: z.string().optional(),
   visibility: z.enum(["self", "manager", "hr", "private_hr"]),
   autoCompleteAssignment: z.boolean().optional(),
+  autoCompleteAnnualEvent: z.boolean().optional(),
 }).refine((v) => {
-  // “最低1項目は中身を書いてね” ルール
   const body =
     (v.factsObserved ?? "") +
     (v.employeeVoice ?? "") +
@@ -26,4 +27,6 @@ export const createInterviewSchema = z.object({
     (v.issues ?? "") +
     (v.responsePolicy ?? "");
   return body.trim().length > 0;
-}, { message: "面談内容（事実/発言/良かった点/課題/方針）のいずれかを入力してください。" });
+}, {
+  message: "面談内容（事実/発言/良かった点/課題/方針）のいずれかを入力してください。",
+});

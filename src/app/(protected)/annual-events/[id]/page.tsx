@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAnnualEventById } from "@/lib/queries/annual-events";
 import { AnnualEventCompleteButton } from "@/components/annual-events/annual-event-complete-button";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function AnnualEventDetailPage({
   params,
@@ -15,11 +16,27 @@ export default async function AnnualEventDetailPage({
 
   if (!event) return notFound();
 
+  const supabase = createSupabaseServerClient();
+
+  const { data: linkedInterviews } = await supabase
+    .from("interview_records")
+    .select("id, interview_date, interview_type")
+    .eq("annual_event_id", event.id)
+    .order("interview_date", { ascending: false });
+
   return (
     <div className="space-y-4 max-w-3xl">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">年間イベント 詳細</h1>
         <div className="flex gap-2">
+          {event.eventType === "interview" && (
+            <Link
+              className="underline text-sm"
+              href={`/interviews/new?annualEventId=${event.id}`}
+            >
+              面談記録を作成
+            </Link>
+          )}
           <Link className="underline text-sm" href={`/annual-events/${event.id}/edit`}>
             編集
           </Link>
@@ -36,6 +53,28 @@ export default async function AnnualEventDetailPage({
         <Row label="状態" value={event.status} />
         <Row label="説明" value={event.description || "-"} />
       </div>
+
+      {event.eventType === "interview" && (
+        <div className="border rounded p-4 space-y-2">
+          <div className="font-medium">関連する面談記録</div>
+
+          {(linkedInterviews ?? []).length === 0 ? (
+            <div className="text-sm text-gray-600">まだ面談記録はありません。</div>
+          ) : (
+            <ul className="space-y-2">
+              {(linkedInterviews ?? []).map((item: any) => (
+                <li key={item.id} className="text-sm border rounded p-3">
+                  <div>日時：{new Date(item.interview_date).toLocaleString()}</div>
+                  <div>種別：{item.interview_type}</div>
+                  <Link className="underline text-xs" href={`/interviews/${item.id}`}>
+                    面談記録を見る
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-2">
         <AnnualEventCompleteButton eventId={event.id} disabled={event.status === "done"} />

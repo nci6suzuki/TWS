@@ -82,6 +82,20 @@ export async function getAnnualEvents({
         item.title.toLowerCase().includes(lower)
     );
   }
+  
+  // getAnnualEvents の query に追加
+  if (me.role === "employee") {
+    q = q.eq("employee_id", me.employeeId);
+  }
+  
+  if (me.role === "mentor" && me.scope?.employeeIds?.length) {
+    q = q.in("employee_id", me.scope.employeeIds);
+  }
+  
+  if (me.role === "manager") {
+    // 最初は owner として自分が担当のものだけに絞る
+    q = q.eq("owner_employee_id", me.employeeId);
+  }
 
   return {
     items,

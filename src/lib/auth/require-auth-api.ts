@@ -1,9 +1,8 @@
-// src/lib/auth/require-auth.ts
-import { redirect } from "next/navigation";
+// src/lib/auth/require-auth-api.ts
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Me, Role } from "@/types/api";
 
-export async function requireAuth(): Promise<Me> {
+export async function requireAuthApi(): Promise<Me> {
   const supabase = createSupabaseServerClient();
 
   const {
@@ -11,12 +10,12 @@ export async function requireAuth(): Promise<Me> {
     error,
   } = await supabase.auth.getUser();
 
-  if (error || !user) redirect("/login");
+  if (error || !user) throw new Error("UNAUTHORIZED");
 
   const role = (user.user_metadata?.role as Role | undefined) ?? "employee";
   const employeeId = user.user_metadata?.employeeId as string | undefined;
 
-  if (!employeeId) redirect("/unauthorized");
+  if (!employeeId) throw new Error("UNAUTHORIZED");
 
   const scope = await buildScope({
     supabase,
@@ -45,7 +44,6 @@ async function buildScope({
     return {};
   }
 
-  // 自分の所属取得
   const { data: meRow, error } = await supabase
     .from("employees")
     .select("id, branch_id, department_id")
@@ -56,14 +54,12 @@ async function buildScope({
     return {};
   }
 
-  // employee は自分のみ
   if (role === "employee") {
     return {
       employeeIds: [employeeId],
     };
   }
 
-  // manager は同一部署 or 支店
   if (role === "manager") {
     return {
       branchIds: meRow.branch_id ? [meRow.branch_id] : [],
@@ -71,7 +67,6 @@ async function buildScope({
     };
   }
 
-  // mentor は担当社員のみ
   if (role === "mentor") {
     const { data: mentees } = await supabase
       .from("employees")

@@ -12,7 +12,30 @@ import type { Me, FollowupDetail } from "@/types/api";
 
 type FormValues = z.infer<typeof createInterviewSchema>;
 
-export function InterviewForm({ me, preset }: { me: Me; preset: FollowupDetail | null }) {
+type AnnualEventPreset = {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  title: string;
+  eventType: string;
+  scheduledDate: string;
+  status: string;
+  priority: number;
+  ownerEmployeeId: string;
+  ownerName: string;
+  description: string;
+};
+
+export function InterviewForm({ 
+  me, 
+  preset,
+  annualEvent,
+}: { 
+  me: Me;
+  preset: FollowupDetail | null;
+  annualEvent: AnnualEventPreset | null;
+}) {
+  
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -21,24 +44,39 @@ export function InterviewForm({ me, preset }: { me: Me; preset: FollowupDetail |
 
   const employeeIdFromQuery = searchParams.get("employeeId") ?? undefined;
 
-  const defaultEmployeeId = preset?.employeeId ?? employeeIdFromQuery ?? "";
+  const defaultEmployeeId =
+  preset?.employeeId ??
+  annualEvent?.employeeId ??
+  employeeIdFromQuery ??
+  "";
   const defaultInterviewerId = me.employeeId; // 通常はログイン者
-
+  
   const defaultValues: Partial<FormValues> = useMemo(() => {
-    // 期限超過などでも、とにかく記録を残せるように最小初期値
-    const nowIso = new Date().toISOString().slice(0, 16); // datetime-local用に後で整形
+    const nowIso = new Date().toISOString().slice(0, 16);
     const localDatetime = toDatetimeLocal(nowIso);
-
+    
     return {
       employeeId: defaultEmployeeId,
       interviewerEmployeeId: defaultInterviewerId,
       interviewDate: localDatetime,
-      interviewType: mapFollowupTypeToInterviewType(preset?.followupType) ?? "retention",
+      interviewType:
+      mapFollowupTypeToInterviewType(preset?.followupType) ??
+      mapAnnualEventTypeToInterviewType(annualEvent?.eventType) ??
+      "retention",
       assignmentId: preset?.id,
-      visibility: "hr", // 最初は hr にしておくのが安全（運用で変更）
-      autoCompleteAssignment: !!preset?.id, // presetから来たらON
+      annualEventId: annualEvent?.id,
+      visibility: "hr",
+      autoCompleteAssignment: !!preset?.id,
+      autoCompleteAnnualEvent: !!annualEvent?.id,
     };
-  }, [defaultEmployeeId, defaultInterviewerId, preset?.id, preset?.followupType]);
+  }, [
+    defaultEmployeeId,
+    defaultInterviewerId,
+    preset?.id,
+    preset?.followupType,
+    annualEvent?.id,
+    annualEvent?.eventType,
+  ]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(createInterviewSchema),
@@ -99,6 +137,16 @@ export function InterviewForm({ me, preset }: { me: Me; preset: FollowupDetail |
         </div>
       )}
 
+      {annualEvent?.id && (
+        <div className="p-3 border rounded bg-blue-50 text-sm">
+          <div className="font-medium">年間イベントから作成</div>
+          <div>対象社員：{annualEvent.employeeName}</div>
+          <div>タイトル：{annualEvent.title}</div>
+          <div>予定日：{annualEvent.scheduledDate}</div>
+          <div>担当：{annualEvent.ownerName}</div>
+        </div>
+      )}
+
       {/* 基本情報 */}
       <section className="p-4 border rounded space-y-3">
         <h2 className="font-medium">基本情報</h2>
@@ -148,20 +196,23 @@ export function InterviewForm({ me, preset }: { me: Me; preset: FollowupDetail |
         </Field>
 
         {/* フォロー割当連携 */}
-        <div className="pt-2 border-t">
+        <div className="pt-2 border-t space-y-2">
           <div className="flex items-center gap-2">
             <input type="checkbox" {...form.register("autoCompleteAssignment")} />
-            <span className="text-sm">割当を完了化する（assignment紐付け時）</span>
+            <span className="text-sm">フォロー割当を完了化する</span>
           </div>
-          {assignmentLinked ? (
-            <div className="text-xs text-gray-600 mt-1">
-              assignmentId: {watched.assignmentId}
-            </div>
-          ) : (
-            <div className="text-xs text-gray-600 mt-1">
-              フォロー割当から来た場合は自動で紐づきます
-            </div>
-          )}
+          
+        <div className="flex items-center gap-2">
+          <input type="checkbox" {...form.register("autoCompleteAnnualEvent")} />
+          <span className="text-sm">年間イベントを完了化する</span>
+        </div>
+        
+        {assignmentLinked && (
+          <div className="text-xs text-gray-600">assignmentId: {watched.assignmentId}</div>
+        )}
+        {!!watched.annualEventId && (
+          <div className="text-xs text-gray-600">annualEventId: {watched.annualEventId}</div>
+        )}
         </div>
       </section>
 
@@ -275,4 +326,10 @@ function fromDatetimeLocal(local: string) {
   // ブラウザのローカル時間をISOへ
   const d = new Date(local);
   return d.toISOString();
+}
+
+function mapAnnualEventTypeToInterviewType(v?: string) {
+  if (!v) return null;
+  if (v === "interview") return "retention";
+  return "other";
 }

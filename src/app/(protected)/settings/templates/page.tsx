@@ -1,3 +1,4 @@
+// src/app/(protected)/settings/templates/page.tsx
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
@@ -14,14 +15,22 @@ export default async function TemplatesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">テンプレート管理</h1>
-        <Link
-          href="/settings/templates/new"
-          className="px-4 py-2 rounded border bg-black text-white text-sm"
-        >
-          新規作成
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/settings/templates/bulk-apply"
+            className="px-4 py-2 rounded border text-sm"
+          >
+            一括適用
+          </Link>
+          <Link
+            href="/settings/templates/new"
+            className="px-4 py-2 rounded border bg-black text-white text-sm"
+          >
+            新規作成
+          </Link>
+        </div>
       </div>
 
       <div className="border rounded">

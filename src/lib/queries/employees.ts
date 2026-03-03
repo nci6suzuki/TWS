@@ -61,13 +61,30 @@ export async function getEmployees(input: GetEmployeesInput) {
 
   const { data, error, count } = await q;
   if (error) throw error;
+  
+  // ロール別絞り込み
+  if (input.me.role === "employee") {
+    q = q.eq("id", input.me.employeeId);
+  }
+  
+  if (input.me.role === "mentor" && input.me.scope?.employeeIds?.length) {
+    q = q.in("id", input.me.scope.employeeIds);
+  }
+  
+  if (input.me.role === "manager") {
+    if (input.me.scope?.departmentIds?.length) {
+      q = q.in("department_id", input.me.scope.departmentIds);
+    } else if (input.me.scope?.branchIds?.length) {
+      q = q.in("branch_id", input.me.scope.branchIds);
+    }
+  }
 
   const filtered = (data ?? []).filter((row: any) =>
     canViewEmployee(input.me, row.id, row.department_id ?? undefined, row.branch_id ?? undefined)
   );
-
+  
   return {
-    items: filtered.map((row: any) => ({
+    items: (data ?? []).map((row: any) => ({
       id: row.id,
       employeeCode: row.employee_code,
       name: row.name,
@@ -84,8 +101,8 @@ export async function getEmployees(input: GetEmployeesInput) {
     pagination: {
       page,
       limit,
-      total: count ?? filtered.length,
-      totalPages: Math.max(1, Math.ceil((count ?? filtered.length) / limit)),
+      total: count ?? 0,
+      totalPages: Math.max(1, Math.ceil((count ?? 0) / limit)),
     },
   };
 }

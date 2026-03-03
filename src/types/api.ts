@@ -145,6 +145,7 @@ export type CreateInterviewReq = {
   interviewDate: string;
   interviewType: InterviewRecord["interviewType"];
   assignmentId?: string;
+  annualEventId?: string;
   factsObserved?: string;
   employeeVoice?: string;
   positivePoints?: string;
@@ -155,6 +156,7 @@ export type CreateInterviewReq = {
   nextInterviewDate?: string;
   visibility: InterviewVisibility;
   autoCompleteAssignment?: boolean;
+  autoCompleteAnnualEvent?: boolean;
 };
 
 export type CreateInterviewRes = { id: string };
