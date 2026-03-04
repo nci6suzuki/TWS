@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 const quickLinks = [
+  { href: "/login", label: "ログイン" },
   { href: "/dashboard", label: "ダッシュボード" },
   { href: "/employees", label: "社員一覧" },
   { href: "/annual-events", label: "年間イベント" },
