@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Me, Role } from "@/types/api";
+import { NextResponse } from "next/server";
 
 export async function requireAuth(): Promise<Me> {
   const supabase = createSupabaseServerClient();
@@ -29,6 +30,57 @@ export async function requireAuth(): Promise<Me> {
     employeeId,
     role,
     scope,
+  };
+}
+
+export async function requireAuthApi(): Promise<
+  | { ok: true; me: Me }
+  | { ok: false; response: NextResponse }
+> {
+  const supabase = createSupabaseServerClient();
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 401 }
+      ),
+    };
+  }
+
+  const role = (user.user_metadata?.role as Role | undefined) ?? "employee";
+  const employeeId = user.user_metadata?.employeeId as string | undefined;
+
+  if (!employeeId) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 403 }
+      ),
+    };
+  }
+
+  const scope = await buildScope({
+    supabase,
+    role,
+    employeeId,
+  });
+
+  return {
+    ok: true,
+    me: {
+      userId: user.id,
+      employeeId,
+      role,
+      scope,
+    },
   };
 }
 
