@@ -21,7 +21,10 @@ export default async function EmployeesPage({
     page: Number(searchParams.page ?? 1),
     limit: Number(searchParams.limit ?? 20),
     sort: typeof searchParams.sort === "string" ? searchParams.sort : "name",
-    order: typeof searchParams.order === "string" ? searchParams.order : "asc",
+    order:
+      searchParams.order === "asc" || searchParams.order === "desc"
+        ? searchParams.order
+        : "asc",
   });
 
   return (
