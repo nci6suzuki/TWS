@@ -29,8 +29,10 @@ export type Me = {
 // ============ Employees ============
 export type EmployeeListItem = {
   id: string;
+  userId?: string | null;
   employeeCode: string;
   name: string;
+  email?: string | null;
   branchName: string;
   departmentName?: string;
   positionName?: string;
@@ -39,6 +41,8 @@ export type EmployeeListItem = {
   nextInterviewDate?: string | null;
   followupStatus?: "normal" | "needs_followup";
   qualificationDueOn?: string | null;
+  lastInvitedAt?: string | null;
+  invitedByName?: string | null;
   status: "active" | "inactive" | "leave";
 };
 
