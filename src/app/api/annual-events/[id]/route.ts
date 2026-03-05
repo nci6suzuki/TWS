@@ -1,11 +1,16 @@
 // src/app/api/annual-events/[id]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     await requireAuthApi();
+
+    const { id } = await params;
     const supabase = createSupabaseServerClient();
     const body = await req.json();
 
@@ -21,14 +26,17 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         status: body.status,
         description: body.description ?? null,
       })
-      .eq("id", params.id);
+      .eq("id", id);
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data: { id: params.id } });
+    return NextResponse.json({ success: true, data: { id } });
   } catch (e: any) {
     return NextResponse.json(
-      { success: false, error: { code: "ERROR", message: e?.message ?? "更新に失敗しました" } },
+      {
+        success: false,
+        error: { code: "ERROR", message: e?.message ?? "更新に失敗しました" },
+      },
       { status: 500 }
     );
   }
