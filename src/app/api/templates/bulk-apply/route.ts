@@ -1,10 +1,10 @@
 // src/app/api/templates/bulk-apply/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { bulkApplyTemplateToEmployees } from "@/lib/services/template-bulk-service";
 import { canManageTemplates } from "@/lib/permissions/can";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const me = await requireAuthApi();
 
@@ -19,7 +19,10 @@ export async function POST(req: Request) {
 
     if (!body.templateId) {
       return NextResponse.json(
-        { success: false, error: { code: "VALIDATION_ERROR", message: "templateId は必須です" } },
+        {
+          success: false,
+          error: { code: "VALIDATION_ERROR", message: "templateId は必須です" },
+        },
         { status: 400 }
       );
     }
