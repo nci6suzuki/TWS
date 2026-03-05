@@ -19,6 +19,7 @@ export async function createInterview(input: { me: Me; input: any }) {
       interview_date: input.input.interviewDate,
       interview_type: input.input.interviewType,
       assignment_id: input.input.assignmentId ?? null,
+      annual_event_id: input.input.annualEventId ?? null,
       facts_observed: input.input.factsObserved ?? null,
       employee_voice: input.input.employeeVoice ?? null,
       positive_points: input.input.positivePoints ?? null,
@@ -29,11 +30,12 @@ export async function createInterview(input: { me: Me; input: any }) {
       next_interview_date: input.input.nextInterviewDate ?? null,
       visibility: input.input.visibility,
     })
-    .select("id, employee_id, assignment_id")
+    .select("id, employee_id, assignment_id, annual_event_id")
     .single();
 
   if (createErr) throw createErr;
 
+  // フォロー割当完了
   if (created.assignment_id && input.input.autoCompleteAssignment) {
     const { data: followupRow, error: followupErr } = await supabase
       .from("followup_assignments")
@@ -58,6 +60,35 @@ export async function createInterview(input: { me: Me; input: any }) {
         body: "面談記録の登録により、フォロー割当が完了になりました。",
         relatedTable: "followup_assignments",
         relatedId: created.assignment_id,
+      });
+    }
+  }
+
+  // 年間イベント完了
+  if (created.annual_event_id && input.input.autoCompleteAnnualEvent) {
+    const { data: annualEventRow, error: annualEventErr } = await supabase
+      .from("employee_annual_events")
+      .select("id, owner_employee_id, title")
+      .eq("id", created.annual_event_id)
+      .maybeSingle();
+
+    if (annualEventErr) throw annualEventErr;
+
+    const { error: eventUpdErr } = await supabase
+      .from("employee_annual_events")
+      .update({ status: "done" })
+      .eq("id", created.annual_event_id);
+
+    if (eventUpdErr) throw eventUpdErr;
+
+    if (annualEventRow?.owner_employee_id) {
+      await createNotification({
+        userEmployeeId: annualEventRow.owner_employee_id,
+        type: "annual_event_completed",
+        title: "年間イベントが完了しました",
+        body: `「${annualEventRow.title ?? "イベント"}」が面談記録の登録により完了になりました。`,
+        relatedTable: "employee_annual_events",
+        relatedId: created.annual_event_id,
       });
     }
   }
