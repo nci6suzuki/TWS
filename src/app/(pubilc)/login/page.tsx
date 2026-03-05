@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { AuthLoginForm } from "@/components/auth-login-form";
 import { Card, CardText } from "@/components/ui/card";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -14,12 +15,16 @@ export default async function LoginPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const supabase = createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const accessToken = cookies().get("tm-access-token")?.value;
 
-  if (user) {
-    redirect("/dashboard");
+  if (accessToken) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser(accessToken);
+
+    if (user) {
+      redirect("/dashboard");
+    }
   }
 
   const params = await searchParams;

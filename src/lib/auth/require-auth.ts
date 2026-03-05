@@ -1,16 +1,20 @@
 // src/lib/auth/require-auth.ts
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Me, Role } from "@/types/api";
 import { NextResponse } from "next/server";
 
 export async function requireAuth(): Promise<Me> {
   const supabase = createSupabaseServerClient();
+  const accessToken = cookies().get("tm-access-token")?.value;
+
+  if (!accessToken) redirect("/login");
 
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser(accessToken);
 
   if (error || !user) redirect("/login");
 
@@ -38,11 +42,22 @@ export async function requireAuthApi(): Promise<
   | { ok: false; response: NextResponse }
 > {
   const supabase = createSupabaseServerClient();
+  const accessToken = cookies().get("tm-access-token")?.value;
+
+  if (!accessToken) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 401 }
+      ),
+    };
+  }
 
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser(accessToken);
 
   if (error || !user) {
     return {
