@@ -33,11 +33,7 @@ export default async function EmployeesPage({
       <EmployeeFilters me={me} initial={searchParams} />
       <EmployeesTable
         me={me}
-        data={result.items.map((item) => ({
-          ...item,
-          followupStatus:
-            item.followupStatus === "needs_followup" ? "needs_followup" : "normal",
-        }))}
+        data={result.items}
         pagination={result.pagination}
       />
     </div>
