@@ -54,7 +54,7 @@ export function EmployeeForm({
     managerEmployeeId: initialData?.managerEmployeeId ?? "",
     mentorEmployeeId: initialData?.mentorEmployeeId ?? "",
     status: initialData?.status ?? "active",
-    templateId: initialData?.templateId ?? "",
+    templateId: initialData?.templateId ?? null,
   });
 
   async function handleSubmit(e: React.FormEvent) {
@@ -200,8 +200,8 @@ export function EmployeeForm({
 
       <Field label="年間イベントテンプレート">
         <TemplateSelect
-        value={form.templateId}
-        onChange={(value) => setForm((v) => ({ ...v, templateId: value }))}
+        value={form.templateId ?? ""}
+        onChange={(value) => setForm((v) => ({ ...v, templateId: value || null }))}
         />
       </Field>
 
