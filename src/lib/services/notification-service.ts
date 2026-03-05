@@ -9,7 +9,7 @@ export async function createNotification(input: {
   relatedTable?: string;
   relatedId?: string;
 }) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase.from("notifications").insert({
     user_employee_id: input.userEmployeeId,

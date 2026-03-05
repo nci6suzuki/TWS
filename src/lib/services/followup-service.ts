@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Me } from "@/types/api";
 
 export async function completeFollowup(input: { me: Me; followupId: string; interviewRecordId?: string }) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("followup_assignments")
@@ -43,7 +43,7 @@ export async function updateFollowup(input: {
     status?: string;
   };
 }) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data: existing, error } = await supabase
     .from("followup_assignments")

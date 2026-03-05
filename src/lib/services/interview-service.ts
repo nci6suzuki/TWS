@@ -9,7 +9,7 @@ export async function createInterview(input: { me: Me; input: any }) {
     throw new Error("FORBIDDEN");
   }
 
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data: created, error: createErr } = await supabase
     .from("interview_records")
