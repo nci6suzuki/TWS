@@ -24,7 +24,7 @@ type EmployeeFormData = {
   managerEmployeeId: string;
   mentorEmployeeId: string;
   status: string;
-  templateId: string;
+  templateId?: string | null;
 };
 
 export function EmployeeForm({
