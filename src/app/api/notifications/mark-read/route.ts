@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function POST(req: Request) {
   try {
     const me = await requireAuthApi();
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
     const body = await req.json();
 
     const ids: string[] = body.notificationIds ?? [];

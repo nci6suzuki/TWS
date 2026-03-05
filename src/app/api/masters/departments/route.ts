@@ -5,7 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function GET(req: Request) {
   try {
     await requireAuthApi();
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
     const { searchParams } = new URL(req.url);
     const branchId = searchParams.get("branchId");
 
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
     const body = await req.json();
 
     const { data, error } = await supabase

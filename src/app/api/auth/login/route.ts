@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     throw new Error("SUPABASE ENV is not set");
   }
 
-  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabase = await createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error || !data.session) {

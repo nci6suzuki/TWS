@@ -11,7 +11,7 @@ export async function PATCH(
     await requireAuthApi();
 
     const { id } = await params;
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
     const body = await req.json();
 
     const { error } = await supabase
@@ -47,7 +47,7 @@ export async function DELETE(
     await requireAuthApi();
 
     const { id } = await params;
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
 
     const { error } = await supabase
       .from("employee_qualifications")

@@ -11,7 +11,7 @@ export async function GET(
     await requireAuthApi();
 
     const { id } = await params;
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
 
     const { data, error } = await supabase
       .from("employee_career_goals")
@@ -52,7 +52,7 @@ export async function PATCH(
     const me = await requireAuthApi();
     const { id } = await params;
 
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
     const body = await req.json();
 
     const canEdit =

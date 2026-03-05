@@ -11,7 +11,7 @@ export async function GET(
     await requireAuthApi();
 
     const { id } = await params;
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
 
     const { data, error } = await supabase
       .from("employee_qualifications")
@@ -49,7 +49,7 @@ export async function POST(
     await requireAuthApi();
 
     const { id } = await params;
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
     const body = await req.json();
 
     const { data, error } = await supabase

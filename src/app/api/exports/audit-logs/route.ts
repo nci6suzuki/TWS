@@ -7,7 +7,7 @@ export async function GET() {
     return new Response("FORBIDDEN", { status: 403 });
   }
 
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("audit_logs")

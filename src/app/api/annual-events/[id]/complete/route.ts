@@ -11,7 +11,7 @@ export async function POST(
     await requireAuthApi();
 
     const { id } = await params;
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
 
     const { error } = await supabase
       .from("employee_annual_events")

@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     const me = await requireAuthApi();
     const body = await req.json();
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
 
     const { error: goalsErr } = await supabase
       .from("employee_career_goals")

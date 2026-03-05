@@ -18,7 +18,7 @@ export async function PATCH(
       );
     }
 
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
     const body = await req.json();
 
     const { error } = await supabase
@@ -55,7 +55,7 @@ export async function DELETE(
       );
     }
 
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
     const { error } = await supabase
       .from("departments")
       .delete()

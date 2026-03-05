@@ -11,7 +11,7 @@ export async function PATCH(
     await requireAuthApi();
     const { id } = await params;
 
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
     const body = await req.json();
 
     const { error: templateErr } = await supabase
@@ -68,7 +68,7 @@ export async function DELETE(
     await requireAuthApi();
     const { id } = await params;
 
-    const supabase = createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
 
     // 子テーブルを先に削除
     const { error: childErr } = await supabase
