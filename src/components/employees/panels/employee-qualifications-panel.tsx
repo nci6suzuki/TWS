@@ -7,7 +7,7 @@ export async function EmployeeQualificationsPanel({
 }: {
   employeeId: string;
 }) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("employee_qualifications")

@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Me } from "@/types/api";
 
 export async function EmployeeInterviewsPanel({ me, employeeId }: { me: Me; employeeId: string }) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   // 例：最新20件
   const { data, error } = await supabase

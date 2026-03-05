@@ -10,7 +10,7 @@ export async function EmployeeCareerPanel({
   me: Me;
   employeeId: string;
 }) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("employee_career_goals")
