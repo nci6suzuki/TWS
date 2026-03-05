@@ -16,7 +16,7 @@ export default async function AnnualEventDetailPage({
 
   if (!event) return notFound();
 
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data: linkedInterviews } = await supabase
     .from("interview_records")
