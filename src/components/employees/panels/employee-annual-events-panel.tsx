@@ -3,6 +3,15 @@ import Link from "next/link";
 import { getAnnualEvents } from "@/lib/queries/annual-events";
 import { Me } from "@/types/api";
 
+type AnnualEventItem = {
+  id: string;
+  title: string;
+  scheduledDate: string;
+  eventType: string;
+  ownerName: string;
+  status: string;
+};
+
 export async function EmployeeAnnualEventsPanel({
   me,
   employeeId,
@@ -31,7 +40,7 @@ export async function EmployeeAnnualEventsPanel({
       ) : (
         <div className="border rounded">
           <ul>
-            {result.items.map((item) => (
+            {result.items.map((item: AnnualEventItem) => (
               <li key={item.id} className="p-3 border-b last:border-b-0 text-sm">
                 <div className="font-medium">{item.title}</div>
                 <div>日付：{item.scheduledDate}</div>
