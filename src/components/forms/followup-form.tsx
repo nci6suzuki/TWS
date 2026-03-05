@@ -3,7 +3,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { FollowupDetail, Me } from "@/types/api";
+import type { FollowupDetail, FollowupStatus, Me } from "@/types/api";
+
+type FollowupFormState = {
+  fiscalYear: number;
+  quarter: 1 | 2 | 3 | 4;
+  employeeId: string;
+  followupType: "retention" | "career" | "performance" | "care";
+  assigneeEmployeeId: string;
+  dueDate: string;
+  priority: 1 | 2 | 3;
+  note: string;
+  status: FollowupStatus;
+};
 
 export function FollowupForm({
   mode,
@@ -15,7 +27,7 @@ export function FollowupForm({
   initialData?: FollowupDetail;
 }) {
   const router = useRouter();
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FollowupFormState>({
     fiscalYear: initialData?.fiscalYear ?? new Date().getFullYear(),
     quarter: initialData?.quarter ?? 1,
     employeeId: initialData?.employeeId ?? "",
@@ -80,7 +92,12 @@ export function FollowupForm({
         <select
           className="border rounded p-2 w-full"
           value={form.quarter}
-          onChange={(e) => setForm((v) => ({ ...v, quarter: Number(e.target.value) }))}
+          onChange={(e) =>
+            setForm((v) => ({
+              ...v,
+              quarter: Number(e.target.value) as 1 | 2 | 3 | 4,
+            }))
+          }
         >
           <option value={1}>Q1</option>
           <option value={2}>Q2</option>
@@ -101,7 +118,12 @@ export function FollowupForm({
         <select
           className="border rounded p-2 w-full"
           value={form.followupType}
-          onChange={(e) => setForm((v) => ({ ...v, followupType: e.target.value }))}
+          onChange={(e) =>
+            setForm((v) => ({
+              ...v,
+              followupType: e.target.value as FollowupFormState["followupType"],
+            }))
+          }
         >
           <option value="retention">定着</option>
           <option value="career">キャリア</option>
@@ -131,7 +153,12 @@ export function FollowupForm({
         <select
           className="border rounded p-2 w-full"
           value={form.priority}
-          onChange={(e) => setForm((v) => ({ ...v, priority: Number(e.target.value) }))}
+          onChange={(e) =>
+            setForm((v) => ({
+              ...v,
+              priority: Number(e.target.value) as 1 | 2 | 3,
+            }))
+          }
         >
           <option value={1}>高</option>
           <option value={2}>中</option>
@@ -143,7 +170,12 @@ export function FollowupForm({
         <select
           className="border rounded p-2 w-full"
           value={form.status}
-          onChange={(e) => setForm((v) => ({ ...v, status: e.target.value }))}
+          onChange={(e) =>
+            setForm((v) => ({
+              ...v,
+              status: e.target.value as FollowupStatus,
+            }))
+          }
         >
           <option value="pending">未着手</option>
           <option value="in_progress">進行中</option>
