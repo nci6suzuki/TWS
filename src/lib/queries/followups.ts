@@ -15,7 +15,7 @@ type GetFollowupsInput = {
 };
 
 export async function getFollowups(input: GetFollowupsInput) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const page = Math.max(1, input.page);
   const limit = Math.min(Math.max(1, input.limit), 100);
@@ -92,7 +92,7 @@ export async function getFollowups(input: GetFollowupsInput) {
 }
 
 export async function getFollowupById(input: { me: Me; id: string }) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("followup_assignments")

@@ -17,7 +17,7 @@ type GetEmployeesInput = {
 };
 
 export async function getEmployees(input: GetEmployeesInput) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const page = Math.max(1, input.page);
   const limit = Math.min(Math.max(1, input.limit), 100);
@@ -122,7 +122,7 @@ export async function getEmployees(input: GetEmployeesInput) {
 }
 
 export async function getEmployeeById(input: { me: Me; employeeId: string }) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("employees")
@@ -174,7 +174,7 @@ export async function getEmployeeById(input: { me: Me; employeeId: string }) {
 }
 
 export async function getEmployeeEditData(input: { me: Me; employeeId: string }) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("employees")

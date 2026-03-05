@@ -21,7 +21,7 @@ export async function getAnnualEvents({
   page: number;
   limit: number;
 }) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -113,7 +113,7 @@ export async function getAnnualEventById({
   me: Me;
   id: string;
 }) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   let q = supabase
     .from("employee_annual_events")

@@ -18,7 +18,7 @@ export async function getAuditLogs({
     throw new Error("FORBIDDEN");
   }
 
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
