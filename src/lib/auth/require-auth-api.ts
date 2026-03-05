@@ -5,7 +5,9 @@ import { Me, Role } from "@/types/api";
 
 export async function requireAuthApi(): Promise<Me> {
   const supabase = createSupabaseServerClient();
-  const accessToken = cookies().get("tm-access-token")?.value;
+
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("tm-access-token")?.value;
 
   if (!accessToken) throw new Error("UNAUTHORIZED");
 
