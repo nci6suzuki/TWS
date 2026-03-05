@@ -4,6 +4,14 @@ import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getTemplates } from "@/lib/queries/templates";
 
+type TemplateItem = {
+  id: string;
+  name: string;
+  targetJobType?: string | null;
+  targetGrade?: string | null;
+  isActive: boolean;
+};
+
 export default async function TemplatesPage() {
   const me = await requireAuth();
 
@@ -11,7 +19,7 @@ export default async function TemplatesPage() {
     redirect("/unauthorized");
   }
 
-  const items = await getTemplates({ me });
+  const items: TemplateItem[] = await getTemplates({ me });
 
   return (
     <div className="space-y-4">
@@ -39,7 +47,10 @@ export default async function TemplatesPage() {
         ) : (
           <ul>
             {items.map((item) => (
-              <li key={item.id} className="p-4 border-b last:border-b-0 flex items-center justify-between">
+              <li
+                key={item.id}
+                className="p-4 border-b last:border-b-0 flex items-center justify-between"
+              >
                 <div className="text-sm">
                   <div className="font-medium">{item.name}</div>
                   <div>対象職種：{item.targetJobType || "-"}</div>
