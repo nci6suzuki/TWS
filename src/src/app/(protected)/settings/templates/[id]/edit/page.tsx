@@ -1,7 +1,7 @@
 // src/app/(protected)/settings/templates/[id]/edit/page.tsx
 import { notFound, redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { getTemplateById } from "@/lib/queries/template";
+import { getTemplateById } from "@/lib/queries/templates";
 import { TemplateForm } from "@/components/forms/template-form";
 import { TemplateDeleteButton } from "@/components/templates/template-delete-button";
 
