@@ -48,23 +48,19 @@ export async function getFollowups(input: GetFollowupsInput) {
   if (input.assigneeEmployeeId) q = q.eq("assignee_employee_id", input.assigneeEmployeeId);
   if (input.employeeId) q = q.eq("employee_id", input.employeeId);
   if (input.branchId) q = q.eq("employees.branch_id", input.branchId);
-  
-  // getFollowups の query 部分に追加
+
   if (input.me.role === "employee") {
     q = q.eq("employee_id", input.me.employeeId);
   }
-  
+
   if (input.me.role === "mentor" && input.me.scope?.employeeIds?.length) {
     q = q.in("employee_id", input.me.scope.employeeIds);
   }
-  
-  if (input.me.role === "manager") {
-  // manager は自分担当分だけにするなら assignee_employee_id = 自分
-  // 部署全体を見るなら employee_id ベースで scope 取得が必要
-  q = q.eq("assignee_employee_id", input.me.employeeId);
-}
 
-  // 標準は期限が近い順
+  if (input.me.role === "manager") {
+    q = q.eq("assignee_employee_id", input.me.employeeId);
+  }
+
   q = q.order("due_date", { ascending: true }).range(from, to);
 
   const { data, error, count } = await q;
@@ -76,15 +72,15 @@ export async function getFollowups(input: GetFollowupsInput) {
       fiscalYear: row.fiscal_year,
       quarter: row.quarter,
       employeeId: row.employee_id,
-      employeeName: row.employees?.name ?? "",
-      branchName: row.employees?.branches?.name ?? "",
+      employeeName: row.employees?.[0]?.name ?? "",
+      branchName: row.employees?.[0]?.branches?.[0]?.name ?? "",
       followupType: row.followup_type,
       assigneeEmployeeId: row.assignee_employee_id,
-      assigneeName: row.assignee?.name ?? "",
+      assigneeName: row.assignee?.[0]?.name ?? "",
       dueDate: row.due_date,
       status: row.status,
       priority: row.priority ?? 2,
-      lastInterviewDate: null, // 将来：interview_recordsの最新で埋める
+      lastInterviewDate: null,
     })),
     pagination: {
       page,
@@ -122,8 +118,6 @@ export async function getFollowupById(input: { me: Me; id: string }) {
   if (error) throw error;
   if (!data) return null;
 
-  // ここで scope 権限チェックを強化する（今は簡易にHR/admin/担当者のみ等）
-  // 例：担当者 or HR/admin だけ見れる、など。
   const isAssignee = input.me.employeeId === data.assignee_employee_id;
   const isHrAdmin = input.me.role === "admin" || input.me.role === "hr";
   if (!isAssignee && !isHrAdmin) return null;
@@ -133,11 +127,11 @@ export async function getFollowupById(input: { me: Me; id: string }) {
     fiscalYear: data.fiscal_year,
     quarter: data.quarter,
     employeeId: data.employee_id,
-    employeeName: data.employees?.name ?? "",
-    branchName: "", // 必要ならjoin
+    employeeName: data.employees?.[0]?.name ?? "",
+    branchName: "",
     followupType: data.followup_type,
     assigneeEmployeeId: data.assignee_employee_id,
-    assigneeName: data.assignee?.name ?? "",
+    assigneeName: data.assignee?.[0]?.name ?? "",
     dueDate: data.due_date,
     status: data.status,
     priority: data.priority ?? 2,
