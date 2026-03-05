@@ -14,13 +14,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(new URL("/login?error=missing", request.url), { status: 303 });
   }
 
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error("SUPABASE ENV is not set");
+  }
+
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error || !data.session) {
     return NextResponse.redirect(new URL("/login?error=invalid", request.url), { status: 303 });
   }
-
 
   const response = NextResponse.redirect(new URL("/dashboard", request.url), { status: 303 });
 
