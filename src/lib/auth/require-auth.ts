@@ -5,8 +5,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Me, Role } from "@/types/api";
 import { NextResponse } from "next/server";
 
+type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
 export async function requireAuth(): Promise<Me> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("tm-access-token")?.value;
@@ -43,7 +45,7 @@ export async function requireAuthApi(): Promise<
   | { ok: true; me: Me }
   | { ok: false; response: NextResponse }
 > {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("tm-access-token")?.value;
@@ -99,7 +101,7 @@ async function buildScope({
   role,
   employeeId,
 }: {
-  supabase: ReturnType<typeof createSupabaseServerClient>;
+  supabase: Supabase;
   role: Role;
   employeeId: string;
 }) {
