@@ -7,7 +7,9 @@ import { NextResponse } from "next/server";
 
 export async function requireAuth(): Promise<Me> {
   const supabase = createSupabaseServerClient();
-  const accessToken = cookies().get("tm-access-token")?.value;
+
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("tm-access-token")?.value;
 
   if (!accessToken) redirect("/login");
 
@@ -42,15 +44,14 @@ export async function requireAuthApi(): Promise<
   | { ok: false; response: NextResponse }
 > {
   const supabase = createSupabaseServerClient();
-  const accessToken = cookies().get("tm-access-token")?.value;
+
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("tm-access-token")?.value;
 
   if (!accessToken) {
     return {
       ok: false,
-      response: NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      ),
+      response: NextResponse.json({ message: "Unauthorized" }, { status: 401 }),
     };
   }
 
@@ -62,10 +63,7 @@ export async function requireAuthApi(): Promise<
   if (error || !user) {
     return {
       ok: false,
-      response: NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      ),
+      response: NextResponse.json({ message: "Unauthorized" }, { status: 401 }),
     };
   }
 
@@ -75,10 +73,7 @@ export async function requireAuthApi(): Promise<
   if (!employeeId) {
     return {
       ok: false,
-      response: NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 403 }
-      ),
+      response: NextResponse.json({ message: "Unauthorized" }, { status: 403 }),
     };
   }
 
@@ -112,7 +107,6 @@ async function buildScope({
     return {};
   }
 
-  // 自分の所属取得
   const { data: meRow, error } = await supabase
     .from("employees")
     .select("id, branch_id, department_id")
@@ -123,14 +117,12 @@ async function buildScope({
     return {};
   }
 
-  // employee は自分のみ
   if (role === "employee") {
     return {
       employeeIds: [employeeId],
     };
   }
 
-  // manager は同一部署 or 支店
   if (role === "manager") {
     return {
       branchIds: meRow.branch_id ? [meRow.branch_id] : [],
@@ -138,7 +130,6 @@ async function buildScope({
     };
   }
 
-  // mentor は担当社員のみ
   if (role === "mentor") {
     const { data: mentees } = await supabase
       .from("employees")
