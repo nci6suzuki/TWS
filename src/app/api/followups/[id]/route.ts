@@ -1,16 +1,20 @@
 // src/app/api/followups/[id]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { updateFollowup } from "@/lib/services/followup-service";
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const me = await requireAuthApi();
+    const { id } = await params;
     const body = await req.json();
 
     const result = await updateFollowup({
       me,
-      followupId: params.id,
+      followupId: id,
       input: body,
     });
 
