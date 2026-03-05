@@ -5,7 +5,7 @@ import { NotificationList } from "@/components/notifications/notification-list";
 
 export default async function NotificationsPage() {
   const me = await requireAuth();
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("notifications")
