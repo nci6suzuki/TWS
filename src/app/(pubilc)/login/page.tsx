@@ -15,7 +15,9 @@ export default async function LoginPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const supabase = createSupabaseServerClient();
-  const accessToken = cookies().get("tm-access-token")?.value;
+
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("tm-access-token")?.value;
 
   if (accessToken) {
     const {
@@ -45,7 +47,9 @@ export default async function LoginPage({
       }}
     >
       <Card variant="dark" style={{ width: "100%", maxWidth: 480, borderRadius: 28, padding: 34 }}>
-        <p style={{ margin: 0, fontSize: 12, letterSpacing: "0.22em", fontWeight: 700, color: "#93c5fd" }}>WELCOME BACK</p>
+        <p style={{ margin: 0, fontSize: 12, letterSpacing: "0.22em", fontWeight: 700, color: "#93c5fd" }}>
+          WELCOME BACK
+        </p>
         <h1 style={{ margin: "14px 0 0", fontSize: 44, lineHeight: 1.1, color: "#f8fafc" }}>
           Talent
           <br />
