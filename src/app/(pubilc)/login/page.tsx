@@ -14,7 +14,7 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("tm-access-token")?.value;
