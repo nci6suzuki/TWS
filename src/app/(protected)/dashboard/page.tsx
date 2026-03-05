@@ -35,7 +35,7 @@ export default async function DashboardPage() {
             {data.dueFollowups.length === 0 ? (
               <li style={{ color: "#64748b" }}>対象なし</li>
             ) : (
-              data.dueFollowups.map((item) => (
+              data.dueFollowups.map((item: any) => (
                 <li key={item.id} style={itemStyle}>
                   <div style={{ fontWeight: 700, color: "#0f172a" }}>{item.employeeName}</div>
                   <div>種別：{item.followupType}</div>
@@ -55,7 +55,7 @@ export default async function DashboardPage() {
             {data.overdueFollowups.length === 0 ? (
               <li style={{ color: "#64748b" }}>期限超過なし</li>
             ) : (
-              data.overdueFollowups.map((item) => (
+              data.overdueFollowups.map((item: any) => (
                 <li key={item.id} style={{ ...itemStyle, border: "1px solid #fecaca", background: "#fff1f2" }}>
                   <div style={{ fontWeight: 700, color: "#be123c" }}>{item.employeeName}</div>
                   <div>種別：{item.followupType}</div>
@@ -77,7 +77,7 @@ export default async function DashboardPage() {
             {data.qualificationAlerts.length === 0 ? (
               <li style={{ color: "#64748b" }}>対象なし</li>
             ) : (
-              data.qualificationAlerts.map((item) => (
+              data.qualificationAlerts.map((item: any) => (
                 <li key={item.id} style={itemStyle}>
                   <div style={{ fontWeight: 700, color: "#0f172a" }}>{item.employeeName}</div>
                   <div>資格：{item.qualificationName}</div>
@@ -94,7 +94,7 @@ export default async function DashboardPage() {
             {data.notifications.length === 0 ? (
               <li style={{ color: "#64748b" }}>通知なし</li>
             ) : (
-              data.notifications.map((item) => (
+              data.notifications.map((item: any) => (
                 <li key={item.id} style={itemStyle}>
                   <div style={{ fontWeight: 700, color: "#0f172a" }}>{item.title}</div>
                   <div style={{ color: "#475569" }}>{item.body}</div>
