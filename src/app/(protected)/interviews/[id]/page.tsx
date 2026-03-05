@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 export default async function InterviewDetailPage({ params }: { params: { id: string } }) {
   await requireAuth();
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("interview_records")
