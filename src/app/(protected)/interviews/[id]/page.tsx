@@ -36,8 +36,8 @@ export default async function InterviewDetailPage({ params }: { params: { id: st
       <h1 className="text-xl font-semibold">面談記録 詳細</h1>
 
       <div className="p-4 border rounded space-y-1 text-sm">
-        <div><span className="font-medium">対象：</span>{data.employees?.name}</div>
-        <div><span className="font-medium">面談者：</span>{data.interviewer?.name}</div>
+        <div><span className="font-medium">対象：</span>{data.employees?.[0]?.name}</div>
+        <div><span className="font-medium">面談者：</span>{data.interviewer?.[0]?.name}</div>
         <div><span className="font-medium">日時：</span>{new Date(data.interview_date).toLocaleString()}</div>
         <div><span className="font-medium">種別：</span>{data.interview_type}</div>
         <div><span className="font-medium">公開：</span>{data.visibility}</div>
