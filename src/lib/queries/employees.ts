@@ -50,6 +50,7 @@ export async function getEmployees(input: GetEmployeesInput) {
       { count: "exact" }
     );
 
+  // 画面フィルタ
   if (input.branchId) q = q.eq("branch_id", input.branchId);
   if (input.departmentId) q = q.eq("department_id", input.departmentId);
   if (input.positionId) q = q.eq("position_id", input.positionId);
@@ -59,23 +60,15 @@ export async function getEmployees(input: GetEmployeesInput) {
     q = q.or(`name.ilike.%${input.keyword}%,employee_code.ilike.%${input.keyword}%`);
   }
 
-  const sortColumn = (input.sort ?? "name") as "name" | "employee_code" | "status";
-  q = q.order(sortColumn, { ascending: (input.order ?? "asc") === "asc" });
-
-  q = q.range(from, to);
-
-  const { data, error, count } = await q;
-  if (error) throw error;
-  
-  // ロール別絞り込み
+  // ロール別絞り込み（※ await の前に適用する）
   if (input.me.role === "employee") {
     q = q.eq("id", input.me.employeeId);
   }
-  
+
   if (input.me.role === "mentor" && input.me.scope?.employeeIds?.length) {
     q = q.in("id", input.me.scope.employeeIds);
   }
-  
+
   if (input.me.role === "manager") {
     if (input.me.scope?.departmentIds?.length) {
       q = q.in("department_id", input.me.scope.departmentIds);
@@ -84,26 +77,38 @@ export async function getEmployees(input: GetEmployeesInput) {
     }
   }
 
+  // ソート
+  const sortColumn = (input.sort ?? "name") as "name" | "employee_code" | "status";
+  q = q.order(sortColumn, { ascending: (input.order ?? "asc") === "asc" });
+
+  // ページング
+  q = q.range(from, to);
+
+  const { data, error, count } = await q;
+  if (error) throw error;
+
   const filtered = (data ?? []).filter((row: any) =>
     canViewEmployee(input.me, row.id, row.department_id ?? undefined, row.branch_id ?? undefined)
   );
-  
+
   return {
-    items: (data ?? []).map((row: any) => ({
+    items: filtered.map((row: any) => ({
       id: row.id,
-      userId: row.user_id,
+      userId: row.user_id ?? null,
       employeeCode: row.employee_code,
       name: row.name,
-      email: row.email ?? "",
+      email: row.email ?? null,
       lastInvitedAt: row.last_invited_at ?? null,
-      invitedByName: row.inviter?.name ?? "",
-      branchName: row.branches?.name ?? "",
-      departmentName: row.departments?.name ?? "",
-      positionName: row.positions?.name ?? "",
-      gradeName: row.grades?.name ?? "",
+      invitedByName: row.inviter?.[0]?.name ?? null,
+
+      branchName: row.branches?.[0]?.name ?? "",
+      departmentName: row.departments?.[0]?.name ?? "",
+      positionName: row.positions?.[0]?.name ?? "",
+      gradeName: row.grades?.[0]?.name ?? "",
+
       managerName: "",
       nextInterviewDate: null,
-      followupStatus: "normal",
+      followupStatus: "normal" as const,
       qualificationDueOn: null,
       status: row.status ?? "active",
     })),
@@ -154,10 +159,10 @@ export async function getEmployeeById(input: { me: Me; employeeId: string }) {
       id: data.id,
       employeeCode: data.employee_code,
       name: data.name,
-      branchName: data.branches?.name ?? "",
-      departmentName: data.departments?.name ?? "",
-      positionName: data.positions?.name ?? "",
-      gradeName: data.grades?.name ?? "",
+      branchName: data.branches?.[0]?.name ?? "",
+      departmentName: data.departments?.[0]?.name ?? "",
+      positionName: data.positions?.[0]?.name ?? "",
+      gradeName: data.grades?.[0]?.name ?? "",
       hireDate: data.hire_date ?? null,
       managerEmployeeId: data.manager_employee_id ?? null,
       mentorEmployeeId: data.mentor_employee_id ?? null,
