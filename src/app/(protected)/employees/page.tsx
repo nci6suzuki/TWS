@@ -31,7 +31,15 @@ export default async function EmployeesPage({
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">社員一覧</h1>
       <EmployeeFilters me={me} initial={searchParams} />
-      <EmployeesTable me={me} data={result.items} pagination={result.pagination} />
+      <EmployeesTable
+        me={me}
+        data={result.items.map((item) => ({
+          ...item,
+          followupStatus:
+            item.followupStatus === "needs_followup" ? "needs_followup" : "normal",
+        }))}
+        pagination={result.pagination}
+      />
     </div>
   );
 }
