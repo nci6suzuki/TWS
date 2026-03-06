@@ -25,7 +25,7 @@ export async function createEmployee({
     hrEmployeeId?: string;
   };
 }) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("employees")
@@ -108,7 +108,7 @@ export async function updateEmployee({
     status?: string;
   };
 }) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseServerClient();
 
   const patch: Record<string, any> = {};
 

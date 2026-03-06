@@ -21,7 +21,7 @@ export async function getAnnualEvents({
   page: number;
   limit: number;
 }) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseServerClient();
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -55,18 +55,6 @@ export async function getAnnualEvents({
     q = q.gte("scheduled_date", start).lte("scheduled_date", end);
   }
 
-  if (me.role === "employee") {
-    q = q.eq("employee_id", me.employeeId);
-  }
-
-  if (me.role === "mentor" && me.scope?.employeeIds?.length) {
-    q = q.in("employee_id", me.scope.employeeIds);
-  }
-
-  if (me.role === "manager") {
-    q = q.eq("owner_employee_id", me.employeeId);
-  }
-
   q = q.order("scheduled_date", { ascending: true }).range(from, to);
 
   const { data, error, count } = await q;
@@ -75,14 +63,14 @@ export async function getAnnualEvents({
   let items = (data ?? []).map((row: any) => ({
     id: row.id,
     employeeId: row.employee_id,
-    employeeName: row.employees?.[0]?.name ?? "",
+    employeeName: row.employees?.name ?? "",
     title: row.title,
     eventType: row.event_type,
     scheduledDate: row.scheduled_date,
     status: row.status,
     priority: row.priority,
     ownerEmployeeId: row.owner_employee_id,
-    ownerName: row.owners?.[0]?.name ?? "",
+    ownerName: row.owners?.name ?? "",
     description: row.description ?? "",
   }));
 
@@ -93,6 +81,20 @@ export async function getAnnualEvents({
         item.employeeName.toLowerCase().includes(lower) ||
         item.title.toLowerCase().includes(lower)
     );
+  }
+  
+  // getAnnualEvents の query に追加
+  if (me.role === "employee") {
+    q = q.eq("employee_id", me.employeeId);
+  }
+  
+  if (me.role === "mentor" && me.scope?.employeeIds?.length) {
+    q = q.in("employee_id", me.scope.employeeIds);
+  }
+  
+  if (me.role === "manager") {
+    // 最初は owner として自分が担当のものだけに絞る
+    q = q.eq("owner_employee_id", me.employeeId);
   }
 
   return {
@@ -113,9 +115,9 @@ export async function getAnnualEventById({
   me: Me;
   id: string;
 }) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseServerClient();
 
-  let q = supabase
+  const { data, error } = await supabase
     .from("employee_annual_events")
     .select(`
       id,
@@ -130,21 +132,8 @@ export async function getAnnualEventById({
       employees:employee_id ( id, name ),
       owners:owner_employee_id ( id, name )
     `)
-    .eq("id", id);
-
-  if (me.role === "employee") {
-    q = q.eq("employee_id", me.employeeId);
-  }
-
-  if (me.role === "mentor" && me.scope?.employeeIds?.length) {
-    q = q.in("employee_id", me.scope.employeeIds);
-  }
-
-  if (me.role === "manager") {
-    q = q.eq("owner_employee_id", me.employeeId);
-  }
-
-  const { data, error } = await q.maybeSingle();
+    .eq("id", id)
+    .maybeSingle();
 
   if (error) throw error;
   if (!data) return null;
@@ -152,14 +141,14 @@ export async function getAnnualEventById({
   return {
     id: data.id,
     employeeId: data.employee_id,
-    employeeName: data.employees?.[0]?.name ?? "",
+    employeeName: data.employees?.name ?? "",
     title: data.title,
     eventType: data.event_type,
     scheduledDate: data.scheduled_date,
     status: data.status,
     priority: data.priority,
     ownerEmployeeId: data.owner_employee_id,
-    ownerName: data.owners?.[0]?.name ?? "",
+    ownerName: data.owners?.name ?? "",
     description: data.description ?? "",
   };
 }

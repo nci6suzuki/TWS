@@ -1,24 +1,16 @@
 // src/lib/auth/require-auth.ts
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Me, Role } from "@/types/api";
 import { NextResponse } from "next/server";
 
-type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
-
 export async function requireAuth(): Promise<Me> {
-  const supabase = await createSupabaseServerClient();
-
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get("tm-access-token")?.value;
-
-  if (!accessToken) redirect("/login");
+  const supabase = createSupabaseServerClient();
 
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser(accessToken);
+  } = await supabase.auth.getUser();
 
   if (error || !user) redirect("/login");
 
@@ -45,27 +37,20 @@ export async function requireAuthApi(): Promise<
   | { ok: true; me: Me }
   | { ok: false; response: NextResponse }
 > {
-  const supabase = await createSupabaseServerClient();
-
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get("tm-access-token")?.value;
-
-  if (!accessToken) {
-    return {
-      ok: false,
-      response: NextResponse.json({ message: "Unauthorized" }, { status: 401 }),
-    };
-  }
+  const supabase = createSupabaseServerClient();
 
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser(accessToken);
+  } = await supabase.auth.getUser();
 
   if (error || !user) {
     return {
       ok: false,
-      response: NextResponse.json({ message: "Unauthorized" }, { status: 401 }),
+      response: NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 401 }
+      ),
     };
   }
 
@@ -75,7 +60,10 @@ export async function requireAuthApi(): Promise<
   if (!employeeId) {
     return {
       ok: false,
-      response: NextResponse.json({ message: "Unauthorized" }, { status: 403 }),
+      response: NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 403 }
+      ),
     };
   }
 
@@ -101,7 +89,7 @@ async function buildScope({
   role,
   employeeId,
 }: {
-  supabase: Supabase;
+  supabase: ReturnType<typeof createSupabaseServerClient>;
   role: Role;
   employeeId: string;
 }) {
@@ -109,6 +97,7 @@ async function buildScope({
     return {};
   }
 
+  // 自分の所属取得
   const { data: meRow, error } = await supabase
     .from("employees")
     .select("id, branch_id, department_id")
@@ -119,12 +108,14 @@ async function buildScope({
     return {};
   }
 
+  // employee は自分のみ
   if (role === "employee") {
     return {
       employeeIds: [employeeId],
     };
   }
 
+  // manager は同一部署 or 支店
   if (role === "manager") {
     return {
       branchIds: meRow.branch_id ? [meRow.branch_id] : [],
@@ -132,6 +123,7 @@ async function buildScope({
     };
   }
 
+  // mentor は担当社員のみ
   if (role === "mentor") {
     const { data: mentees } = await supabase
       .from("employees")

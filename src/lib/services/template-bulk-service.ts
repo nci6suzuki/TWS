@@ -25,7 +25,7 @@ export async function bulkApplyTemplateToEmployees({
   skipIfAlreadyHasEvents?: boolean;
   hrEmployeeId?: string | null;
 }) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseServerClient();
 
   let q = supabase
     .from("employees")

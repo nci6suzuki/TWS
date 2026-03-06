@@ -16,7 +16,7 @@ export async function applyAnnualTemplateToEmployee({
   mentorEmployeeId?: string | null;
   hrEmployeeId?: string | null;
 }) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseServerClient();
 
   const { data: templateEvents, error } = await supabase
     .from("annual_plan_template_events")
