@@ -11,8 +11,11 @@ export default async function EmployeeNewPage() {
   }
 
   return (
-    <div className="space-y-4 max-w-3xl">
-      <h1 className="text-xl font-semibold">社員登録</h1>
+    <div className="mx-auto max-w-5xl space-y-5">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">社員登録</h1>
+        <p className="text-sm text-slate-600">新規社員の基本情報、組織情報、初期設定を登録します。</p>
+      </div>
       <EmployeeForm mode="create" me={me} />
     </div>
   );

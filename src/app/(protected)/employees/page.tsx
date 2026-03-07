@@ -29,26 +29,29 @@ export default async function EmployeesPage({
   });
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-xl font-semibold">社員一覧</h1>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">社員一覧</h1>
+          <p className="mt-1 text-sm text-slate-600">社員情報の閲覧、検索、アカウント招待を行えます。</p>
+        </div>
         {(me.role === "admin" || me.role === "hr") && (
           <Link
             href="/employees/new"
-            className="px-4 py-2 rounded border bg-black text-white text-sm"
+            className="inline-flex h-11 items-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
-            社員登録
+            + 社員登録
           </Link>
         )}
       </div>
       <EmployeeFilters me={me} initial={searchParams} />
       <EmployeesTable
         me={me}
-          data={result.items.map((item: any) => ({
-            ...item,
-            followupStatus:
+        data={result.items.map((item: any) => ({
+          ...item,
+          followupStatus:
             item.followupStatus === "needs_followup" ? "needs_followup" : "normal",
-          }))}
+        }))}
         pagination={result.pagination}
       />
     </div>

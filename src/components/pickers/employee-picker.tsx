@@ -23,6 +23,8 @@ export function EmployeePicker({
   const [loading, setLoading] = useState(false);
 
   const debouncedKeyword = useDebouncedValue(keyword, 300);
+  const controlClassName =
+    "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
 
   useEffect(() => {
     let active = true;
@@ -64,18 +66,18 @@ export function EmployeePicker({
   }, [items, value]);
 
   return (
-    <div className="space-y-1">
-      <div className="text-sm font-medium">{label}</div>
+    <div className="space-y-1.5">
+      <div className="text-sm font-medium text-slate-700">{label}</div>
 
       <input
-        className="border rounded p-2 w-full"
+        className={controlClassName}
         placeholder="氏名や社員番号で検索"
         value={keyword}
         onChange={(e) => setKeyword(e.target.value)}
       />
 
       <select
-        className="border rounded p-2 w-full"
+        className={controlClassName}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -88,7 +90,7 @@ export function EmployeePicker({
       </select>
 
       {value && selectedLabel && (
-        <div className="text-xs text-gray-600">選択中：{selectedLabel}</div>
+        <div className="text-xs text-slate-500">選択中：{selectedLabel}</div>
       )}
     </div>
   );
