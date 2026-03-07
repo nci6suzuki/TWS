@@ -4,6 +4,7 @@ import { getEmployees } from "@/lib/queries/employees";
 import { EmployeesTable } from "@/components/tables/employees-table";
 import { EmployeeFilters } from "@/components/filters/employee-filters";
 import Link from "next/link";
+import { Card, CardText, CardTitle } from "@/components/ui/card";
 
 export default async function EmployeesPage({
   searchParams,
@@ -30,21 +31,26 @@ export default async function EmployeesPage({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">社員一覧</h1>
-          <p className="mt-1 text-sm text-slate-600">社員情報の閲覧、検索、アカウント招待を行えます。</p>
-        </div>
-        {(me.role === "admin" || me.role === "hr") && (
-          <Link
-            href="/employees/new"
-            className="inline-flex h-11 items-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
-          >
-            + 社員登録
-          </Link>
-        )}
-      </div>
+      <Card variant="elevated" style={{ padding: 0 }}>
+        <section className="flex flex-wrap items-end justify-between gap-3 p-6 sm:p-7">
+          <div>
+            <CardTitle style={{ fontSize: 28 }}>社員一覧</CardTitle>
+            <CardText style={{ marginTop: 10, fontSize: 14 }}>
+              社員情報の閲覧、検索、アカウント招待を行えます。
+            </CardText>
+          </div>
+          {(me.role === "admin" || me.role === "hr") && (
+            <Link
+              href="/employees/new"
+              className="inline-flex h-11 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              + 社員登録
+            </Link>
+          )}
+        </section>
+      </Card>
       <EmployeeFilters me={me} initial={searchParams} />
+
       <EmployeesTable
         me={me}
         data={result.items.map((item: any) => ({
