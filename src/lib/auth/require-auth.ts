@@ -3,16 +3,21 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Me, Role } from "@/types/api";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+
+const ACCESS_TOKEN_COOKIE = "tm-access-token";
 
 type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 export async function requireAuth(): Promise<Me> {
   const supabase = await createSupabaseServerClient();
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
 
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser(accessToken);
 
   if (error || !user) redirect("/login");
 
@@ -40,11 +45,13 @@ export async function requireAuthApi(): Promise<
   | { ok: false; response: NextResponse }
 > {
   const supabase = await createSupabaseServerClient();
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
 
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser(accessToken);
 
   if (error || !user) {
     return {
