@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { getEmployees } from "@/lib/queries/employees";
 import { EmployeesTable } from "@/components/tables/employees-table";
 import { EmployeeFilters } from "@/components/filters/employee-filters";
+import Link from "next/link";
 
 export default async function EmployeesPage({
   searchParams,
@@ -29,7 +30,17 @@ export default async function EmployeesPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">社員一覧</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-xl font-semibold">社員一覧</h1>
+        {(me.role === "admin" || me.role === "hr") && (
+          <Link
+            href="/employees/new"
+            className="px-4 py-2 rounded border bg-black text-white text-sm"
+          >
+            社員登録
+          </Link>
+        )}
+      </div>
       <EmployeeFilters me={me} initial={searchParams} />
       <EmployeesTable
         me={me}
