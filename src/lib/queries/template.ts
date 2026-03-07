@@ -6,7 +6,7 @@ export async function getTemplates({
 }: {
   me: Me;
 }) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("annual_plan_templates")
@@ -37,7 +37,7 @@ export async function getTemplateById({
   me: Me;
   id: string;
 }) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("annual_plan_templates")
