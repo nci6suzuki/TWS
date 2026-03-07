@@ -2,8 +2,10 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Me, Role } from "@/types/api";
 
+type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
 export async function requireAuthApi(): Promise<Me> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const {
     data: { user },
@@ -36,7 +38,7 @@ async function buildScope({
   role,
   employeeId,
 }: {
-  supabase: ReturnType<typeof createSupabaseServerClient>;
+  supabase: Supabase;
   role: Role;
   employeeId: string;
 }) {
