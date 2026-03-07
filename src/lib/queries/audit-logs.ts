@@ -18,7 +18,7 @@ export async function getAuditLogs({
     throw new Error("FORBIDDEN");
   }
 
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -60,8 +60,8 @@ export async function getAuditLogs({
       action: row.action,
       recordId: row.record_id,
       actorEmployeeId: row.actor_employee_id,
-      actorName: row.actor?.name ?? "",
-      actorEmployeeCode: row.actor?.employee_code ?? "",
+      actorName: row.actor?.[0]?.name ?? "",
+      actorEmployeeCode: row.actor?.[0]?.employee_code ?? "",
       oldData: row.old_data,
       newData: row.new_data,
       createdAt: row.created_at,
