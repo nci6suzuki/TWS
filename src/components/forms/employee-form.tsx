@@ -101,7 +101,7 @@ export function EmployeeForm({
         </div>
       )}
 
-      <Card variant="elevated" style={{ padding: 0 }}>
+      <Card variant="elevated" style={{ padding: 0, overflow: "hidden" }}>
         <section className="overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-50/70 p-5 sm:p-6">
           <div className="mb-5 border-b border-slate-200 pb-4">
             <CardTitle style={{ fontSize: 17 }}>🧾 基本情報</CardTitle>
@@ -110,7 +110,7 @@ export function EmployeeForm({
             </CardText>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
+          <div className="grid grid-cols-1 gap-4">
             <Field label="社員番号" required className="xl:col-span-4">
               <input
                 className={controlClassName}
@@ -120,7 +120,7 @@ export function EmployeeForm({
               />
             </Field>
 
-            <Field label="氏名" required className="xl:col-span-4">
+            <Field label="氏名" required >
               <input
                 className={controlClassName}
                 placeholder="例: 山田 太郎"
@@ -129,7 +129,7 @@ export function EmployeeForm({
               />
             </Field>
 
-            <Field label="メールアドレス" required className="xl:col-span-4">
+            <Field label="メールアドレス" required >
               <input
                 type="email"
                 className={controlClassName}
@@ -139,7 +139,7 @@ export function EmployeeForm({
               />
             </Field>
 
-            <Field label="雇用区分" required className="xl:col-span-4">
+            <Field label="雇用区分" required >
               <select
                 className={controlClassName}
                 value={form.employmentType}
@@ -152,14 +152,14 @@ export function EmployeeForm({
               </select>
             </Field>
 
-            <Field label="支店" required className="xl:col-span-4">
+            <Field label="支店" required >
               <BranchSelect
                 value={form.branchId}
                 onChange={(value) => setForm((v) => ({ ...v, branchId: value, departmentId: "" }))}
               />
             </Field>
 
-            <Field label="部署" required className="xl:col-span-4">
+            <Field label="部署" required >
               <DepartmentSelect
                 branchId={form.branchId}
                 value={form.departmentId}
@@ -167,21 +167,21 @@ export function EmployeeForm({
               />
             </Field>
 
-            <Field label="役職" required className="xl:col-span-4">
+            <Field label="役職" required >
               <PositionSelect
                 value={form.positionId}
                 onChange={(value) => setForm((v) => ({ ...v, positionId: value }))}
               />
             </Field>
 
-            <Field label="等級" required className="xl:col-span-4">
+            <Field label="等級" required >
               <GradeSelect
                 value={form.gradeId}
                 onChange={(value) => setForm((v) => ({ ...v, gradeId: value }))}
               />
             </Field>
 
-            <Field label="入社日" className="xl:col-span-4">
+            <Field label="入社日">
               <input
                 type="date"
                 className={controlClassName}
@@ -190,7 +190,7 @@ export function EmployeeForm({
               />
             </Field>
 
-            <Field label="在籍状態" required className="xl:col-span-4">
+            <Field label="在籍状態" required>
               <select
                 className={controlClassName}
                 value={form.status}
@@ -205,7 +205,7 @@ export function EmployeeForm({
         </section>
       </Card>
 
-      <Card style={{ padding: 0 }}>
+      <Card style={{ padding: 0, overflow: "hidden" }}>
         <section className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6">
           <div className="mb-5 border-b border-slate-200 pb-4">
             <CardTitle style={{ fontSize: 17 }}>🌱 組織・育成設定</CardTitle>
