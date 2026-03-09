@@ -9,17 +9,21 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const branchId = searchParams.get("branchId");
 
-    let q = supabase
-      .from("departments")
-      .select("id, name, branch_id, branches:branch_id ( name )")
-      .order("name", { ascending: true });
+    let q = supabase.from("departments").select("*, branches:branch_id ( name )");
 
     if (branchId) q = q.eq("branch_id", branchId);
 
     const { data, error } = await q;
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data: { items: data ?? [] } });
+    const items = (data ?? []).map((row: any) => ({
+      id: row.id,
+      name: row.name ?? row.department_name ?? row.departmentName ?? "",
+      branch_id: row.branch_id ?? row.branchId ?? null,
+      branches: row.branches ?? null,
+    }));
+
+    return NextResponse.json({ success: true, data: { items } });
   } catch (e: any) {
     return NextResponse.json(
       { success: false, error: { code: "ERROR", message: e?.message ?? "取得に失敗しました" } },

@@ -7,14 +7,17 @@ export async function GET() {
     await requireAuthApi();
     const supabase = await createSupabaseServerClient();
 
-    const { data, error } = await supabase
-      .from("positions")
-      .select("id, name, sort_order")
-      .order("sort_order", { ascending: true });
+    const { data, error } = await supabase.from("positions").select("*");
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data: { items: data ?? [] } });
+    const items = (data ?? []).map((row: any) => ({
+      id: row.id,
+      name: row.name ?? row.position_name ?? row.positionName ?? "",
+      sort_order: row.sort_order ?? row.sortOrder ?? 0,
+    }));
+
+    return NextResponse.json({ success: true, data: { items } });
   } catch (e: any) {
     return NextResponse.json(
       { success: false, error: { code: "ERROR", message: e?.message ?? "取得に失敗しました" } },
