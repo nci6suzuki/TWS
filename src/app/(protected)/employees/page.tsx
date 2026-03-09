@@ -6,26 +6,40 @@ import { EmployeeFilters } from "@/components/filters/employee-filters";
 import Link from "next/link";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
 
+type EmployeesPageSearchParams = Promise<{
+  branchId?: string | string[];
+  departmentId?: string | string[];
+  positionId?: string | string[];
+  gradeId?: string | string[];
+  keyword?: string | string[];
+  page?: string | string[];
+  limit?: string | string[];
+  sort?: string | string[];
+  order?: string | string[];
+}>;
+
 export default async function EmployeesPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: EmployeesPageSearchParams;
 }) {
   const me = await requireAuth();
+  const sp = await searchParams;
 
   const result = await getEmployees({
     me,
-    branchId: typeof searchParams.branchId === "string" ? searchParams.branchId : undefined,
-    departmentId: typeof searchParams.departmentId === "string" ? searchParams.departmentId : undefined,
-    positionId: typeof searchParams.positionId === "string" ? searchParams.positionId : undefined,
-    gradeId: typeof searchParams.gradeId === "string" ? searchParams.gradeId : undefined,
-    keyword: typeof searchParams.keyword === "string" ? searchParams.keyword : undefined,
-    page: Number(searchParams.page ?? 1),
-    limit: Number(searchParams.limit ?? 20),
-    sort: typeof searchParams.sort === "string" ? searchParams.sort : "name",
+    branchId: typeof sp.branchId === "string" ? sp.branchId : undefined,
+    departmentId:
+      typeof sp.departmentId === "string" ? sp.departmentId : undefined,
+    positionId: typeof sp.positionId === "string" ? sp.positionId : undefined,
+    gradeId: typeof sp.gradeId === "string" ? sp.gradeId : undefined,
+    keyword: typeof sp.keyword === "string" ? sp.keyword : undefined,
+    page: Number(typeof sp.page === "string" ? sp.page : 1),
+    limit: Number(typeof sp.limit === "string" ? sp.limit : 20),
+    sort: typeof sp.sort === "string" ? sp.sort : "name",
     order:
-      searchParams.order === "asc" || searchParams.order === "desc"
-        ? searchParams.order
+      sp.order === "asc" || sp.order === "desc"
+        ? sp.order
         : "asc",
   });
 
@@ -49,14 +63,17 @@ export default async function EmployeesPage({
           )}
         </section>
       </Card>
-      <EmployeeFilters me={me} initial={searchParams} />
+
+      <EmployeeFilters me={me} initial={sp} />
 
       <EmployeesTable
         me={me}
         data={result.items.map((item: any) => ({
           ...item,
           followupStatus:
-            item.followupStatus === "needs_followup" ? "needs_followup" : "normal",
+            item.followupStatus === "needs_followup"
+              ? "needs_followup"
+              : "normal",
         }))}
         pagination={result.pagination}
       />

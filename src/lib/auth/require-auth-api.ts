@@ -1,4 +1,3 @@
-// src/lib/auth/require-auth-api.ts
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Me, Role } from "@/types/api";
 
@@ -12,10 +11,19 @@ export async function requireAuthApi(): Promise<Me> {
     error,
   } = await supabase.auth.getUser();
 
+  console.log("requireAuthApi error:", error);
+  console.log("requireAuthApi user id:", user?.id);
+  console.log("requireAuthApi metadata:", user?.user_metadata);
+
   if (error || !user) throw new Error("UNAUTHORIZED");
 
   const role = (user.user_metadata?.role as Role | undefined) ?? "employee";
-  const employeeId = user.user_metadata?.employeeId as string | undefined;
+  const employeeId =
+    (user.user_metadata?.employeeId as string | undefined) ??
+    (user.user_metadata?.employee_id as string | undefined);
+
+  console.log("requireAuthApi role:", role);
+  console.log("requireAuthApi employeeId:", employeeId);
 
   if (!employeeId) throw new Error("UNAUTHORIZED");
 
@@ -51,6 +59,9 @@ async function buildScope({
     .select("id, branch_id, department_id")
     .eq("id", employeeId)
     .maybeSingle();
+
+  console.log("buildScope meRow:", meRow);
+  console.log("buildScope error:", error);
 
   if (error || !meRow) {
     return {};
