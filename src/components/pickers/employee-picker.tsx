@@ -7,6 +7,8 @@ type EmployeeOption = {
   id: string;
   name: string;
   employeeCode: string;
+  branchName: string;
+  departmentName: string;
 };
 
 export function EmployeePicker({
@@ -35,7 +37,7 @@ export function EmployeePicker({
         const params = new URLSearchParams();
         if (debouncedKeyword) params.set("keyword", debouncedKeyword);
         params.set("page", "1");
-        params.set("limit", "20");
+        params.set("limit", "1000");
 
         const res = await fetch(`/api/employees?${params.toString()}`);
         const json = await res.json();
@@ -44,7 +46,9 @@ export function EmployeePicker({
         const mapped = (json?.data?.items ?? []).map((x: any) => ({
           id: x.id,
           name: x.name,
-          employeeCode: x.employeeCode,
+          employeeCode: x.employeeCode ?? x.employee_code ?? "",
+          branchName: x.branchName ?? x.branches?.name ?? "",
+          departmentName: x.departmentName ?? x.departments?.name ?? "",
         }));
         setItems(mapped);
       } catch {
@@ -62,7 +66,12 @@ export function EmployeePicker({
 
   const selectedLabel = useMemo(() => {
     const found = items.find((item) => item.id === value);
-    return found ? `${found.name}（${found.employeeCode}）` : "";
+    if (!found) return "";
+
+    const org = [found.branchName, found.departmentName].filter(Boolean).join(" / ");
+    return org
+      ? `${found.name}（${found.employeeCode}｜${org}）`
+      : `${found.name}（${found.employeeCode}）`;
   }, [items, value]);
 
   return (
@@ -84,7 +93,11 @@ export function EmployeePicker({
         <option value="">{loading ? "読み込み中..." : "選択してください"}</option>
         {items.map((item) => (
           <option key={item.id} value={item.id}>
-            {item.name}（{item.employeeCode}）
+            {item.name}（{item.employeeCode}
+            {item.branchName || item.departmentName
+              ? `｜${[item.branchName, item.departmentName].filter(Boolean).join(" / ")}`
+              : ""}
+            ）
           </option>
         ))}
       </select>
