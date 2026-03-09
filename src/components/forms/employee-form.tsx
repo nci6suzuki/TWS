@@ -282,11 +282,15 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className={`block min-w-0 space-y-1.5 ${className ?? ""}`}>
-      <span className="text-sm font-medium text-slate-700">
+    <label
+      className={`block min-w-0 space-y-1.5 ${className ?? ""}`}
+      style={{ display: "block" }}
+    >
+      <span className="text-sm font-medium text-slate-700" style={{ display: "inline" }}>
         {label}
         {required ? <span className="ml-1 text-rose-500">*</span> : null}
       </span>
+      <br />
       {children}
     </label>
   );
