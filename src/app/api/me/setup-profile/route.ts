@@ -11,14 +11,17 @@ export async function POST(req: Request) {
 
     const { error: goalsErr } = await supabase
       .from("employee_career_goals")
-      .update({
-        desired_role: body.desiredRole || null,
-        desired_career_path: body.desiredCareerPath || null,
-        goal_1y: body.goal1y || null,
-        goal_3y: body.goal3y || null,
-        self_comment: body.selfComment || null,
-      })
-      .eq("employee_id", me.employeeId);
+      .upsert(
+        {
+          employee_id: me.employeeId,
+          desired_role: body.desiredRole || null,
+          desired_career_path: body.desiredCareerPath || null,
+          goal_1y: body.goal1y || null,
+          goal_3y: body.goal3y || null,
+          self_comment: body.selfComment || null,
+        },
+        { onConflict: "employee_id" }
+      );
 
     if (goalsErr) throw goalsErr;
 
