@@ -110,8 +110,8 @@ export function EmployeeForm({
             </CardText>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
-            <Field label="社員番号" required className="xl:col-span-4">
+          <div className="mx-auto w-full max-w-3xl space-y-4">
+            <Field label="社員番号" required>
               <input
                 className={controlClassName}
                 placeholder="例: A00123"
@@ -120,7 +120,7 @@ export function EmployeeForm({
               />
             </Field>
 
-            <Field label="氏名" required >
+            <Field label="氏名" required>
               <input
                 className={controlClassName}
                 placeholder="例: 山田 太郎"
@@ -129,7 +129,7 @@ export function EmployeeForm({
               />
             </Field>
 
-            <Field label="メールアドレス" required >
+            <Field label="メールアドレス" required>
               <input
                 type="email"
                 className={controlClassName}
@@ -139,7 +139,7 @@ export function EmployeeForm({
               />
             </Field>
 
-            <Field label="雇用区分" required >
+            <Field label="雇用区分" required>
               <select
                 className={controlClassName}
                 value={form.employmentType}
@@ -152,14 +152,14 @@ export function EmployeeForm({
               </select>
             </Field>
 
-            <Field label="支店" required >
+            <Field label="支店" required>
               <BranchSelect
                 value={form.branchId}
                 onChange={(value) => setForm((v) => ({ ...v, branchId: value, departmentId: "" }))}
               />
             </Field>
 
-            <Field label="部署" required >
+            <Field label="部署" required>
               <DepartmentSelect
                 branchId={form.branchId}
                 value={form.departmentId}
@@ -167,14 +167,14 @@ export function EmployeeForm({
               />
             </Field>
 
-            <Field label="役職" required >
+            <Field label="役職" required>
               <PositionSelect
                 value={form.positionId}
                 onChange={(value) => setForm((v) => ({ ...v, positionId: value }))}
               />
             </Field>
 
-            <Field label="等級" required >
+            <Field label="等級" required>
               <GradeSelect
                 value={form.gradeId}
                 onChange={(value) => setForm((v) => ({ ...v, gradeId: value }))}
