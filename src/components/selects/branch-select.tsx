@@ -14,7 +14,7 @@ export function BranchSelect({
 }) {
   const [items, setItems] = useState<Item[]>([]);
   const selectClassName =
-    "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
+    "h-11 min-w-0 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
 
   useEffect(() => {
     fetch("/api/masters/branches")

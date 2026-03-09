@@ -29,7 +29,7 @@ type EmployeeFormData = {
 };
 
 const controlClassName =
-  "h-11 w-full rounded-xl border border-slate-300/90 bg-white/95 px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
+  "h-11 min-w-0 w-full rounded-xl border border-slate-300/90 bg-white/95 px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
 
 export function EmployeeForm({
   mode,
@@ -94,7 +94,7 @@ export function EmployeeForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="w-full max-w-full space-y-6">
       {errorMsg && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {errorMsg}
@@ -102,7 +102,7 @@ export function EmployeeForm({
       )}
 
       <Card variant="elevated" style={{ padding: 0 }}>
-        <section className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-5 sm:p-6">
+        <section className="overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-50/70 p-5 sm:p-6">
           <div className="mb-5 border-b border-slate-200 pb-4">
             <CardTitle style={{ fontSize: 17 }}>🧾 基本情報</CardTitle>
             <CardText style={{ marginTop: 8, fontSize: 13 }}>
@@ -110,8 +110,8 @@ export function EmployeeForm({
             </CardText>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-            <Field label="社員番号" required className="lg:col-span-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
+            <Field label="社員番号" required className="xl:col-span-4">
               <input
                 className={controlClassName}
                 placeholder="例: A00123"
@@ -120,7 +120,7 @@ export function EmployeeForm({
               />
             </Field>
 
-            <Field label="氏名" required className="lg:col-span-4">
+            <Field label="氏名" required className="xl:col-span-4">
               <input
                 className={controlClassName}
                 placeholder="例: 山田 太郎"
@@ -129,7 +129,7 @@ export function EmployeeForm({
               />
             </Field>
 
-            <Field label="メールアドレス" required className="lg:col-span-4">
+            <Field label="メールアドレス" required className="xl:col-span-4">
               <input
                 type="email"
                 className={controlClassName}
@@ -139,7 +139,7 @@ export function EmployeeForm({
               />
             </Field>
 
-            <Field label="雇用区分" required className="lg:col-span-4">
+            <Field label="雇用区分" required className="xl:col-span-4">
               <select
                 className={controlClassName}
                 value={form.employmentType}
@@ -152,14 +152,14 @@ export function EmployeeForm({
               </select>
             </Field>
 
-            <Field label="支店" required className="lg:col-span-4">
+            <Field label="支店" required className="xl:col-span-4">
               <BranchSelect
                 value={form.branchId}
                 onChange={(value) => setForm((v) => ({ ...v, branchId: value, departmentId: "" }))}
               />
             </Field>
 
-            <Field label="部署" required className="lg:col-span-4">
+            <Field label="部署" required className="xl:col-span-4">
               <DepartmentSelect
                 branchId={form.branchId}
                 value={form.departmentId}
@@ -167,21 +167,21 @@ export function EmployeeForm({
               />
             </Field>
 
-            <Field label="役職" required className="lg:col-span-3">
+            <Field label="役職" required className="xl:col-span-4">
               <PositionSelect
                 value={form.positionId}
                 onChange={(value) => setForm((v) => ({ ...v, positionId: value }))}
               />
             </Field>
 
-            <Field label="等級" required className="lg:col-span-3">
+            <Field label="等級" required className="xl:col-span-4">
               <GradeSelect
                 value={form.gradeId}
                 onChange={(value) => setForm((v) => ({ ...v, gradeId: value }))}
               />
             </Field>
 
-            <Field label="入社日" className="lg:col-span-3">
+            <Field label="入社日" className="xl:col-span-4">
               <input
                 type="date"
                 className={controlClassName}
@@ -190,7 +190,7 @@ export function EmployeeForm({
               />
             </Field>
 
-            <Field label="在籍状態" required className="lg:col-span-3">
+            <Field label="在籍状態" required className="xl:col-span-4">
               <select
                 className={controlClassName}
                 value={form.status}
@@ -206,7 +206,7 @@ export function EmployeeForm({
       </Card>
 
       <Card style={{ padding: 0 }}>
-        <section className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6">
+        <section className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6">
           <div className="mb-5 border-b border-slate-200 pb-4">
             <CardTitle style={{ fontSize: 17 }}>🌱 組織・育成設定</CardTitle>
             <CardText style={{ marginTop: 8, fontSize: 13 }}>
@@ -214,8 +214,8 @@ export function EmployeeForm({
             </CardText>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12">
-            <div className="lg:col-span-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-12">
+            <div className="min-w-0 xl:col-span-6">
               <EmployeePicker
                 label="直属上長"
                 value={form.managerEmployeeId}
@@ -223,7 +223,7 @@ export function EmployeeForm({
               />
             </div>
 
-            <div className="lg:col-span-6">
+            <div className="min-w-0 xl:col-span-6">
               <EmployeePicker
                 label="メンター"
                 value={form.mentorEmployeeId}
@@ -231,7 +231,7 @@ export function EmployeeForm({
               />
             </div>
 
-            <div className="sm:col-span-2 lg:col-span-12">
+            <div className="min-w-0 sm:col-span-2 xl:col-span-12">
               <Field label="年間イベントテンプレート">
                 <TemplateSelect
                   value={form.templateId ?? ""}
@@ -243,7 +243,7 @@ export function EmployeeForm({
         </section>
       </Card>
 
-      <div className="sticky bottom-3 z-10 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur">
+      <div className="sticky bottom-3 z-10 w-full max-w-full rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur">
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
@@ -282,7 +282,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className={`block space-y-1.5 ${className ?? ""}`}>
+    <label className={`block min-w-0 space-y-1.5 ${className ?? ""}`}>
       <span className="text-sm font-medium text-slate-700">
         {label}
         {required ? <span className="ml-1 text-rose-500">*</span> : null}

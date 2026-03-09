@@ -24,7 +24,7 @@ export function EmployeePicker({
 
   const debouncedKeyword = useDebouncedValue(keyword, 300);
   const controlClassName =
-    "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
+    "h-11 min-w-0 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
 
   useEffect(() => {
     let active = true;
@@ -66,7 +66,7 @@ export function EmployeePicker({
   }, [items, value]);
 
   return (
-    <div className="space-y-1.5">
+    <div className="min-w-0 space-y-1.5">
       <div className="text-sm font-medium text-slate-700">{label}</div>
 
       <input
