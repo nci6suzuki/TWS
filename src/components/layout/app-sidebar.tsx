@@ -8,6 +8,7 @@ const navItems = [
   { href: "/dashboard", label: "ダッシュボード", icon: "◈" },
   { href: "/employees", label: "社員", icon: "👥" },
   { href: "/annual-events", label: "年次イベント", icon: "🗓" },
+  { href: "/followups", label: "フォロー", icon: "🧭" },
   { href: "/notifications", label: "通知", icon: "🔔" },
 ];
 
