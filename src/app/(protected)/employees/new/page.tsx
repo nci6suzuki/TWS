@@ -22,10 +22,10 @@ export default async function EmployeeNewPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
+    <div style={{ margin: "0 auto", maxWidth: 1040, display: "grid", gap: 18 }}>
       <Card variant="elevated" style={{ padding: 0, overflow: "hidden" }}>
-        <section className="rounded-2xl bg-slate-50/80 p-6 sm:p-7">
-          <CardTitle style={{ fontSize: 30 }}>社員登録</CardTitle>
+        <section style={{ padding: 28, background: "#f8fafc" }}>
+          <CardTitle style={{ fontSize: 32 }}>社員登録</CardTitle>
           <CardText style={{ marginTop: 10, fontSize: 14 }}>
             新規社員の基本情報・組織情報・育成設定を登録します。入力後は社員一覧からアカウント招待ができます。
           </CardText>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { CSSProperties, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Me } from "@/types/api";
 import { EmployeePicker } from "@/components/pickers/employee-picker";
@@ -34,9 +34,6 @@ type EmployeeFormMasterOptions = {
   grades: MasterOption[];
 };
 
-const controlClassName =
-  "h-11 min-w-0 w-full rounded-xl border border-slate-300/90 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
-
 export function EmployeeForm({
   mode,
   me,
@@ -53,6 +50,24 @@ export function EmployeeForm({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [clientMasterOptions, setClientMasterOptions] = useState<EmployeeFormMasterOptions | null>(masterOptions ?? null);
+
+  const [form, setForm] = useState<EmployeeFormData>({
+    id: initialData?.id,
+    employeeCode: initialData?.employeeCode ?? "",
+    name: initialData?.name ?? "",
+    email: initialData?.email ?? "",
+    branchId: initialData?.branchId ?? "",
+    departmentId: initialData?.departmentId ?? "",
+    positionId: initialData?.positionId ?? "",
+    gradeId: initialData?.gradeId ?? "",
+    employmentType: initialData?.employmentType ?? "full_time",
+    hireDate: initialData?.hireDate ?? "",
+    managerEmployeeId: initialData?.managerEmployeeId ?? "",
+    mentorEmployeeId: initialData?.mentorEmployeeId ?? "",
+    status: initialData?.status ?? "active",
+    templateId: initialData?.templateId ?? null,
+  });
+
 
   useEffect(() => {
     if (masterOptions) return;
@@ -91,23 +106,6 @@ export function EmployeeForm({
       active = false;
     };
   }, [masterOptions]);
-
-  const [form, setForm] = useState<EmployeeFormData>({
-    id: initialData?.id,
-    employeeCode: initialData?.employeeCode ?? "",
-    name: initialData?.name ?? "",
-    email: initialData?.email ?? "",
-    branchId: initialData?.branchId ?? "",
-    departmentId: initialData?.departmentId ?? "",
-    positionId: initialData?.positionId ?? "",
-    gradeId: initialData?.gradeId ?? "",
-    employmentType: initialData?.employmentType ?? "full_time",
-    hireDate: initialData?.hireDate ?? "",
-    managerEmployeeId: initialData?.managerEmployeeId ?? "",
-    mentorEmployeeId: initialData?.mentorEmployeeId ?? "",
-    status: initialData?.status ?? "active",
-    templateId: initialData?.templateId ?? null,
-  });
 
   const resolvedMasterOptions = masterOptions ?? clientMasterOptions;
   const branches = resolvedMasterOptions?.branches ?? [];
@@ -152,30 +150,34 @@ export function EmployeeForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full space-y-6 text-slate-800">
-      {errorMsg && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{errorMsg}</div>}
+    <form onSubmit={handleSubmit} style={{ width: "100%", display: "grid", gap: 18 }}>
+      {errorMsg && (
+        <div style={{ borderRadius: 12, border: "1px solid #fecaca", background: "#fef2f2", padding: "10px 12px", color: "#b91c1c", fontSize: 14 }}>
+          {errorMsg}
+        </div>
+      )}
 
       <Card variant="elevated" style={{ padding: 0, overflow: "hidden" }}>
-        <section className="rounded-2xl border border-slate-200/90 bg-slate-50/80 p-6 sm:p-7">
-          <div className="mb-6 border-b border-slate-200 pb-4">
-            <CardTitle style={{ fontSize: 20 }}>🧾 基本情報</CardTitle>
+        <section style={sectionStyle}>
+          <div style={sectionHeaderStyle}>
+            <CardTitle style={{ fontSize: 22 }}>🧾 基本情報</CardTitle>
             <CardText style={{ marginTop: 8, fontSize: 14 }}>社員マスタに必要な項目を入力してください。</CardText>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div style={twoColumnGridStyle}>
             <Field label="社員番号" required>
-              <input className={controlClassName} placeholder="例: A00123" value={form.employeeCode} onChange={(e) => setForm((v) => ({ ...v, employeeCode: e.target.value }))} />
+              <input style={controlStyle} placeholder="例: A00123" value={form.employeeCode} onChange={(e) => setForm((v) => ({ ...v, employeeCode: e.target.value }))} />
             </Field>
 
             <Field label="氏名" required>
-              <input className={controlClassName} placeholder="例: 山田 太郎" value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} />
+              <input style={controlStyle} placeholder="例: 山田 太郎" value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} />
             </Field>
 
-            <Field label="メールアドレス" required className="md:col-span-2">
-              <input type="email" className={controlClassName} placeholder="name@example.co.jp" value={form.email} onChange={(e) => setForm((v) => ({ ...v, email: e.target.value }))} />
+            <Field label="メールアドレス" required wide>
+              <input type="email" style={controlStyle} placeholder="name@example.co.jp" value={form.email} onChange={(e) => setForm((v) => ({ ...v, email: e.target.value }))} />
             </Field>
             <Field label="雇用区分" required>
-              <select className={controlClassName} value={form.employmentType} onChange={(e) => setForm((v) => ({ ...v, employmentType: e.target.value }))}>
+              <select style={controlStyle} value={form.employmentType} onChange={(e) => setForm((v) => ({ ...v, employmentType: e.target.value }))}>
                 <option value="full_time">正社員</option>
                 <option value="contract">契約社員</option>
                 <option value="part_time">パート</option>
@@ -183,11 +185,11 @@ export function EmployeeForm({
               </select>
             </Field>
             <Field label="入社日">
-              <input type="date" className={controlClassName} value={form.hireDate} onChange={(e) => setForm((v) => ({ ...v, hireDate: e.target.value }))} />
+              <input type="date" style={controlStyle} value={form.hireDate} onChange={(e) => setForm((v) => ({ ...v, hireDate: e.target.value }))} />
             </Field>
 
             <Field label="支店" required>
-              <select className={controlClassName} value={form.branchId} onChange={(e) => setForm((v) => ({ ...v, branchId: e.target.value, departmentId: "" }))}>
+              <select style={controlStyle} value={form.branchId} onChange={(e) => setForm((v) => ({ ...v, branchId: e.target.value, departmentId: "" }))}>
                 <option value="">支店を選択</option>
                 {branches.map((item) => (
                   <option key={item.id} value={item.id}>{item.name}</option>
@@ -195,7 +197,7 @@ export function EmployeeForm({
               </select>
             </Field>
             <Field label="部署" required>
-              <select className={controlClassName} value={form.departmentId} onChange={(e) => setForm((v) => ({ ...v, departmentId: e.target.value }))}>
+              <select style={controlStyle} value={form.departmentId} onChange={(e) => setForm((v) => ({ ...v, departmentId: e.target.value }))}>
                 <option value="">部署を選択</option>
                 {filteredDepartments.map((item) => (
                   <option key={item.id} value={item.id}>{item.name}</option>
@@ -203,7 +205,7 @@ export function EmployeeForm({
               </select>
             </Field>
             <Field label="役職" required>
-              <select className={controlClassName} value={form.positionId} onChange={(e) => setForm((v) => ({ ...v, positionId: e.target.value }))}>
+              <select style={controlStyle} value={form.positionId} onChange={(e) => setForm((v) => ({ ...v, positionId: e.target.value }))}>
                 <option value="">役職を選択</option>
                 {positions.map((item) => (
                   <option key={item.id} value={item.id}>{item.name}</option>
@@ -212,7 +214,7 @@ export function EmployeeForm({
             </Field>
 
             <Field label="等級" required>
-              <select className={controlClassName} value={form.gradeId} onChange={(e) => setForm((v) => ({ ...v, gradeId: e.target.value }))}>
+              <select style={controlStyle} value={form.gradeId} onChange={(e) => setForm((v) => ({ ...v, gradeId: e.target.value }))}>
                 <option value="">等級を選択</option>
                 {grades.map((item) => (
                   <option key={item.id} value={item.id}>{item.name}</option>
@@ -221,7 +223,7 @@ export function EmployeeForm({
             </Field>
 
             <Field label="在籍状態" required>
-              <select className={controlClassName} value={form.status} onChange={(e) => setForm((v) => ({ ...v, status: e.target.value }))}>
+              <select style={controlStyle} value={form.status} onChange={(e) => setForm((v) => ({ ...v, status: e.target.value }))}>
                 <option value="active">在籍</option>
                 <option value="leave">休職</option>
                 <option value="inactive">退職/無効</option>
@@ -232,35 +234,41 @@ export function EmployeeForm({
       </Card>
 
       <Card style={{ padding: 0, overflow: "hidden" }}>
-        <section className="rounded-2xl border border-slate-200/90 bg-white p-6 sm:p-7">
-          <div className="mb-6 border-b border-slate-200 pb-4">
-            <CardTitle style={{ fontSize: 20 }}>🌱 組織・育成設定</CardTitle>
+        <section style={{ ...sectionStyle, background: "#ffffff" }}>
+          <div style={sectionHeaderStyle}>
+            <CardTitle style={{ fontSize: 22 }}>🌱 組織・育成設定</CardTitle>
             <CardText style={{ marginTop: 8, fontSize: 14 }}>育成体制や初期テンプレートの紐づけを設定します。</CardText>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <EmployeePicker label="直属上長" value={form.managerEmployeeId} onChange={(value) => setForm((v) => ({ ...v, managerEmployeeId: value }))} />
-            <EmployeePicker label="メンター" value={form.mentorEmployeeId} onChange={(value) => setForm((v) => ({ ...v, mentorEmployeeId: value }))} />
-            <Field label="年間イベントテンプレート" className="lg:col-span-2">
+          <div style={twoColumnGridStyle}>
+            <div style={{ minWidth: 0 }}>
+              <EmployeePicker label="直属上長" value={form.managerEmployeeId} onChange={(value) => setForm((v) => ({ ...v, managerEmployeeId: value }))} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <EmployeePicker label="メンター" value={form.mentorEmployeeId} onChange={(value) => setForm((v) => ({ ...v, mentorEmployeeId: value }))} />
+            </div>
+            <Field label="年間イベントテンプレート" wide>
               <TemplateSelect value={form.templateId ?? ""} onChange={(value) => setForm((v) => ({ ...v, templateId: value || null }))} />
             </Field>
           </div>
         </section>
       </Card>
 
-      <div className="sticky bottom-3 z-10 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur">
-        <div className="flex flex-wrap items-center gap-3">
-          <button type="submit" disabled={saving} className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
-            {saving ? "保存中..." : "保存する"}
-          </button>
-          <button type="button" className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" onClick={() => router.back()}>
-            戻る
-          </button>
-          <span className="text-xs text-slate-500">* は必須項目です</span>
-        </div>
+      <div style={actionBarStyle}>
+        <button type="submit" disabled={saving} style={primaryButtonStyle}>
+          {saving ? "保存中..." : "保存する"}
+        </button>
+        <button type="button" style={secondaryButtonStyle} onClick={() => router.back()}>
+          戻る
+        </button>
+        <span style={{ fontSize: 12, color: "#64748b" }}>* は必須項目です</span>
       </div>
 
-      {me.role === "admin" && <p className="text-xs text-slate-500">管理者は登録完了後に一覧画面からアカウント招待を実行できます。</p>}
+      {me.role === "admin" && (
+        <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
+          管理者は登録完了後に一覧画面からアカウント招待を実行できます。
+        </p>
+      )}
     </form>
   );
 }
@@ -268,21 +276,98 @@ export function EmployeeForm({
 function Field({
   label,
   required,
-  className,
   children,
+  wide,
 }: {
   label: string;
   required?: boolean;
-  className?: string;
   children: React.ReactNode;
+  wide?: boolean;
 }) {
   return (
-    <label className={`block min-w-0 space-y-1.5 ${className ?? ""}`}>
-      <span className="text-sm font-semibold text-slate-700">
+    <label style={{ ...fieldStyle, ...(wide ? { gridColumn: "1 / -1" } : null) }}>
+      <span style={fieldLabelStyle}>
         {label}
-        {required ? <span className="ml-1 text-rose-500">*</span> : null}
+        {required ? <span style={{ color: "#e11d48", marginLeft: 4 }}>*</span> : null}
       </span>
       {children}
     </label>
   );
 }
+
+const sectionStyle: CSSProperties = {
+  padding: 26,
+  background: "#f8fafc",
+};
+
+const sectionHeaderStyle: CSSProperties = {
+  borderBottom: "1px solid #e2e8f0",
+  paddingBottom: 14,
+  marginBottom: 16,
+};
+
+const twoColumnGridStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+  gap: 14,
+};
+
+const fieldStyle: CSSProperties = {
+  display: "grid",
+  gap: 6,
+  minWidth: 0,
+};
+
+const fieldLabelStyle: CSSProperties = {
+  fontSize: 14,
+  fontWeight: 700,
+  color: "#334155",
+};
+
+const controlStyle: CSSProperties = {
+  width: "100%",
+  height: 42,
+  borderRadius: 10,
+  border: "1px solid #cbd5e1",
+  padding: "0 12px",
+  fontSize: 14,
+  color: "#0f172a",
+  background: "#fff",
+  boxSizing: "border-box",
+};
+
+const actionBarStyle: CSSProperties = {
+  position: "sticky",
+  bottom: 12,
+  zIndex: 10,
+  borderRadius: 14,
+  border: "1px solid #e2e8f0",
+  background: "rgba(255,255,255,0.96)",
+  padding: 12,
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 10,
+  alignItems: "center",
+};
+
+const primaryButtonStyle: CSSProperties = {
+  height: 42,
+  borderRadius: 10,
+  border: "none",
+  padding: "0 18px",
+  fontWeight: 700,
+  color: "#fff",
+  background: "#0f172a",
+  cursor: "pointer",
+};
+
+const secondaryButtonStyle: CSSProperties = {
+  height: 42,
+  borderRadius: 10,
+  border: "1px solid #cbd5e1",
+  padding: "0 18px",
+  fontWeight: 700,
+  color: "#334155",
+  background: "#fff",
+  cursor: "pointer",
+};

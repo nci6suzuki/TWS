@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { CSSProperties, useEffect, useState } from "react";
 
 type Item = {
   id: string;
@@ -15,8 +15,6 @@ export function TemplateSelect({
   onChange: (value: string) => void;
 }) {
   const [items, setItems] = useState<Item[]>([]);
-  const selectClassName =
-    "h-11 min-w-0 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
 
   useEffect(() => {
     fetch("/api/templates/options")
@@ -26,7 +24,7 @@ export function TemplateSelect({
 
   return (
     <select
-      className={selectClassName}
+      style={selectStyle}
       value={value}
       onChange={(e) => onChange(e.target.value)}
     >
@@ -39,3 +37,15 @@ export function TemplateSelect({
     </select>
   );
 }
+
+const selectStyle: CSSProperties = {
+  width: "100%",
+  height: 42,
+  borderRadius: 10,
+  border: "1px solid #cbd5e1",
+  padding: "0 12px",
+  fontSize: 14,
+  color: "#0f172a",
+  background: "#fff",
+  boxSizing: "border-box",
+};

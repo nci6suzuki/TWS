@@ -1,7 +1,7 @@
 // src/components/pickers/employee-picker.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { CSSProperties, useEffect, useMemo, useState } from "react";
 
 type EmployeeOption = {
   id: string;
@@ -25,8 +25,6 @@ export function EmployeePicker({
   const [loading, setLoading] = useState(false);
 
   const debouncedKeyword = useDebouncedValue(keyword, 300);
-  const controlClassName =
-    "h-11 min-w-0 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
 
   useEffect(() => {
     let active = true;
@@ -75,18 +73,18 @@ export function EmployeePicker({
   }, [items, value]);
 
   return (
-    <div className="min-w-0 space-y-1.5">
-      <div className="text-sm font-medium text-slate-700">{label}</div>
+    <div style={{ minWidth: 0, display: "grid", gap: 6 }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color: "#334155" }}>{label}</div>
 
       <input
-        className={controlClassName}
+        style={pickerControlStyle}
         placeholder="氏名や社員番号で検索"
         value={keyword}
         onChange={(e) => setKeyword(e.target.value)}
       />
 
       <select
-        className={controlClassName}
+        style={pickerControlStyle}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -103,7 +101,7 @@ export function EmployeePicker({
       </select>
 
       {value && selectedLabel && (
-        <div className="text-xs text-slate-500">選択中：{selectedLabel}</div>
+        <div style={{ fontSize: 12, color: "#64748b" }}>選択中：{selectedLabel}</div>
       )}
     </div>
   );
@@ -124,3 +122,15 @@ function useDebouncedValue<T>(value: T, delay = 300) {
 
   return debounced;
 }
+
+const pickerControlStyle: CSSProperties = {
+  width: "100%",
+  height: 42,
+  borderRadius: 10,
+  border: "1px solid #cbd5e1",
+  padding: "0 12px",
+  fontSize: 14,
+  color: "#0f172a",
+  background: "#fff",
+  boxSizing: "border-box",
+};
