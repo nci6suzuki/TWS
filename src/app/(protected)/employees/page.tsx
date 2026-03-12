@@ -45,8 +45,8 @@ export default async function EmployeesPage({
 
   return (
     <div className="space-y-5">
-      <Card variant="elevated" style={{ padding: 0 }}>
-        <section className="flex flex-wrap items-end justify-between gap-3 p-6 sm:p-7">
+      <Card variant="elevated" style={{ padding: 0, overflow: "hidden" }}>
+        <section className="flex flex-wrap items-end justify-between gap-3 bg-slate-50 p-6 sm:p-7">
           <div>
             <CardTitle style={{ fontSize: 28 }}>社員一覧</CardTitle>
             <CardText style={{ marginTop: 10, fontSize: 14 }}>
