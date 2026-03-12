@@ -1,9 +1,10 @@
 // src/components/forms/followup-form.tsx
 "use client";
 
-import { useState } from "react";
+import { CSSProperties, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FollowupDetail, FollowupStatus, Me } from "@/types/api";
+import { Card, CardText, CardTitle } from "@/components/ui/card";
 
 type FollowupFormState = {
   fiscalYear: number;
@@ -76,135 +77,74 @@ export function FollowupForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {errorMsg && <div className="p-3 border rounded bg-red-50 text-sm">{errorMsg}</div>}
+    <form onSubmit={handleSubmit} style={{ width: "100%", display: "grid", gap: 18 }}>
+      {errorMsg && <div style={errorStyle}>{errorMsg}</div>}
 
-      <Field label="年度">
-        <input
-          type="number"
-          className="border rounded p-2 w-full"
-          value={form.fiscalYear}
-          onChange={(e) => setForm((v) => ({ ...v, fiscalYear: Number(e.target.value) }))}
-        />
-      </Field>
+      <Card variant="elevated" style={{ padding: 0, overflow: "hidden" }}>
+        <section style={sectionStyle}>
+          <div style={sectionHeaderStyle}>
+            <CardTitle style={{ fontSize: 22 }}>🎯 フォロー割当情報</CardTitle>
+            <CardText style={{ marginTop: 8, fontSize: 14 }}>
+              対象社員・担当者・期限・優先度を設定してフォローを管理します。
+            </CardText>
+          </div>
 
-      <Field label="四半期">
-        <select
-          className="border rounded p-2 w-full"
-          value={form.quarter}
-          onChange={(e) =>
-            setForm((v) => ({
-              ...v,
-              quarter: Number(e.target.value) as 1 | 2 | 3 | 4,
-            }))
-          }
-        >
-          <option value={1}>Q1</option>
-          <option value={2}>Q2</option>
-          <option value={3}>Q3</option>
-          <option value={4}>Q4</option>
-        </select>
-      </Field>
+          <div style={twoColumnGridStyle}>
+            <Field label="年度" required>
+              <input type="number" style={controlStyle} value={form.fiscalYear} onChange={(e) => setForm((v) => ({ ...v, fiscalYear: Number(e.target.value) }))} />
+            </Field>
+            <Field label="四半期" required>
+              <select style={controlStyle} value={form.quarter} onChange={(e) => setForm((v) => ({ ...v, quarter: Number(e.target.value) as 1 | 2 | 3 | 4 }))}>
+                <option value={1}>Q1</option>
+                <option value={2}>Q2</option>
+                <option value={3}>Q3</option>
+                <option value={4}>Q4</option>
+              </select>
+            </Field>
+            <Field label="対象社員ID" required>
+              <input style={controlStyle} value={form.employeeId} onChange={(e) => setForm((v) => ({ ...v, employeeId: e.target.value }))} />
+            </Field>
+            <Field label="担当者ID" required>
+              <input style={controlStyle} value={form.assigneeEmployeeId} onChange={(e) => setForm((v) => ({ ...v, assigneeEmployeeId: e.target.value }))} />
+            </Field>
+            <Field label="面談種別" required>
+              <select style={controlStyle} value={form.followupType} onChange={(e) => setForm((v) => ({ ...v, followupType: e.target.value as FollowupFormState["followupType"] }))}>
+                <option value="retention">定着</option>
+                <option value="career">キャリア</option>
+                <option value="performance">成果/業務</option>
+                <option value="care">ケア</option>
+              </select>
+            </Field>
+            <Field label="期限" required>
+              <input type="date" style={controlStyle} value={form.dueDate} onChange={(e) => setForm((v) => ({ ...v, dueDate: e.target.value }))} />
+            </Field>
+            <Field label="優先度" required>
+              <select style={controlStyle} value={form.priority} onChange={(e) => setForm((v) => ({ ...v, priority: Number(e.target.value) as 1 | 2 | 3 }))}>
+                <option value={1}>高</option>
+                <option value={2}>中</option>
+                <option value={3}>低</option>
+              </select>
+            </Field>
+            <Field label="状態" required>
+              <select style={controlStyle} value={form.status} onChange={(e) => setForm((v) => ({ ...v, status: e.target.value as FollowupStatus }))}>
+                <option value="pending">未着手</option>
+                <option value="in_progress">進行中</option>
+                <option value="done">完了</option>
+                <option value="overdue">期限超過</option>
+              </select>
+            </Field>
+            <Field label="備考" wide>
+              <textarea style={textareaStyle} value={form.note} onChange={(e) => setForm((v) => ({ ...v, note: e.target.value }))} />
+            </Field>
+          </div>
+        </section>
+      </Card>
 
-      <Field label="対象社員ID（仮）">
-        <input
-          className="border rounded p-2 w-full"
-          value={form.employeeId}
-          onChange={(e) => setForm((v) => ({ ...v, employeeId: e.target.value }))}
-        />
-      </Field>
-
-      <Field label="面談種別">
-        <select
-          className="border rounded p-2 w-full"
-          value={form.followupType}
-          onChange={(e) =>
-            setForm((v) => ({
-              ...v,
-              followupType: e.target.value as FollowupFormState["followupType"],
-            }))
-          }
-        >
-          <option value="retention">定着</option>
-          <option value="career">キャリア</option>
-          <option value="performance">成果/業務</option>
-          <option value="care">ケア</option>
-        </select>
-      </Field>
-
-      <Field label="担当者ID（仮）">
-        <input
-          className="border rounded p-2 w-full"
-          value={form.assigneeEmployeeId}
-          onChange={(e) => setForm((v) => ({ ...v, assigneeEmployeeId: e.target.value }))}
-        />
-      </Field>
-
-      <Field label="期限">
-        <input
-          type="date"
-          className="border rounded p-2 w-full"
-          value={form.dueDate}
-          onChange={(e) => setForm((v) => ({ ...v, dueDate: e.target.value }))}
-        />
-      </Field>
-
-      <Field label="優先度">
-        <select
-          className="border rounded p-2 w-full"
-          value={form.priority}
-          onChange={(e) =>
-            setForm((v) => ({
-              ...v,
-              priority: Number(e.target.value) as 1 | 2 | 3,
-            }))
-          }
-        >
-          <option value={1}>高</option>
-          <option value={2}>中</option>
-          <option value={3}>低</option>
-        </select>
-      </Field>
-
-      <Field label="状態">
-        <select
-          className="border rounded p-2 w-full"
-          value={form.status}
-          onChange={(e) =>
-            setForm((v) => ({
-              ...v,
-              status: e.target.value as FollowupStatus,
-            }))
-          }
-        >
-          <option value="pending">未着手</option>
-          <option value="in_progress">進行中</option>
-          <option value="done">完了</option>
-          <option value="overdue">期限超過</option>
-        </select>
-      </Field>
-
-      <Field label="備考">
-        <textarea
-          className="border rounded p-2 w-full min-h-24"
-          value={form.note}
-          onChange={(e) => setForm((v) => ({ ...v, note: e.target.value }))}
-        />
-      </Field>
-
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="px-4 py-2 rounded border bg-black text-white disabled:opacity-50"
-        >
+      <div style={actionBarStyle}>
+        <button type="submit" disabled={saving} style={primaryButtonStyle}>
           {saving ? "保存中..." : "保存する"}
         </button>
-        <button
-          type="button"
-          className="px-4 py-2 rounded border"
-          onClick={() => router.back()}
-        >
+        <button type="button" style={secondaryButtonStyle} onClick={() => router.back()}>
           戻る
         </button>
       </div>
@@ -212,11 +152,26 @@ export function FollowupForm({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, required, children, wide }: { label: string; required?: boolean; children: React.ReactNode; wide?: boolean }) {
   return (
-    <div className="space-y-1">
-      <div className="text-sm font-medium">{label}</div>
+    <label style={{ ...fieldStyle, ...(wide ? { gridColumn: "1 / -1" } : null) }}>
+      <span style={fieldLabelStyle}>
+        {label}
+        {required ? <span style={{ color: "#e11d48", marginLeft: 4 }}>*</span> : null}
+      </span>
       {children}
-    </div>
+    </label>
   );
 }
+
+const sectionStyle: CSSProperties = { padding: 26, background: "#f8fafc" };
+const sectionHeaderStyle: CSSProperties = { borderBottom: "1px solid #e2e8f0", paddingBottom: 14, marginBottom: 16 };
+const twoColumnGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 };
+const fieldStyle: CSSProperties = { display: "grid", gap: 6, minWidth: 0 };
+const fieldLabelStyle: CSSProperties = { fontSize: 13, fontWeight: 700, color: "#1f2937" };
+const controlStyle: CSSProperties = { height: 40, border: "1px solid #cbd5e1", borderRadius: 10, padding: "0 12px", fontSize: 14, background: "#fff" };
+const textareaStyle: CSSProperties = { ...controlStyle, height: "auto", minHeight: 120, padding: "10px 12px", resize: "vertical" };
+const errorStyle: CSSProperties = { borderRadius: 12, border: "1px solid #fecaca", background: "#fef2f2", padding: "10px 12px", color: "#b91c1c", fontSize: 14 };
+const actionBarStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" };
+const primaryButtonStyle: CSSProperties = { border: "none", borderRadius: 10, background: "#0f172a", color: "#fff", height: 40, padding: "0 18px", fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: 1 };
+const secondaryButtonStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", color: "#0f172a", height: 40, padding: "0 16px", fontSize: 14, fontWeight: 600, cursor: "pointer" };

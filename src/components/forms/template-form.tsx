@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { CSSProperties, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Card, CardText, CardTitle } from "@/components/ui/card";
 
 type TemplateEventForm = {
   id?: string;
@@ -117,150 +118,116 @@ export function TemplateForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {errorMsg && <div className="p-3 border rounded bg-red-50 text-sm">{errorMsg}</div>}
+    <form onSubmit={handleSubmit} style={{ width: "100%", display: "grid", gap: 18 }}>
+      {errorMsg && <div style={errorStyle}>{errorMsg}</div>}
 
-      <Field label="テンプレート名">
-        <input
-          className="border rounded p-2 w-full"
-          value={form.name}
-          onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))}
-        />
-      </Field>
-
-      <Field label="対象職種">
-        <input
-          className="border rounded p-2 w-full"
-          value={form.targetJobType}
-          onChange={(e) => setForm((v) => ({ ...v, targetJobType: e.target.value }))}
-          placeholder="例：新卒営業 / 中途営業"
-        />
-      </Field>
-
-      <Field label="対象等級">
-        <input
-          className="border rounded p-2 w-full"
-          value={form.targetGrade}
-          onChange={(e) => setForm((v) => ({ ...v, targetGrade: e.target.value }))}
-          placeholder="例：一般 / 主任"
-        />
-      </Field>
-
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={form.isActive}
-          onChange={(e) => setForm((v) => ({ ...v, isActive: e.target.checked }))}
-        />
-        有効にする
-      </label>
-
-      <div className="space-y-3">
-        <div className="font-medium">イベント定義</div>
-
-        {form.events.map((event, index) => (
-          <div key={index} className="border rounded p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="font-medium text-sm">イベント {index + 1}</div>
-              {form.events.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeEvent(index)}
-                  className="text-sm text-red-600 underline"
-                >
-                  削除
-                </button>
-              )}
-            </div>
-
-            <Field label="種別">
-              <select
-                className="border rounded p-2 w-full"
-                value={event.eventType}
-                onChange={(e) => updateEvent(index, { eventType: e.target.value })}
-              >
-                <option value="interview">面談</option>
-                <option value="training">研修</option>
-                <option value="evaluation">評価</option>
-                <option value="other">その他</option>
-              </select>
-            </Field>
-
-            <Field label="タイトル">
-              <input
-                className="border rounded p-2 w-full"
-                value={event.title}
-                onChange={(e) => updateEvent(index, { title: e.target.value })}
-              />
-            </Field>
-
-            <Field label="入社日から何日後">
-              <input
-                type="number"
-                className="border rounded p-2 w-full"
-                value={event.offsetDaysFromHire}
-                onChange={(e) =>
-                  updateEvent(index, { offsetDaysFromHire: Number(e.target.value) })
-                }
-              />
-            </Field>
-
-            <Field label="担当者種別">
-              <select
-                className="border rounded p-2 w-full"
-                value={event.defaultOwnerType}
-                onChange={(e) => updateEvent(index, { defaultOwnerType: e.target.value })}
-              >
-                <option value="manager">上長</option>
-                <option value="mentor">メンター</option>
-                <option value="hr">人事</option>
-              </select>
-            </Field>
-
-            <Field label="優先度">
-              <select
-                className="border rounded p-2 w-full"
-                value={event.priority}
-                onChange={(e) => updateEvent(index, { priority: Number(e.target.value) })}
-              >
-                <option value={1}>高</option>
-                <option value={2}>中</option>
-                <option value={3}>低</option>
-              </select>
-            </Field>
-
-            <Field label="説明">
-              <textarea
-                className="border rounded p-2 w-full min-h-20"
-                value={event.description}
-                onChange={(e) => updateEvent(index, { description: e.target.value })}
-              />
-            </Field>
+      <Card variant="elevated" style={{ padding: 0, overflow: "hidden" }}>
+        <section style={sectionStyle}>
+          <div style={sectionHeaderStyle}>
+            <CardTitle style={{ fontSize: 22 }}>🧩 テンプレート基本情報</CardTitle>
+            <CardText style={{ marginTop: 8, fontSize: 14 }}>
+              対象社員条件とテンプレートの公開状態を設定します。
+            </CardText>
           </div>
-        ))}
 
-        <button
-          type="button"
-          onClick={addEvent}
-          className="px-3 py-2 rounded border text-sm"
-        >
-          イベントを追加
-        </button>
-      </div>
+          <div style={twoColumnGridStyle}>
+            <Field label="テンプレート名" required wide>
+              <input style={controlStyle} value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} />
+            </Field>
 
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="px-4 py-2 rounded border bg-black text-white disabled:opacity-50"
-        >
+            <Field label="対象職種">
+              <input style={controlStyle} value={form.targetJobType} onChange={(e) => setForm((v) => ({ ...v, targetJobType: e.target.value }))} placeholder="例：新卒営業 / 中途営業" />
+            </Field>
+
+            <Field label="対象等級">
+              <input style={controlStyle} value={form.targetGrade} onChange={(e) => setForm((v) => ({ ...v, targetGrade: e.target.value }))} placeholder="例：一般 / 主任" />
+            </Field>
+
+            <label style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
+              <span style={fieldLabelStyle}>状態</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, color: "#0f172a" }}>
+                <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((v) => ({ ...v, isActive: e.target.checked }))} />
+                有効にする
+              </span>
+            </label>
+          </div>
+        </section>
+      </Card>
+
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <section style={{ ...sectionStyle, background: "#ffffff" }}>
+          <div style={sectionHeaderStyle}>
+            <CardTitle style={{ fontSize: 22 }}>🗓️ イベント定義</CardTitle>
+            <CardText style={{ marginTop: 8, fontSize: 14 }}>
+              面談・研修などのイベント内容、タイミング、担当者ルールを設定します。
+            </CardText>
+          </div>
+
+          <div style={{ display: "grid", gap: 14 }}>
+            {form.events.map((event, index) => (
+              <div key={index} style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, display: "grid", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>イベント {index + 1}</div>
+                  {form.events.length > 1 && (
+                    <button type="button" onClick={() => removeEvent(index)} style={{ border: "none", background: "transparent", color: "#dc2626", fontSize: 13, textDecoration: "underline", cursor: "pointer" }}>
+                      削除
+                    </button>
+                  )}
+                </div>
+
+                <div style={twoColumnGridStyle}>
+                  <Field label="種別" required>
+                    <select style={controlStyle} value={event.eventType} onChange={(e) => updateEvent(index, { eventType: e.target.value })}>
+                      <option value="interview">面談</option>
+                      <option value="training">研修</option>
+                      <option value="evaluation">評価</option>
+                      <option value="other">その他</option>
+                    </select>
+                  </Field>
+
+                  <Field label="タイトル" required>
+                    <input style={controlStyle} value={event.title} onChange={(e) => updateEvent(index, { title: e.target.value })} />
+                  </Field>
+
+                  <Field label="入社日から何日後" required>
+                    <input type="number" style={controlStyle} value={event.offsetDaysFromHire} onChange={(e) => updateEvent(index, { offsetDaysFromHire: Number(e.target.value) })} />
+                  </Field>
+
+                  <Field label="担当者種別" required>
+                    <select style={controlStyle} value={event.defaultOwnerType} onChange={(e) => updateEvent(index, { defaultOwnerType: e.target.value })}>
+                      <option value="manager">上長</option>
+                      <option value="mentor">メンター</option>
+                      <option value="hr">人事</option>
+                    </select>
+                  </Field>
+
+                  <Field label="優先度" required>
+                    <select style={controlStyle} value={event.priority} onChange={(e) => updateEvent(index, { priority: Number(e.target.value) })}>
+                      <option value={1}>高</option>
+                      <option value={2}>中</option>
+                      <option value={3}>低</option>
+                    </select>
+                  </Field>
+
+                  <Field label="説明" wide>
+                    <textarea style={textareaStyle} value={event.description} onChange={(e) => updateEvent(index, { description: e.target.value })} />
+                  </Field>
+                </div>
+              </div>
+            ))}
+
+            <button type="button" onClick={addEvent} style={secondaryButtonStyle}>
+              イベントを追加
+            </button>
+          </div>
+        </section>
+      </Card>
+
+      <div style={actionBarStyle}>
+        <button type="submit" disabled={saving} style={primaryButtonStyle}>
           {saving ? "保存中..." : "保存する"}
         </button>
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="px-4 py-2 rounded border"
-        >
+        <button type="button" onClick={() => router.back()} style={secondaryButtonStyle}>
           戻る
         </button>
       </div>
@@ -268,17 +235,26 @@ export function TemplateForm({
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, required, children, wide }: { label: string; required?: boolean; children: React.ReactNode; wide?: boolean }) {
   return (
-    <div className="space-y-1">
-      <div className="text-sm font-medium">{label}</div>
+    <label style={{ ...fieldStyle, ...(wide ? { gridColumn: "1 / -1" } : null) }}>
+      <span style={fieldLabelStyle}>
+        {label}
+        {required ? <span style={{ color: "#e11d48", marginLeft: 4 }}>*</span> : null}
+      </span>
       {children}
-    </div>
+    </label>
   );
 }
+
+const sectionStyle: CSSProperties = { padding: 26, background: "#f8fafc" };
+const sectionHeaderStyle: CSSProperties = { borderBottom: "1px solid #e2e8f0", paddingBottom: 14, marginBottom: 16 };
+const twoColumnGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 };
+const fieldStyle: CSSProperties = { display: "grid", gap: 6, minWidth: 0 };
+const fieldLabelStyle: CSSProperties = { fontSize: 13, fontWeight: 700, color: "#1f2937" };
+const controlStyle: CSSProperties = { height: 40, border: "1px solid #cbd5e1", borderRadius: 10, padding: "0 12px", fontSize: 14, background: "#fff" };
+const textareaStyle: CSSProperties = { ...controlStyle, height: "auto", minHeight: 100, padding: "10px 12px", resize: "vertical" };
+const errorStyle: CSSProperties = { borderRadius: 12, border: "1px solid #fecaca", background: "#fef2f2", padding: "10px 12px", color: "#b91c1c", fontSize: 14 };
+const actionBarStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" };
+const primaryButtonStyle: CSSProperties = { border: "none", borderRadius: 10, background: "#0f172a", color: "#fff", height: 40, padding: "0 18px", fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: 1 };
+const secondaryButtonStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", color: "#0f172a", height: 40, padding: "0 16px", fontSize: 14, fontWeight: 600, cursor: "pointer" };

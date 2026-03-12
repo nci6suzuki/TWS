@@ -1,7 +1,7 @@
 // src/components/forms/interview-form.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { CSSProperties, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { createInterviewSchema } from "@/lib/validations/interview";
 import type { Me, FollowupDetail } from "@/types/api";
+import { Card, CardText, CardTitle } from "@/components/ui/card";
 
 type FormValues = z.infer<typeof createInterviewSchema>;
 
@@ -26,16 +27,15 @@ type AnnualEventPreset = {
   description: string;
 };
 
-export function InterviewForm({ 
-  me, 
+export function InterviewForm({
+  me,
   preset,
   annualEvent,
-}: { 
+}: {
   me: Me;
   preset: FollowupDetail | null;
   annualEvent: AnnualEventPreset | null;
 }) {
-  
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -45,24 +45,24 @@ export function InterviewForm({
   const employeeIdFromQuery = searchParams.get("employeeId") ?? undefined;
 
   const defaultEmployeeId =
-  preset?.employeeId ??
-  annualEvent?.employeeId ??
-  employeeIdFromQuery ??
-  "";
-  const defaultInterviewerId = me.employeeId; // 通常はログイン者
+    preset?.employeeId ??
+    annualEvent?.employeeId ??
+    employeeIdFromQuery ??
+    "";
+  const defaultInterviewerId = me.employeeId;
   
   const defaultValues: Partial<FormValues> = useMemo(() => {
     const nowIso = new Date().toISOString().slice(0, 16);
     const localDatetime = toDatetimeLocal(nowIso);
-    
+
     return {
       employeeId: defaultEmployeeId,
       interviewerEmployeeId: defaultInterviewerId,
       interviewDate: localDatetime,
       interviewType:
-      mapFollowupTypeToInterviewType(preset?.followupType) ??
-      mapAnnualEventTypeToInterviewType(annualEvent?.eventType) ??
-      "retention",
+        mapFollowupTypeToInterviewType(preset?.followupType) ??
+        mapAnnualEventTypeToInterviewType(annualEvent?.eventType) ??
+        "retention",
       assignmentId: preset?.id,
       annualEventId: annualEvent?.id,
       visibility: "hr",
@@ -88,7 +88,6 @@ export function InterviewForm({
     setSubmitting(true);
     setErrorMsg(null);
     try {
-      // datetime-local → ISO に整形（API側がISO期待の場合）
       const payload = {
         ...values,
         interviewDate: fromDatetimeLocal(values.interviewDate),
@@ -107,7 +106,6 @@ export function InterviewForm({
 
       const id = json.data.id as string;
 
-      // 作成後の遷移：記録詳細へ
       router.push(`/interviews/${id}`);
       router.refresh();
     } catch (e: any) {
@@ -121,16 +119,12 @@ export function InterviewForm({
   const assignmentLinked = !!watched.assignmentId;
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-w-3xl">
-      {errorMsg && (
-        <div className="p-3 border rounded bg-red-50 text-sm">
-          {errorMsg}
-        </div>
-      )}
+    <form onSubmit={form.handleSubmit(onSubmit)} style={{ width: "100%", display: "grid", gap: 18 }}>
+      {errorMsg && <div style={errorStyle}>{errorMsg}</div>}
 
       {preset?.id && (
-        <div className="p-3 border rounded bg-gray-50 text-sm">
-          <div className="font-medium">フォロー割当から作成</div>
+        <div style={{ ...infoStyle, background: "#f8fafc", borderColor: "#dbeafe" }}>
+          <div style={{ fontWeight: 700 }}>フォロー割当から作成</div>
           <div>対象社員：{preset.employeeName}</div>
           <div>種別：{preset.followupType} / 期限：{preset.dueDate}</div>
           <div>担当：{preset.assigneeName}</div>
@@ -138,8 +132,8 @@ export function InterviewForm({
       )}
 
       {annualEvent?.id && (
-        <div className="p-3 border rounded bg-blue-50 text-sm">
-          <div className="font-medium">年間イベントから作成</div>
+        <div style={{ ...infoStyle, background: "#eff6ff", borderColor: "#bfdbfe" }}>
+          <div style={{ fontWeight: 700 }}>年間イベントから作成</div>
           <div>対象社員：{annualEvent.employeeName}</div>
           <div>タイトル：{annualEvent.title}</div>
           <div>予定日：{annualEvent.scheduledDate}</div>
@@ -147,136 +141,140 @@ export function InterviewForm({
         </div>
       )}
 
-      {/* 基本情報 */}
-      <section className="p-4 border rounded space-y-3">
-        <h2 className="font-medium">基本情報</h2>
-
-        <Field label="対象社員ID（仮）" hint="まずはID入力。次にEmployeePickerへ置換推奨">
-          <input
-            className="w-full border rounded p-2"
-            {...form.register("employeeId")}
-            placeholder="employee uuid"
-          />
-          <ErrorText msg={form.formState.errors.employeeId?.message} />
-        </Field>
-
-        <Field label="面談者ID（仮）" hint="通常はログイン者のemployeeIdを自動セット">
-          <input className="w-full border rounded p-2" {...form.register("interviewerEmployeeId")} />
-          <ErrorText msg={form.formState.errors.interviewerEmployeeId?.message} />
-        </Field>
-
-        <Field label="面談日時">
-          <input
-            type="datetime-local"
-            className="border rounded p-2"
-            {...form.register("interviewDate")}
-          />
-          <ErrorText msg={form.formState.errors.interviewDate?.message} />
-        </Field>
-
-        <Field label="面談種別">
-          <select className="border rounded p-2" {...form.register("interviewType")}>
-            <option value="retention">定着</option>
-            <option value="career">キャリア</option>
-            <option value="performance">成果/業務</option>
-            <option value="care">ケア</option>
-            <option value="other">その他</option>
-          </select>
-          <ErrorText msg={form.formState.errors.interviewType?.message} />
-        </Field>
-
-        <Field label="公開範囲">
-          <select className="border rounded p-2" {...form.register("visibility")}>
-            <option value="self">本人公開</option>
-            <option value="manager">上長まで</option>
-            <option value="hr">人事まで</option>
-            <option value="private_hr">人事機密</option>
-          </select>
-          <ErrorText msg={form.formState.errors.visibility?.message} />
-        </Field>
-
-        {/* フォロー割当連携 */}
-        <div className="pt-2 border-t space-y-2">
-          <div className="flex items-center gap-2">
-            <input type="checkbox" {...form.register("autoCompleteAssignment")} />
-            <span className="text-sm">フォロー割当を完了化する</span>
+      <Card variant="elevated" style={{ padding: 0, overflow: "hidden" }}>
+        <section style={sectionStyle}>
+          <div style={sectionHeaderStyle}>
+            <CardTitle style={{ fontSize: 22 }}>📝 基本情報</CardTitle>
+            <CardText style={{ marginTop: 8, fontSize: 14 }}>
+              面談の対象者・実施者・日時・公開範囲を設定します。
+            </CardText>
           </div>
           
-        <div className="flex items-center gap-2">
-          <input type="checkbox" {...form.register("autoCompleteAnnualEvent")} />
-          <span className="text-sm">年間イベントを完了化する</span>
-        </div>
-        
-        {assignmentLinked && (
-          <div className="text-xs text-gray-600">assignmentId: {watched.assignmentId}</div>
-        )}
-        {!!watched.annualEventId && (
-          <div className="text-xs text-gray-600">annualEventId: {watched.annualEventId}</div>
-        )}
-        </div>
-      </section>
+          <div style={twoColumnGridStyle}>
+            <Field label="対象社員ID" hint="まずはID入力。次にEmployeePickerへ置換推奨" required>
+              <input style={controlStyle} {...form.register("employeeId")} placeholder="employee uuid" />
+              <ErrorText msg={form.formState.errors.employeeId?.message} />
+            </Field>
 
-      {/* 面談内容 */}
-      <section className="p-4 border rounded space-y-3">
-        <h2 className="font-medium">面談内容</h2>
+            <Field label="面談者ID" hint="通常はログイン者のemployeeIdを自動セット" required>
+              <input style={controlStyle} {...form.register("interviewerEmployeeId")} />
+              <ErrorText msg={form.formState.errors.interviewerEmployeeId?.message} />
+            </Field>
 
-        <Field label="事実（観察・出来事）" hint="評価や解釈ではなく、起きたことを記述">
-          <textarea className="w-full border rounded p-2 min-h-24" {...form.register("factsObserved")} />
-        </Field>
+            <Field label="面談日時" required>
+              <input type="datetime-local" style={controlStyle} {...form.register("interviewDate")} />
+              <ErrorText msg={form.formState.errors.interviewDate?.message} />
+            </Field>
 
-        <Field label="本人の発言">
-          <textarea className="w-full border rounded p-2 min-h-20" {...form.register("employeeVoice")} />
-        </Field>
+            <Field label="面談種別" required>
+              <select style={controlStyle} {...form.register("interviewType")}>
+                <option value="retention">定着</option>
+                <option value="career">キャリア</option>
+                <option value="performance">成果/業務</option>
+                <option value="care">ケア</option>
+                <option value="other">その他</option>
+              </select>
+              <ErrorText msg={form.formState.errors.interviewType?.message} />
+            </Field>
 
-        <Field label="良かった点">
-          <textarea className="w-full border rounded p-2 min-h-20" {...form.register("positivePoints")} />
-        </Field>
+            <Field label="公開範囲" required>
+              <select style={controlStyle} {...form.register("visibility")}>
+                <option value="self">本人公開</option>
+                <option value="manager">上長まで</option>
+                <option value="hr">人事まで</option>
+                <option value="private_hr">人事機密</option>
+              </select>
+              <ErrorText msg={form.formState.errors.visibility?.message} />
+            </Field>
 
-        <Field label="課題">
-          <textarea className="w-full border rounded p-2 min-h-20" {...form.register("issues")} />
-        </Field>
+            <label style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
+              <span style={fieldLabelStyle}>連携設定</span>
+              <div style={{ display: "grid", gap: 8, fontSize: 14 }}>
+                <label style={checkboxLabelStyle}>
+                  <input type="checkbox" {...form.register("autoCompleteAssignment")} />
+                  フォロー割当を完了化する
+                </label>
+                <label style={checkboxLabelStyle}>
+                  <input type="checkbox" {...form.register("autoCompleteAnnualEvent")} />
+                  年間イベントを完了化する
+                </label>
+                {assignmentLinked && <div style={subtleTextStyle}>assignmentId: {watched.assignmentId}</div>}
+                {!!watched.annualEventId && <div style={subtleTextStyle}>annualEventId: {watched.annualEventId}</div>}
+              </div>
+            </label>
+          </div>
+        </section>
+      </Card>
 
-        <Field label="対応方針">
-          <textarea className="w-full border rounded p-2 min-h-20" {...form.register("responsePolicy")} />
-        </Field>
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <section style={{ ...sectionStyle, background: "#ffffff" }}>
+          <div style={sectionHeaderStyle}>
+            <CardTitle style={{ fontSize: 22 }}>🗂️ 面談内容</CardTitle>
+            <CardText style={{ marginTop: 8, fontSize: 14 }}>
+              面談の事実・発言・課題・対応方針を記録します。
+            </CardText>
+          </div>
 
-        <div className="text-xs text-gray-600">
-          ※「事実/発言/良かった点/課題/方針」のいずれかは必須（空欄のみ保存不可）
-        </div>
-        <ErrorText msg={form.formState.errors.root?.message} />
-      </section>
+          <div style={{ display: "grid", gap: 14 }}>
+            <Field label="事実（観察・出来事）" hint="評価や解釈ではなく、起きたことを記述" wide>
+              <textarea style={textareaStyle} {...form.register("factsObserved")} />
+            </Field>
 
-      {/* 次回アクション */}
-      <section className="p-4 border rounded space-y-3">
-        <h2 className="font-medium">次回アクション</h2>
+            <Field label="本人の発言" wide>
+              <textarea style={textareaStyle} {...form.register("employeeVoice")} />
+            </Field>
 
-        <Field label="本人アクション（次回まで）">
-          <textarea className="w-full border rounded p-2 min-h-16" {...form.register("actionEmployee")} />
-        </Field>
+            <Field label="良かった点" wide>
+              <textarea style={textareaStyle} {...form.register("positivePoints")} />
+            </Field>
 
-        <Field label="会社/上長アクション（次回まで）">
-          <textarea className="w-full border rounded p-2 min-h-16" {...form.register("actionCompany")} />
-        </Field>
+            <Field label="課題" wide>
+              <textarea style={textareaStyle} {...form.register("issues")} />
+            </Field>
 
-        <Field label="次回面談予定日（任意）">
-          <input type="date" className="border rounded p-2" {...form.register("nextInterviewDate")} />
-        </Field>
-      </section>
+            <Field label="対応方針" wide>
+              <textarea style={textareaStyle} {...form.register("responsePolicy")} />
+            </Field>
 
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={submitting}
-          className="px-4 py-2 rounded border bg-black text-white disabled:opacity-50"
-        >
+            <div style={subtleTextStyle}>
+              ※「事実/発言/良かった点/課題/方針」のいずれかは必須（空欄のみ保存不可）
+            </div>
+            <ErrorText msg={form.formState.errors.root?.message} />
+          </div>
+        </section>
+      </Card>
+
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <section style={{ ...sectionStyle, background: "#ffffff" }}>
+          <div style={sectionHeaderStyle}>
+            <CardTitle style={{ fontSize: 22 }}>✅ 次回アクション</CardTitle>
+            <CardText style={{ marginTop: 8, fontSize: 14 }}>
+              次回までに実施する本人・会社側のアクションを整理します。
+            </CardText>
+          </div>
+
+          <div style={{ display: "grid", gap: 14 }}>
+            <Field label="本人アクション（次回まで）" wide>
+              <textarea style={textareaStyle} {...form.register("actionEmployee")} />
+            </Field>
+
+            <Field label="会社/上長アクション（次回まで）" wide>
+              <textarea style={textareaStyle} {...form.register("actionCompany")} />
+            </Field>
+
+            <Field label="次回面談予定日（任意)">
+              <input type="date" style={controlStyle} {...form.register("nextInterviewDate")} />
+            </Field>
+          </div>
+        </section>
+      </Card>
+
+      <div style={actionBarStyle}>
+        <button type="submit" disabled={submitting} style={primaryButtonStyle}>
           {submitting ? "保存中..." : "保存する"}
         </button>
 
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="px-4 py-2 rounded border"
-        >
+        <button type="button" onClick={() => router.back()} style={secondaryButtonStyle}>
           戻る
         </button>
       </div>
@@ -284,22 +282,36 @@ export function InterviewForm({
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: any }) {
+function Field({
+  label,
+  hint,
+  required,
+  children,
+  wide,
+}: {
+  label: string;
+  hint?: string;
+  required?: boolean;
+  children: React.ReactNode;
+  wide?: boolean;
+}) {
   return (
-    <div className="space-y-1">
-      <div className="text-sm font-medium">{label}</div>
-      {hint && <div className="text-xs text-gray-600">{hint}</div>}
+    <label style={{ ...fieldStyle, ...(wide ? { gridColumn: "1 / -1" } : null) }}>
+      <span style={fieldLabelStyle}>
+        {label}
+        {required ? <span style={{ color: "#e11d48", marginLeft: 4 }}>*</span> : null}
+      </span>
+      {hint && <span style={hintStyle}>{hint}</span>}
       {children}
-    </div>
+    </label>
   );
 }
 
 function ErrorText({ msg }: { msg?: string }) {
   if (!msg) return null;
-  return <div className="text-xs text-red-600">{msg}</div>;
+  return <div style={{ color: "#dc2626", fontSize: 12 }}>{msg}</div>;
 }
 
-// followupType -> interviewType 変換（preset用）
 function mapFollowupTypeToInterviewType(v?: string) {
   if (!v) return null;
   if (v === "retention") return "retention";
@@ -309,7 +321,6 @@ function mapFollowupTypeToInterviewType(v?: string) {
   return "other";
 }
 
-// datetime-local <-> ISO
 function toDatetimeLocal(iso: string) {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -322,8 +333,6 @@ function toDatetimeLocal(iso: string) {
 }
 
 function fromDatetimeLocal(local: string) {
-  // local: "YYYY-MM-DDTHH:mm" -> ISO
-  // ブラウザのローカル時間をISOへ
   const d = new Date(local);
   return d.toISOString();
 }
@@ -333,3 +342,19 @@ function mapAnnualEventTypeToInterviewType(v?: string) {
   if (v === "interview") return "retention";
   return "other";
 }
+
+const sectionStyle: CSSProperties = { padding: 26, background: "#f8fafc" };
+const sectionHeaderStyle: CSSProperties = { borderBottom: "1px solid #e2e8f0", paddingBottom: 14, marginBottom: 16 };
+const twoColumnGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 };
+const fieldStyle: CSSProperties = { display: "grid", gap: 6, minWidth: 0 };
+const fieldLabelStyle: CSSProperties = { fontSize: 13, fontWeight: 700, color: "#1f2937" };
+const hintStyle: CSSProperties = { fontSize: 12, color: "#64748b" };
+const controlStyle: CSSProperties = { height: 40, border: "1px solid #cbd5e1", borderRadius: 10, padding: "0 12px", fontSize: 14, background: "#fff" };
+const textareaStyle: CSSProperties = { ...controlStyle, height: "auto", minHeight: 100, padding: "10px 12px", resize: "vertical" };
+const checkboxLabelStyle: CSSProperties = { display: "inline-flex", alignItems: "center", gap: 8, color: "#0f172a" };
+const subtleTextStyle: CSSProperties = { fontSize: 12, color: "#64748b" };
+const errorStyle: CSSProperties = { borderRadius: 12, border: "1px solid #fecaca", background: "#fef2f2", padding: "10px 12px", color: "#b91c1c", fontSize: 14 };
+const infoStyle: CSSProperties = { borderRadius: 12, border: "1px solid", padding: "10px 12px", fontSize: 14, color: "#1f2937", display: "grid", gap: 2 };
+const actionBarStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" };
+const primaryButtonStyle: CSSProperties = { border: "none", borderRadius: 10, background: "#0f172a", color: "#fff", height: 40, padding: "0 18px", fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: 1 };
+const secondaryButtonStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", color: "#0f172a", height: 40, padding: "0 16px", fontSize: 14, fontWeight: 600, cursor: "pointer" };
