@@ -1,3 +1,4 @@
+//app/api/masters/grades/route.ts
 import { NextResponse } from "next/server";
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
