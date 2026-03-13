@@ -1,20 +1,16 @@
-import { cookies } from "next/headers";
+// lib/auth/require-auth-api.ts
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Me, Role } from "@/types/api";
-
-const ACCESS_TOKEN_COOKIE = "tm-access-token";
 
 type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 export async function requireAuthApi(): Promise<Me> {
   const supabase = await createSupabaseServerClient();
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
 
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser(accessToken);
+  } = await supabase.auth.getUser();
 
   if (error || !user) throw new Error("UNAUTHORIZED");
 
