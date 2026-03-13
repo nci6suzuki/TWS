@@ -10,6 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { createInterviewSchema } from "@/lib/validations/interview";
 import type { Me, FollowupDetail } from "@/types/api";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
+import { EmployeePicker } from "@/components/pickers/employee-picker";
 
 type FormValues = z.infer<typeof createInterviewSchema>;
 
@@ -151,13 +152,21 @@ export function InterviewForm({
           </div>
           
           <div style={twoColumnGridStyle}>
-            <Field label="対象社員ID" hint="まずはID入力。次にEmployeePickerへ置換推奨" required>
-              <input style={controlStyle} {...form.register("employeeId")} placeholder="employee uuid" />
+            <Field label="対象社員" required>
+              <EmployeePicker
+                label=""
+                value={watched.employeeId}
+                onChange={(value) => form.setValue("employeeId", value, { shouldDirty: true, shouldValidate: true })}
+              />
               <ErrorText msg={form.formState.errors.employeeId?.message} />
             </Field>
 
-            <Field label="面談者ID" hint="通常はログイン者のemployeeIdを自動セット" required>
-              <input style={controlStyle} {...form.register("interviewerEmployeeId")} />
+            <Field label="面談者" hint="通常はログイン者のemployeeIdを自動セット" required>
+              <EmployeePicker
+                label=""
+                value={watched.interviewerEmployeeId}
+                onChange={(value) => form.setValue("interviewerEmployeeId", value, { shouldDirty: true, shouldValidate: true })}
+              />
               <ErrorText msg={form.formState.errors.interviewerEmployeeId?.message} />
             </Field>
 

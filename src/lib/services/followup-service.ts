@@ -2,6 +2,44 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Me } from "@/types/api";
 
+export async function createFollowup(input: {
+  me: Me;
+  input: {
+    fiscalYear: number;
+    quarter: number;
+    employeeId: string;
+    followupType: string;
+    assigneeEmployeeId: string;
+    dueDate: string;
+    priority: number;
+    note?: string;
+    status: string;
+  };
+}) {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("followup_assignments")
+    .insert({
+      fiscal_year: input.input.fiscalYear,
+      quarter: input.input.quarter,
+      employee_id: input.input.employeeId,
+      followup_type: input.input.followupType,
+      assignee_employee_id: input.input.assigneeEmployeeId,
+      due_date: input.input.dueDate,
+      priority: input.input.priority,
+      note: input.input.note ?? null,
+      status: input.input.status,
+      created_by: input.me.employeeId,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+
+  return { id: data.id as string };
+}
+
 export async function completeFollowup(input: { me: Me; followupId: string; interviewRecordId?: string }) {
   const supabase = await createSupabaseServerClient();
 

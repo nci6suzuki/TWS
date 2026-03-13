@@ -5,6 +5,7 @@ import { CSSProperties, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FollowupDetail, FollowupStatus, Me } from "@/types/api";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
+import { EmployeePicker } from "@/components/pickers/employee-picker";
 
 type FollowupFormState = {
   fiscalYear: number;
@@ -101,11 +102,19 @@ export function FollowupForm({
                 <option value={4}>Q4</option>
               </select>
             </Field>
-            <Field label="対象社員ID" required>
-              <input style={controlStyle} value={form.employeeId} onChange={(e) => setForm((v) => ({ ...v, employeeId: e.target.value }))} />
+            <Field label="対象社員" required>
+              <EmployeePicker
+                label=""
+                value={form.employeeId}
+                onChange={(value) => setForm((v) => ({ ...v, employeeId: value }))}
+              />
             </Field>
-            <Field label="担当者ID" required>
-              <input style={controlStyle} value={form.assigneeEmployeeId} onChange={(e) => setForm((v) => ({ ...v, assigneeEmployeeId: e.target.value }))} />
+            <Field label="担当者" required>
+              <EmployeePicker
+                label=""
+                value={form.assigneeEmployeeId}
+                onChange={(value) => setForm((v) => ({ ...v, assigneeEmployeeId: value }))}
+              />
             </Field>
             <Field label="面談種別" required>
               <select style={controlStyle} value={form.followupType} onChange={(e) => setForm((v) => ({ ...v, followupType: e.target.value as FollowupFormState["followupType"] }))}>
