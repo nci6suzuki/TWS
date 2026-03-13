@@ -1,16 +1,19 @@
-// lib/auth/require-auth-api.ts
 import { Me, Role } from "@/types/api";
-import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
+import {
+  createSupabaseServerAuthClient,
+  getTmAccessToken,
+} from "@/lib/supabase/server-auth";
 
 type Supabase = Awaited<ReturnType<typeof createSupabaseServerAuthClient>>;
 
 export async function requireAuthApi(): Promise<Me> {
   const supabase = await createSupabaseServerAuthClient();
+  const accessToken = await getTmAccessToken();
 
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser(accessToken);
 
   if (error || !user) throw new Error("UNAUTHORIZED");
 

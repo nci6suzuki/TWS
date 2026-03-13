@@ -1,9 +1,19 @@
-// src/lib/supabase/server-auth.ts
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 
 const ACCESS_TOKEN_COOKIE = "tm-access-token";
+
+export async function getTmAccessToken() {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
+
+  if (!accessToken) {
+    throw new Error("UNAUTHORIZED");
+  }
+
+  return accessToken;
+}
 
 export async function createSupabaseServerAuthClient() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -12,12 +22,7 @@ export async function createSupabaseServerAuthClient() {
     );
   }
 
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
-
-  if (!accessToken) {
-    throw new Error("UNAUTHORIZED");
-  }
+  const accessToken = await getTmAccessToken();
 
   return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: {

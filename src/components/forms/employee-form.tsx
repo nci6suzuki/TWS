@@ -49,6 +49,34 @@ const employeeFormOptionFallback = {
   ],
 };
 
+function hasMasterOptionsData(options?: EmployeeFormMasterOptions | null) {
+  if (!options) return false;
+  return (
+    (options.branches?.length ?? 0) > 0 ||
+    (options.departments?.length ?? 0) > 0 ||
+    (options.positions?.length ?? 0) > 0 ||
+    (options.grades?.length ?? 0) > 0
+  );
+}
+
+async function fetchMaster(url: string) {
+  const res = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  const json = await res.json();
+
+  if (!res.ok || !json?.success) {
+    throw new Error(json?.error?.message ?? `${url} の取得に失敗しました`);
+  }
+
+  return json;
+}
+
 export function EmployeeForm({
   mode,
   me,
@@ -64,7 +92,10 @@ export function EmployeeForm({
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [clientMasterOptions, setClientMasterOptions] = useState<EmployeeFormMasterOptions | null>(masterOptions ?? null);
+  const [clientMasterOptions, setClientMasterOptions] =
+    useState<EmployeeFormMasterOptions | null>(
+      hasMasterOptionsData(masterOptions) ? masterOptions! : null
+    );
 
   const optionsByCategory = useMasterOptions(
     ["employment_type", "employee_status"],
@@ -88,46 +119,73 @@ export function EmployeeForm({
     templateId: initialData?.templateId ?? null,
   });
 
-
   useEffect(() => {
-    if (masterOptions) return;
+    if (hasMasterOptionsData(masterOptions)) {
+      setClientMasterOptions(masterOptions!);
+      return;
+    }
+
     let active = true;
 
     async function loadMasterOptions() {
       try {
+        setErrorMsg(null);
+
         const [b, d, p, g] = await Promise.all([
-          fetch("/api/masters/branches", { cache: "no-store" }).then((r) => r.json()),
-          fetch("/api/masters/departments", { cache: "no-store" }).then((r) => r.json()),
-          fetch("/api/masters/positions", { cache: "no-store" }).then((r) => r.json()),
-          fetch("/api/masters/grades", { cache: "no-store" }).then((r) => r.json()),
+          fetchMaster("/api/masters/branches"),
+          fetchMaster("/api/masters/departments"),
+          fetchMaster("/api/masters/positions"),
+          fetchMaster("/api/masters/grades"),
         ]);
 
         if (!active) return;
 
         setClientMasterOptions({
-          branches: b?.data?.items ?? [],
-          departments: (d?.data?.items ?? []).map((item: any) => ({
-            id: item.id,
-            name: item.name ?? "",
-            branchId: item.branch_id ?? item.branchId ?? null,
+          branches: (b?.data?.items ?? []).map((item: any) => ({
+            id: String(item.id),
+            name: String(item.name ?? ""),
           })),
-          positions: p?.data?.items ?? [],
-          grades: g?.data?.items ?? [],
+          departments: (d?.data?.items ?? []).map((item: any) => ({
+            id: String(item.id),
+            name: String(item.name ?? ""),
+            branchId:
+              item.branch_id != null
+                ? String(item.branch_id)
+                : item.branchId != null
+                ? String(item.branchId)
+                : null,
+          })),
+          positions: (p?.data?.items ?? []).map((item: any) => ({
+            id: String(item.id),
+            name: String(item.name ?? ""),
+          })),
+          grades: (g?.data?.items ?? []).map((item: any) => ({
+            id: String(item.id),
+            name: String(item.name ?? ""),
+          })),
         });
-      } catch {
-        if (active) {
-          setClientMasterOptions({ branches: [], departments: [], positions: [], grades: [] });
-        }
+      } catch (e: any) {
+        if (!active) return;
+        setErrorMsg(e?.message ?? "マスタ取得に失敗しました");
+        setClientMasterOptions({
+          branches: [],
+          departments: [],
+          positions: [],
+          grades: [],
+        });
       }
     }
 
     loadMasterOptions();
+
     return () => {
       active = false;
     };
   }, [masterOptions]);
 
-  const resolvedMasterOptions = masterOptions ?? clientMasterOptions;
+  const resolvedMasterOptions =
+    hasMasterOptionsData(masterOptions) ? masterOptions! : clientMasterOptions;
+
   const branches = resolvedMasterOptions?.branches ?? [];
   const positions = resolvedMasterOptions?.positions ?? [];
   const grades = resolvedMasterOptions?.grades ?? [];
@@ -135,7 +193,9 @@ export function EmployeeForm({
   const filteredDepartments = useMemo(() => {
     const departments = resolvedMasterOptions?.departments ?? [];
     if (!form.branchId) return departments;
-    return departments.filter((item) => item.branchId === form.branchId);
+    return departments.filter(
+      (item) => String(item.branchId ?? "") === String(form.branchId)
+    );
   }, [form.branchId, resolvedMasterOptions?.departments]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -172,7 +232,16 @@ export function EmployeeForm({
   return (
     <form onSubmit={handleSubmit} style={{ width: "100%", display: "grid", gap: 18 }}>
       {errorMsg && (
-        <div style={{ borderRadius: 12, border: "1px solid #fecaca", background: "#fef2f2", padding: "10px 12px", color: "#b91c1c", fontSize: 14 }}>
+        <div
+          style={{
+            borderRadius: 12,
+            border: "1px solid #fecaca",
+            background: "#fef2f2",
+            padding: "10px 12px",
+            color: "#b91c1c",
+            fontSize: 14,
+          }}
+        >
           {errorMsg}
         </div>
       )}
@@ -181,70 +250,147 @@ export function EmployeeForm({
         <section style={sectionStyle}>
           <div style={sectionHeaderStyle}>
             <CardTitle style={{ fontSize: 22 }}>🧾 基本情報</CardTitle>
-            <CardText style={{ marginTop: 8, fontSize: 14 }}>社員マスタに必要な項目を入力してください。</CardText>
+            <CardText style={{ marginTop: 8, fontSize: 14 }}>
+              社員マスタに必要な項目を入力してください。
+            </CardText>
           </div>
 
           <div style={twoColumnGridStyle}>
             <Field label="社員番号" required>
-              <input style={controlStyle} placeholder="例: A00123" value={form.employeeCode} onChange={(e) => setForm((v) => ({ ...v, employeeCode: e.target.value }))} />
+              <input
+                style={controlStyle}
+                placeholder="例: A00123"
+                value={form.employeeCode}
+                onChange={(e) =>
+                  setForm((v) => ({ ...v, employeeCode: e.target.value }))
+                }
+              />
             </Field>
 
             <Field label="氏名" required>
-              <input style={controlStyle} placeholder="例: 山田 太郎" value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} />
+              <input
+                style={controlStyle}
+                placeholder="例: 山田 太郎"
+                value={form.name}
+                onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))}
+              />
             </Field>
 
             <Field label="メールアドレス" required wide>
-              <input type="email" style={controlStyle} placeholder="name@example.co.jp" value={form.email} onChange={(e) => setForm((v) => ({ ...v, email: e.target.value }))} />
+              <input
+                type="email"
+                style={controlStyle}
+                placeholder="name@example.co.jp"
+                value={form.email}
+                onChange={(e) => setForm((v) => ({ ...v, email: e.target.value }))}
+              />
             </Field>
+
             <Field label="雇用区分" required>
-              <select style={controlStyle} value={form.employmentType} onChange={(e) => setForm((v) => ({ ...v, employmentType: e.target.value }))}>
+              <select
+                style={controlStyle}
+                value={form.employmentType}
+                onChange={(e) =>
+                  setForm((v) => ({ ...v, employmentType: e.target.value }))
+                }
+              >
                 {optionsByCategory.employment_type.map((item) => (
-                  <option key={item.value} value={item.value}>{item.label}</option>
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
                 ))}
               </select>
             </Field>
+
             <Field label="入社日">
-              <input type="date" style={controlStyle} value={form.hireDate} onChange={(e) => setForm((v) => ({ ...v, hireDate: e.target.value }))} />
+              <input
+                type="date"
+                style={controlStyle}
+                value={form.hireDate}
+                onChange={(e) => setForm((v) => ({ ...v, hireDate: e.target.value }))}
+              />
             </Field>
 
             <Field label="支店" required>
-              <select style={controlStyle} value={form.branchId} onChange={(e) => setForm((v) => ({ ...v, branchId: e.target.value, departmentId: "" }))}>
+              <select
+                style={controlStyle}
+                value={form.branchId}
+                onChange={(e) =>
+                  setForm((v) => ({
+                    ...v,
+                    branchId: e.target.value,
+                    departmentId: "",
+                  }))
+                }
+              >
                 <option value="">支店を選択</option>
                 {branches.map((item) => (
-                  <option key={item.id} value={item.id}>{item.name}</option>
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
                 ))}
               </select>
             </Field>
+
             <Field label="部署" required>
-              <select style={controlStyle} value={form.departmentId} onChange={(e) => setForm((v) => ({ ...v, departmentId: e.target.value }))}>
+              <select
+                style={controlStyle}
+                value={form.departmentId}
+                onChange={(e) =>
+                  setForm((v) => ({ ...v, departmentId: e.target.value }))
+                }
+              >
                 <option value="">部署を選択</option>
                 {filteredDepartments.map((item) => (
-                  <option key={item.id} value={item.id}>{item.name}</option>
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
                 ))}
               </select>
             </Field>
+
             <Field label="役職" required>
-              <select style={controlStyle} value={form.positionId} onChange={(e) => setForm((v) => ({ ...v, positionId: e.target.value }))}>
+              <select
+                style={controlStyle}
+                value={form.positionId}
+                onChange={(e) =>
+                  setForm((v) => ({ ...v, positionId: e.target.value }))
+                }
+              >
                 <option value="">役職を選択</option>
                 {positions.map((item) => (
-                  <option key={item.id} value={item.id}>{item.name}</option>
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
                 ))}
               </select>
             </Field>
 
             <Field label="等級" required>
-              <select style={controlStyle} value={form.gradeId} onChange={(e) => setForm((v) => ({ ...v, gradeId: e.target.value }))}>
+              <select
+                style={controlStyle}
+                value={form.gradeId}
+                onChange={(e) => setForm((v) => ({ ...v, gradeId: e.target.value }))}
+              >
                 <option value="">等級を選択</option>
                 {grades.map((item) => (
-                  <option key={item.id} value={item.id}>{item.name}</option>
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
                 ))}
               </select>
             </Field>
 
             <Field label="在籍状態" required>
-              <select style={controlStyle} value={form.status} onChange={(e) => setForm((v) => ({ ...v, status: e.target.value }))}>
+              <select
+                style={controlStyle}
+                value={form.status}
+                onChange={(e) => setForm((v) => ({ ...v, status: e.target.value }))}
+              >
                 {optionsByCategory.employee_status.map((item) => (
-                  <option key={item.value} value={item.value}>{item.label}</option>
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
                 ))}
               </select>
             </Field>
@@ -256,18 +402,37 @@ export function EmployeeForm({
         <section style={{ ...sectionStyle, background: "#ffffff" }}>
           <div style={sectionHeaderStyle}>
             <CardTitle style={{ fontSize: 22 }}>🌱 組織・育成設定</CardTitle>
-            <CardText style={{ marginTop: 8, fontSize: 14 }}>育成体制や初期テンプレートの紐づけを設定します。</CardText>
+            <CardText style={{ marginTop: 8, fontSize: 14 }}>
+              育成体制や初期テンプレートの紐づけを設定します。
+            </CardText>
           </div>
 
           <div style={twoColumnGridStyle}>
             <div style={{ minWidth: 0 }}>
-              <EmployeePicker label="直属上長" value={form.managerEmployeeId} onChange={(value) => setForm((v) => ({ ...v, managerEmployeeId: value }))} />
+              <EmployeePicker
+                label="直属上長"
+                value={form.managerEmployeeId}
+                onChange={(value) =>
+                  setForm((v) => ({ ...v, managerEmployeeId: value }))
+                }
+              />
             </div>
             <div style={{ minWidth: 0 }}>
-              <EmployeePicker label="メンター" value={form.mentorEmployeeId} onChange={(value) => setForm((v) => ({ ...v, mentorEmployeeId: value }))} />
+              <EmployeePicker
+                label="メンター"
+                value={form.mentorEmployeeId}
+                onChange={(value) =>
+                  setForm((v) => ({ ...v, mentorEmployeeId: value }))
+                }
+              />
             </div>
             <Field label="年間イベントテンプレート" wide>
-              <TemplateSelect value={form.templateId ?? ""} onChange={(value) => setForm((v) => ({ ...v, templateId: value || null }))} />
+              <TemplateSelect
+                value={form.templateId ?? ""}
+                onChange={(value) =>
+                  setForm((v) => ({ ...v, templateId: value || null }))
+                }
+              />
             </Field>
           </div>
         </section>
