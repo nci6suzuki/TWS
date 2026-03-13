@@ -7,6 +7,17 @@ import { BranchSelect } from "@/components/selects/branch-select";
 import { DepartmentSelect } from "@/components/selects/department-select";
 import { PositionSelect } from "@/components/selects/position-select";
 import { GradeSelect } from "@/components/selects/grade-select";
+import { useMasterOptions } from "@/components/forms/use-master-options";
+
+const employmentTypeFallback = {
+  employment_type_filter: [
+    { value: "", label: "すべて" },
+    { value: "full_time", label: "正社員" },
+    { value: "contract", label: "契約社員" },
+    { value: "part_time", label: "パート" },
+    { value: "other", label: "その他" },
+  ],
+};
 
 type Result = {
   targetCount: number;
@@ -23,6 +34,7 @@ export function TemplateBulkApplyForm() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  const optionsByCategory = useMasterOptions(["employment_type_filter"], employmentTypeFallback);
 
   const [form, setForm] = useState({
     templateId: "",
@@ -113,11 +125,9 @@ export function TemplateBulkApplyForm() {
               value={form.employmentType}
               onChange={(e) => setForm((v) => ({ ...v, employmentType: e.target.value }))}
             >
-              <option value="">すべて</option>
-              <option value="full_time">正社員</option>
-              <option value="contract">契約社員</option>
-              <option value="part_time">パート</option>
-              <option value="other">その他</option>
+              {optionsByCategory.employment_type_filter.map((item) => (
+                <option key={item.value || "all"} value={item.value}>{item.label}</option>
+              ))}
             </select>
           </Field>
 

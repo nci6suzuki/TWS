@@ -6,6 +6,7 @@ import type { Me } from "@/types/api";
 import { EmployeePicker } from "@/components/pickers/employee-picker";
 import { TemplateSelect } from "@/components/selects/template-select";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
+import { useMasterOptions } from "@/components/forms/use-master-options";
 
 type EmployeeFormData = {
   id?: string;
@@ -34,6 +35,20 @@ type EmployeeFormMasterOptions = {
   grades: MasterOption[];
 };
 
+const employeeFormOptionFallback = {
+  employment_type: [
+    { value: "full_time", label: "正社員" },
+    { value: "contract", label: "契約社員" },
+    { value: "part_time", label: "パート" },
+    { value: "other", label: "その他" },
+  ],
+  employee_status: [
+    { value: "active", label: "在籍" },
+    { value: "leave", label: "休職" },
+    { value: "inactive", label: "退職/無効" },
+  ],
+};
+
 export function EmployeeForm({
   mode,
   me,
@@ -50,6 +65,11 @@ export function EmployeeForm({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [clientMasterOptions, setClientMasterOptions] = useState<EmployeeFormMasterOptions | null>(masterOptions ?? null);
+
+  const optionsByCategory = useMasterOptions(
+    ["employment_type", "employee_status"],
+    employeeFormOptionFallback
+  );
 
   const [form, setForm] = useState<EmployeeFormData>({
     id: initialData?.id,
@@ -178,10 +198,9 @@ export function EmployeeForm({
             </Field>
             <Field label="雇用区分" required>
               <select style={controlStyle} value={form.employmentType} onChange={(e) => setForm((v) => ({ ...v, employmentType: e.target.value }))}>
-                <option value="full_time">正社員</option>
-                <option value="contract">契約社員</option>
-                <option value="part_time">パート</option>
-                <option value="other">その他</option>
+                {optionsByCategory.employment_type.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
               </select>
             </Field>
             <Field label="入社日">
@@ -224,9 +243,9 @@ export function EmployeeForm({
 
             <Field label="在籍状態" required>
               <select style={controlStyle} value={form.status} onChange={(e) => setForm((v) => ({ ...v, status: e.target.value }))}>
-                <option value="active">在籍</option>
-                <option value="leave">休職</option>
-                <option value="inactive">退職/無効</option>
+                {optionsByCategory.employee_status.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
               </select>
             </Field>
           </div>

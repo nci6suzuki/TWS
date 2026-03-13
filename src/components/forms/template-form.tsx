@@ -3,6 +3,26 @@
 import { CSSProperties, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
+import { useMasterOptions } from "@/components/forms/use-master-options";
+
+const templateOptionFallback = {
+  annual_event_type: [
+    { value: "interview", label: "面談" },
+    { value: "training", label: "研修" },
+    { value: "evaluation", label: "評価" },
+    { value: "other", label: "その他" },
+  ],
+  default_owner_type: [
+    { value: "manager", label: "上長" },
+    { value: "mentor", label: "メンター" },
+    { value: "hr", label: "人事" },
+  ],
+  priority_level: [
+    { value: "1", label: "高" },
+    { value: "2", label: "中" },
+    { value: "3", label: "低" },
+  ],
+};
 
 type TemplateEventForm = {
   id?: string;
@@ -50,6 +70,8 @@ export function TemplateForm({
       },
     ],
   });
+
+  const optionsByCategory = useMasterOptions(["annual_event_type", "default_owner_type", "priority_level"], templateOptionFallback);
 
   function updateEvent(index: number, patch: Partial<TemplateEventForm>) {
     setForm((prev) => ({
@@ -178,10 +200,9 @@ export function TemplateForm({
                 <div style={twoColumnGridStyle}>
                   <Field label="種別" required>
                     <select style={controlStyle} value={event.eventType} onChange={(e) => updateEvent(index, { eventType: e.target.value })}>
-                      <option value="interview">面談</option>
-                      <option value="training">研修</option>
-                      <option value="evaluation">評価</option>
-                      <option value="other">その他</option>
+                      {optionsByCategory.annual_event_type.map((item) => (
+                        <option key={item.value} value={item.value}>{item.label}</option>
+                      ))}
                     </select>
                   </Field>
 
@@ -195,17 +216,17 @@ export function TemplateForm({
 
                   <Field label="担当者種別" required>
                     <select style={controlStyle} value={event.defaultOwnerType} onChange={(e) => updateEvent(index, { defaultOwnerType: e.target.value })}>
-                      <option value="manager">上長</option>
-                      <option value="mentor">メンター</option>
-                      <option value="hr">人事</option>
+                      {optionsByCategory.default_owner_type.map((item) => (
+                        <option key={item.value} value={item.value}>{item.label}</option>
+                      ))}
                     </select>
                   </Field>
 
                   <Field label="優先度" required>
                     <select style={controlStyle} value={event.priority} onChange={(e) => updateEvent(index, { priority: Number(e.target.value) })}>
-                      <option value={1}>高</option>
-                      <option value={2}>中</option>
-                      <option value={3}>低</option>
+                      {optionsByCategory.priority_level.map((item) => (
+                        <option key={item.value} value={Number(item.value)}>{item.label}</option>
+                      ))}
                     </select>
                   </Field>
 

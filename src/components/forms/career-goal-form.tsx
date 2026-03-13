@@ -2,6 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMasterOptions } from "@/components/forms/use-master-options";
+
+const careerGoalFallback = {
+  mobility_preference: [
+    { value: "", label: "未設定" },
+    { value: "ok", label: "可" },
+    { value: "conditional", label: "条件付き可" },
+    { value: "ng", label: "不可" },
+  ],
+};
 
 export function CareerGoalForm({
   employeeId,
@@ -24,6 +34,7 @@ export function CareerGoalForm({
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [form, setForm] = useState(initialData);
+  const optionsByCategory = useMasterOptions(["mobility_preference"], careerGoalFallback);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -109,10 +120,9 @@ export function CareerGoalForm({
           onChange={(e) => setForm((v) => ({ ...v, mobilityPreference: e.target.value }))}
           disabled={!canEdit}
         >
-          <option value="">未設定</option>
-          <option value="ok">可</option>
-          <option value="conditional">条件付き可</option>
-          <option value="ng">不可</option>
+          {optionsByCategory.mobility_preference.map((item) => (
+            <option key={item.value || "none"} value={item.value}>{item.label}</option>
+          ))}
         </select>
       </Field>
 

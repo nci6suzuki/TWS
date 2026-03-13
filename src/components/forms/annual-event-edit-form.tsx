@@ -6,6 +6,27 @@ import { useRouter } from "next/navigation";
 import { EmployeePicker } from "@/components/pickers/employee-picker";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
 import { Me } from "@/types/api";
+import { useMasterOptions } from "@/components/forms/use-master-options";
+
+
+const annualEventOptionFallback = {
+  annual_event_type: [
+    { value: "interview", label: "面談" },
+    { value: "training", label: "研修" },
+    { value: "evaluation", label: "評価" },
+    { value: "other", label: "その他" },
+  ],
+  priority_level: [
+    { value: "1", label: "高" },
+    { value: "2", label: "中" },
+    { value: "3", label: "低" },
+  ],
+  annual_event_status: [
+    { value: "pending", label: "未実施" },
+    { value: "done", label: "完了" },
+    { value: "cancelled", label: "中止" },
+  ],
+};
 
 export function AnnualEventEditForm({
   me,
@@ -27,6 +48,7 @@ export function AnnualEventEditForm({
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const optionsByCategory = useMasterOptions(["annual_event_type", "priority_level", "annual_event_status"], annualEventOptionFallback);
   const [form, setForm] = useState({
     employeeId: initialData.employeeId,
     title: initialData.title,
@@ -104,10 +126,9 @@ export function AnnualEventEditForm({
 
             <Field label="種別" required>
               <select style={controlStyle} value={form.eventType} onChange={(e) => setForm((v) => ({ ...v, eventType: e.target.value }))}>
-                <option value="interview">面談</option>
-                <option value="training">研修</option>
-                <option value="evaluation">評価</option>
-                <option value="other">その他</option>
+                {optionsByCategory.annual_event_type.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
               </select>
             </Field>
 
@@ -117,17 +138,17 @@ export function AnnualEventEditForm({
 
             <Field label="優先度" required>
               <select style={controlStyle} value={form.priority} onChange={(e) => setForm((v) => ({ ...v, priority: Number(e.target.value) }))}>
-                <option value={1}>高</option>
-                <option value={2}>中</option>
-                <option value={3}>低</option>
+                {optionsByCategory.priority_level.map((item) => (
+                  <option key={item.value} value={Number(item.value)}>{item.label}</option>
+                ))}
               </select>
             </Field>
 
             <Field label="状態" required>
               <select style={controlStyle} value={form.status} onChange={(e) => setForm((v) => ({ ...v, status: e.target.value }))}>
-                <option value="pending">未実施</option>
-                <option value="done">完了</option>
-                <option value="cancelled">中止</option>
+                {optionsByCategory.annual_event_status.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
               </select>
             </Field>
 

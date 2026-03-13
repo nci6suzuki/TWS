@@ -11,8 +11,26 @@ import { createInterviewSchema } from "@/lib/validations/interview";
 import type { Me, FollowupDetail } from "@/types/api";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
 import { EmployeePicker } from "@/components/pickers/employee-picker";
+import { useMasterOptions } from "@/components/forms/use-master-options";
 
 type FormValues = z.infer<typeof createInterviewSchema>;
+
+const interviewOptionFallback = {
+  interview_type: [
+    { value: "retention", label: "定着" },
+    { value: "career", label: "キャリア" },
+    { value: "performance", label: "成果/業務" },
+    { value: "care", label: "ケア" },
+    { value: "other", label: "その他" },
+  ],
+  interview_visibility: [
+    { value: "self", label: "本人公開" },
+    { value: "manager", label: "上長まで" },
+    { value: "hr", label: "人事まで" },
+    { value: "private_hr", label: "人事機密" },
+  ],
+};
+
 
 type AnnualEventPreset = {
   id: string;
@@ -42,6 +60,11 @@ export function InterviewForm({
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const optionsByCategory = useMasterOptions(
+    ["interview_type", "interview_visibility"],
+    interviewOptionFallback
+  );
 
   const employeeIdFromQuery = searchParams.get("employeeId") ?? undefined;
 
@@ -177,21 +200,18 @@ export function InterviewForm({
 
             <Field label="面談種別" required>
               <select style={controlStyle} {...form.register("interviewType")}>
-                <option value="retention">定着</option>
-                <option value="career">キャリア</option>
-                <option value="performance">成果/業務</option>
-                <option value="care">ケア</option>
-                <option value="other">その他</option>
+                {optionsByCategory.interview_type.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
               </select>
               <ErrorText msg={form.formState.errors.interviewType?.message} />
             </Field>
 
             <Field label="公開範囲" required>
               <select style={controlStyle} {...form.register("visibility")}>
-                <option value="self">本人公開</option>
-                <option value="manager">上長まで</option>
-                <option value="hr">人事まで</option>
-                <option value="private_hr">人事機密</option>
+                {optionsByCategory.interview_visibility.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
               </select>
               <ErrorText msg={form.formState.errors.visibility?.message} />
             </Field>

@@ -6,6 +6,33 @@ import { useRouter } from "next/navigation";
 import type { FollowupDetail, FollowupStatus, Me } from "@/types/api";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
 import { EmployeePicker } from "@/components/pickers/employee-picker";
+import { useMasterOptions } from "@/components/forms/use-master-options";
+
+const followupOptionFallback = {
+  fiscal_quarter: [
+    { value: "1", label: "Q1" },
+    { value: "2", label: "Q2" },
+    { value: "3", label: "Q3" },
+    { value: "4", label: "Q4" },
+  ],
+  followup_type: [
+    { value: "retention", label: "定着" },
+    { value: "career", label: "キャリア" },
+    { value: "performance", label: "成果/業務" },
+    { value: "care", label: "ケア" },
+  ],
+  priority_level: [
+    { value: "1", label: "高" },
+    { value: "2", label: "中" },
+    { value: "3", label: "低" },
+  ],
+  followup_status: [
+    { value: "pending", label: "未着手" },
+    { value: "in_progress", label: "進行中" },
+    { value: "done", label: "完了" },
+    { value: "overdue", label: "期限超過" },
+  ],
+};
 
 type FollowupFormState = {
   fiscalYear: number;
@@ -42,6 +69,10 @@ export function FollowupForm({
   });
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const optionsByCategory = useMasterOptions(
+    ["fiscal_quarter", "followup_type", "priority_level", "followup_status"],
+    followupOptionFallback
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -96,10 +127,9 @@ export function FollowupForm({
             </Field>
             <Field label="四半期" required>
               <select style={controlStyle} value={form.quarter} onChange={(e) => setForm((v) => ({ ...v, quarter: Number(e.target.value) as 1 | 2 | 3 | 4 }))}>
-                <option value={1}>Q1</option>
-                <option value={2}>Q2</option>
-                <option value={3}>Q3</option>
-                <option value={4}>Q4</option>
+                {optionsByCategory.fiscal_quarter.map((item) => (
+                  <option key={item.value} value={Number(item.value)}>{item.label}</option>
+                ))}
               </select>
             </Field>
             <Field label="対象社員" required>
@@ -118,10 +148,9 @@ export function FollowupForm({
             </Field>
             <Field label="面談種別" required>
               <select style={controlStyle} value={form.followupType} onChange={(e) => setForm((v) => ({ ...v, followupType: e.target.value as FollowupFormState["followupType"] }))}>
-                <option value="retention">定着</option>
-                <option value="career">キャリア</option>
-                <option value="performance">成果/業務</option>
-                <option value="care">ケア</option>
+                {optionsByCategory.followup_type.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
               </select>
             </Field>
             <Field label="期限" required>
@@ -129,17 +158,16 @@ export function FollowupForm({
             </Field>
             <Field label="優先度" required>
               <select style={controlStyle} value={form.priority} onChange={(e) => setForm((v) => ({ ...v, priority: Number(e.target.value) as 1 | 2 | 3 }))}>
-                <option value={1}>高</option>
-                <option value={2}>中</option>
-                <option value={3}>低</option>
+                {optionsByCategory.priority_level.map((item) => (
+                  <option key={item.value} value={Number(item.value)}>{item.label}</option>
+                ))}
               </select>
             </Field>
             <Field label="状態" required>
               <select style={controlStyle} value={form.status} onChange={(e) => setForm((v) => ({ ...v, status: e.target.value as FollowupStatus }))}>
-                <option value="pending">未着手</option>
-                <option value="in_progress">進行中</option>
-                <option value="done">完了</option>
-                <option value="overdue">期限超過</option>
+                {optionsByCategory.followup_status.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
               </select>
             </Field>
             <Field label="備考" wide>

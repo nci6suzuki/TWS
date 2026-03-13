@@ -3,6 +3,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMasterOptions } from "@/components/forms/use-master-options";
+
+const qualificationStatusFallback = {
+  qualification_status: [
+    { value: "valid", label: "有効" },
+    { value: "expired", label: "失効" },
+    { value: "planned", label: "取得予定" },
+  ],
+};
 
 type QualificationOption = {
   id: string;
@@ -25,6 +34,7 @@ export function QualificationEditForm({
   const router = useRouter();
   const [items, setItems] = useState<QualificationOption[]>([]);
   const [saving, setSaving] = useState(false);
+  const optionsByCategory = useMasterOptions(["qualification_status"], qualificationStatusFallback);
   const [form, setForm] = useState(initialData);
 
   useEffect(() => {
@@ -108,9 +118,9 @@ export function QualificationEditForm({
         value={form.status}
         onChange={(e) => setForm((v) => ({ ...v, status: e.target.value }))}
       >
-        <option value="valid">有効</option>
-        <option value="expired">失効</option>
-        <option value="planned">取得予定</option>
+        {optionsByCategory.qualification_status.map((item) => (
+          <option key={item.value} value={item.value}>{item.label}</option>
+        ))}
       </select>
 
       <textarea
