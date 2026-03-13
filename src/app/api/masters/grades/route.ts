@@ -1,14 +1,17 @@
-//app/api/masters/grades/route.ts
+// app/api/masters/grades/route.ts
 import { NextResponse } from "next/server";
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
 
 export async function GET() {
   try {
     await requireAuthApi();
-    const supabase = await createSupabaseServerClient();
+    const supabase = await createSupabaseServerAuthClient();
 
-    const { data, error } = await supabase.from("grades").select("*");
+    const { data, error } = await supabase
+      .from("grades")
+      .select("id, name, sort_order")
+      .order("sort_order");
 
     if (error) throw error;
 
@@ -21,8 +24,11 @@ export async function GET() {
     return NextResponse.json({ success: true, data: { items } });
   } catch (e: any) {
     return NextResponse.json(
-      { success: false, error: { code: "ERROR", message: e?.message ?? "取得に失敗しました" } },
-      { status: 500 }
+      {
+        success: false,
+        error: { code: "ERROR", message: e?.message ?? "取得に失敗しました" },
+      },
+      { status: e?.message === "UNAUTHORIZED" ? 401 : 500 }
     );
   }
 }
@@ -30,14 +36,18 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const me = await requireAuthApi();
+
     if (me.role !== "admin" && me.role !== "hr") {
       return NextResponse.json(
-        { success: false, error: { code: "FORBIDDEN", message: "権限がありません" } },
+        {
+          success: false,
+          error: { code: "FORBIDDEN", message: "権限がありません" },
+        },
         { status: 403 }
       );
     }
 
-    const supabase = await createSupabaseServerClient();
+    const supabase = await createSupabaseServerAuthClient();
     const body = await req.json();
 
     const { data, error } = await supabase
@@ -54,8 +64,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, data: { id: data.id } });
   } catch (e: any) {
     return NextResponse.json(
-      { success: false, error: { code: "ERROR", message: e?.message ?? "登録に失敗しました" } },
-      { status: 500 }
+      {
+        success: false,
+        error: { code: "ERROR", message: e?.message ?? "登録に失敗しました" },
+      },
+      { status: e?.message === "UNAUTHORIZED" ? 401 : 500 }
     );
   }
 }

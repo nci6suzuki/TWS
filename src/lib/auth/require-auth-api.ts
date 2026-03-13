@@ -1,11 +1,11 @@
 // lib/auth/require-auth-api.ts
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Me, Role } from "@/types/api";
+import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
 
-type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+type Supabase = Awaited<ReturnType<typeof createSupabaseServerAuthClient>>;
 
 export async function requireAuthApi(): Promise<Me> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseServerAuthClient();
 
   const {
     data: { user },
