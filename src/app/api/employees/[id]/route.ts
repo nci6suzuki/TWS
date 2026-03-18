@@ -23,7 +23,6 @@ export async function PATCH(
 
     const body = await req.json();
     const result = await updateEmployee({
-      me,
       employeeId: id,
       input: body,
     });
