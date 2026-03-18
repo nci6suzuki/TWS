@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createEmployee } from "@/lib/services/employee-service";
+import { createEmployeeSchema } from "@/lib/validations/employee";
+import { ZodError } from "zod";
 
 export async function GET(req: NextRequest) {
   try {
@@ -88,6 +90,19 @@ export async function GET(req: NextRequest) {
   } catch (e: any) {
     console.error("GET /api/employees error:", e);
 
+    if (e instanceof ZodError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: e.issues[0]?.message ?? "入力内容を確認してください",
+          },
+        },
+        { status: 400 }
+      );
+    }
+
     if (e?.message === "UNAUTHORIZED") {
       return NextResponse.json(
         {
@@ -126,18 +141,31 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-
-    const result = await createEmployee({
-      me,
-      input: {
-        ...body,
-        hrEmployeeId: me.employeeId,
-      },
+    const input = createEmployeeSchema.parse({
+      ...body,
+      hrEmployeeId: me.employeeId,
     });
+
+    const result = await createEmployee(
+      input,
+    );
 
     return NextResponse.json({ success: true, data: result });
   } catch (e: any) {
     console.error("POST /api/employees error:", e);
+
+    if (e instanceof ZodError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: e.issues[0]?.message ?? "入力内容を確認してください",
+          },
+        },
+        { status: 400 }
+      );
+    }
 
     if (e?.message === "UNAUTHORIZED") {
       return NextResponse.json(

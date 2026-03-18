@@ -7,6 +7,7 @@ import { EmployeePicker } from "@/components/pickers/employee-picker";
 import { TemplateSelect } from "@/components/selects/template-select";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
 import { useMasterOptions } from "@/components/forms/use-master-options";
+import { createEmployeeSchema } from "@/lib/validations/employee";
 
 type EmployeeFormData = {
   id?: string;
@@ -204,6 +205,13 @@ export function EmployeeForm({
     setErrorMsg(null);
 
     try {
+      if (mode === "create") {
+        createEmployeeSchema.parse({
+          ...form,
+          hrEmployeeId: me.employeeId,
+        });
+      }
+
       const url = mode === "create" ? "/api/employees" : `/api/employees/${initialData?.id}`;
       const method = mode === "create" ? "POST" : "PATCH";
 
@@ -223,7 +231,8 @@ export function EmployeeForm({
       router.push(`/employees/${id}?tab=basic`);
       router.refresh();
     } catch (e: any) {
-      setErrorMsg(e?.message ?? "保存に失敗しました");
+      const validationMessage = Array.isArray(e?.issues) ? e.issues[0]?.message : null;
+      setErrorMsg(validationMessage ?? e?.message ?? "保存に失敗しました");
     } finally {
       setSaving(false);
     }
