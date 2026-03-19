@@ -8,6 +8,12 @@ import { cookies } from "next/headers";
 const ACCESS_TOKEN_COOKIE = "tm-access-token";
 
 type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+type EmployeeScopeRow = {
+  id: string;
+  app_role?: string | null;
+  branch_id?: string | null;
+  department_id?: string | null;
+};
 
 export async function requireAuth(): Promise<Me> {
   const supabase = await createSupabaseServerClient();
@@ -21,21 +27,28 @@ export async function requireAuth(): Promise<Me> {
 
   if (error || !user) redirect("/login");
 
-  const role = (user.user_metadata?.role as Role | undefined) ?? "employee";
-  const employeeId = user.user_metadata?.employeeId as string | undefined;
+  const authContext = await resolveAuthContext({
+    supabase,
+    userId: user.id,
+    metadataRole: user.user_metadata?.role as Role | undefined,
+    metadataEmployeeId:
+      (user.user_metadata?.employeeId as string | undefined) ??
+      (user.user_metadata?.employee_id as string | undefined),
+  });
 
-  if (!employeeId) redirect("/unauthorized");
+  if (!authContext) redirect("/unauthorized");
 
   const scope = await buildScope({
     supabase,
-    role,
-    employeeId,
+    role: authContext.role,
+    employeeId: authContext.employeeId,
+    employeeRow: authContext.employeeRow,
   });
 
   return {
     userId: user.id,
-    employeeId,
-    role,
+    employeeId: authContext.employeeId,
+    role: authContext.role,
     scope,
   };
 }
@@ -60,10 +73,16 @@ export async function requireAuthApi(): Promise<
     };
   }
 
-  const role = (user.user_metadata?.role as Role | undefined) ?? "employee";
-  const employeeId = user.user_metadata?.employeeId as string | undefined;
+  const authContext = await resolveAuthContext({
+    supabase,
+    userId: user.id,
+    metadataRole: user.user_metadata?.role as Role | undefined,
+    metadataEmployeeId:
+      (user.user_metadata?.employeeId as string | undefined) ??
+      (user.user_metadata?.employee_id as string | undefined),
+  });
 
-  if (!employeeId) {
+  if (!authContext) {
     return {
       ok: false,
       response: NextResponse.json({ message: "Unauthorized" }, { status: 403 }),
@@ -72,41 +91,85 @@ export async function requireAuthApi(): Promise<
 
   const scope = await buildScope({
     supabase,
-    role,
-    employeeId,
+    role: authContext.role,
+    employeeId: authContext.employeeId,
+    employeeRow: authContext.employeeRow,
   });
 
   return {
     ok: true,
     me: {
       userId: user.id,
-      employeeId,
-      role,
+      employeeId: authContext.employeeId,
+      role: authContext.role,
       scope,
     },
   };
+}
+
+async function resolveAuthContext({
+  supabase,
+  userId,
+  metadataRole,
+  metadataEmployeeId,
+}: {
+  supabase: Supabase;
+  userId: string;
+  metadataRole?: Role;
+  metadataEmployeeId?: string;
+}) {
+  const { data: employeeRow, error } = await supabase
+    .from("employees")
+    .select("id, app_role, branch_id, department_id")
+    .eq("user_id", userId)
+    .maybeSingle<EmployeeScopeRow>();
+
+  if (error) {
+    return null;
+  }
+
+  const role = normalizeRole(metadataRole ?? employeeRow?.app_role ?? undefined);
+  const employeeId = metadataEmployeeId ?? employeeRow?.id ?? null;
+
+  if (!role || !employeeId) {
+    return null;
+  }
+
+  return {
+    role,
+    employeeId,
+    employeeRow,
+  };
+}
+
+function normalizeRole(value?: string | null): Role | null {
+  if (value === "admin" || value === "hr" || value === "manager" || value === "mentor" || value === "employee") {
+    return value;
+  }
+
+  return null;
 }
 
 async function buildScope({
   supabase,
   role,
   employeeId,
+  employeeRow,
 }: {
   supabase: Supabase;
   role: Role;
   employeeId: string;
+  employeeRow?: EmployeeScopeRow | null;
 }) {
   if (role === "admin" || role === "hr") {
     return {};
   }
 
-  const { data: meRow, error } = await supabase
-    .from("employees")
-    .select("id, branch_id, department_id")
-    .eq("id", employeeId)
-    .maybeSingle();
+  const meRow = employeeRow?.id === employeeId
+    ? employeeRow
+    : await fetchEmployeeScopeRow({ supabase, employeeId });
 
-  if (error || !meRow) {
+  if (!meRow) {
     return {};
   }
 
@@ -135,4 +198,24 @@ async function buildScope({
   }
 
   return {};
+}
+
+async function fetchEmployeeScopeRow({
+  supabase,
+  employeeId,
+}: {
+  supabase: Supabase;
+  employeeId: string;
+}) {
+  const { data, error } = await supabase
+    .from("employees")
+    .select("id, app_role, branch_id, department_id")
+    .eq("id", employeeId)
+    .maybeSingle<EmployeeScopeRow>();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data;
 }

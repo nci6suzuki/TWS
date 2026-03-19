@@ -5,6 +5,12 @@ import {
 } from "@/lib/supabase/server-auth";
 
 type Supabase = Awaited<ReturnType<typeof createSupabaseServerAuthClient>>;
+type EmployeeScopeRow = {
+  id: string;
+  app_role?: string | null;
+  branch_id?: string | null;
+  department_id?: string | null;
+};
 
 export async function requireAuthApi(): Promise<Me> {
   const supabase = await createSupabaseServerAuthClient();
@@ -17,47 +23,95 @@ export async function requireAuthApi(): Promise<Me> {
 
   if (error || !user) throw new Error("UNAUTHORIZED");
 
-  const role = (user.user_metadata?.role as Role | undefined) ?? "employee";
-  const employeeId =
-    (user.user_metadata?.employeeId as string | undefined) ??
-    (user.user_metadata?.employee_id as string | undefined);
+  const authContext = await resolveAuthContext({
+    supabase,
+    userId: user.id,
+    metadataRole: user.user_metadata?.role as Role | undefined,
+    metadataEmployeeId:
+      (user.user_metadata?.employeeId as string | undefined) ??
+      (user.user_metadata?.employee_id as string | undefined),
+  });
 
-  if (!employeeId) throw new Error("UNAUTHORIZED");
+  if (!authContext) throw new Error("UNAUTHORIZED");
 
   const scope = await buildScope({
     supabase,
-    role,
-    employeeId,
+    role: authContext.role,
+    employeeId: authContext.employeeId,
+    employeeRow: authContext.employeeRow,
   });
 
   return {
     userId: user.id,
-    employeeId,
-    role,
+    employeeId: authContext.employeeId,
+    role: authContext.role,
     scope,
   };
+}
+
+async function resolveAuthContext({
+  supabase,
+  userId,
+  metadataRole,
+  metadataEmployeeId,
+}: {
+  supabase: Supabase;
+  userId: string;
+  metadataRole?: Role;
+  metadataEmployeeId?: string;
+}) {
+  const { data: employeeRow, error } = await supabase
+    .from("employees")
+    .select("id, app_role, branch_id, department_id")
+    .eq("user_id", userId)
+    .maybeSingle<EmployeeScopeRow>();
+
+  if (error) {
+    return null;
+  }
+
+  const role = normalizeRole(metadataRole ?? employeeRow?.app_role ?? undefined);
+  const employeeId = metadataEmployeeId ?? employeeRow?.id ?? null;
+
+  if (!role || !employeeId) {
+    return null;
+  }
+
+  return {
+    role,
+    employeeId,
+    employeeRow,
+  };
+}
+
+function normalizeRole(value?: string | null): Role | null {
+  if (value === "admin" || value === "hr" || value === "manager" || value === "mentor" || value === "employee") {
+    return value;
+  }
+
+  return null;
 }
 
 async function buildScope({
   supabase,
   role,
   employeeId,
+  employeeRow,
 }: {
   supabase: Supabase;
   role: Role;
   employeeId: string;
+  employeeRow: EmployeeScopeRow | null;
 }) {
   if (role === "admin" || role === "hr") {
     return {};
   }
 
-  const { data: meRow, error } = await supabase
-    .from("employees")
-    .select("id, branch_id, department_id")
-    .eq("id", employeeId)
-    .maybeSingle();
+  const meRow = employeeRow?.id === employeeId
+    ? employeeRow
+    : await fetchEmployeeScopeRow({ supabase, employeeId });
 
-  if (error || !meRow) {
+  if (!meRow) {
     return {};
   }
 
@@ -86,4 +140,24 @@ async function buildScope({
   }
 
   return {};
+}
+
+async function fetchEmployeeScopeRow({
+  supabase,
+  employeeId,
+}: {
+  supabase: Supabase;
+  employeeId: string;
+}) {
+  const { data, error } = await supabase
+    .from("employees")
+    .select("id, app_role, branch_id, department_id")
+    .eq("id", employeeId)
+    .maybeSingle<EmployeeScopeRow>();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data;
 }
