@@ -11,9 +11,20 @@ export default async function DashboardPage() {
 
   return (
     <div style={{ display: "grid", gap: 18 }}>
-      <Card variant="elevated" style={{ borderRadius: 26, padding: 24 }}>
-        <p style={{ margin: 0, fontSize: 11, fontWeight: 800, letterSpacing: "0.2em", color: "#6366f1" }}>DASHBOARD OVERVIEW</p>
-        <h1 style={{ margin: "8px 0 0", fontSize: 30, color: "#0f172a" }}>ダッシュボード</h1>
+      <Card variant="elevated" style={{ borderRadius: 30, padding: 0, overflow: "hidden" }}>
+        <div style={{ display: "grid", gap: 20, gridTemplateColumns: "minmax(0,1.5fr) minmax(320px,0.9fr)", padding: 28, background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 42%, #eef2ff 100%)" }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 800, letterSpacing: "0.2em", color: "#6366f1" }}>TALENT MANAGEMENT HOME</p>
+            <h1 style={{ margin: "10px 0 0", fontSize: 34, color: "#0f172a" }}>ダッシュボード</h1>
+            <p style={{ margin: "14px 0 0", maxWidth: 720, fontSize: 14, lineHeight: 1.8, color: "#475569" }}>
+              Kaonaviライクな「お知らせ」「ToDo」「主要機能導線」を取り込み、日々の利用開始地点として見やすいホーム画面に再構成しました。
+            </p>
+          </div>
+          <div style={{ display: "grid", gap: 12 }}>
+            <QuickPanel title="お知らせ" body={data.notifications[0]?.title ?? "現在のお知らせはありません。"} sub={data.notifications[0]?.body ?? "公開された通知はここに集約されます。"} />
+            <QuickPanel title="ToDo" body={data.dueFollowups[0] ? `${data.dueFollowups[0].employeeName} / ${data.dueFollowups[0].followupType}` : "対応待ちのToDoはありません。"} sub={data.dueFollowups[0] ? `期限: ${data.dueFollowups[0].dueDate}` : "未完了のフォローや面談をここから確認できます。"} />
+          </div>
+        </div>
       </Card>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
@@ -27,6 +38,13 @@ export default async function DashboardPage() {
         <KpiCard label="資格期限 30日以内" value={data.kpis.qualification30Count} />
         <KpiCard label="資格期限 90日以内" value={data.kpis.qualification90Count} />
         <KpiCard label="資格失効" value={data.kpis.qualificationExpiredCount} />
+      </section>
+
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
+        <FeatureCard href="/employees" title="プロフィールブック" description="社員検索・カード表示・詳細閲覧" />
+        <FeatureCard href="/annual-events" title="シートガレージ" description="年次イベント・進捗確認" />
+        <FeatureCard href="/followups" title="スマートレビュー" description="フォロー対象・対応状況" />
+        <FeatureCard href="/notifications" title="お知らせ" description="最新通知を一覧確認" />
       </section>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
@@ -150,3 +168,25 @@ const linkStyle: CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
 };
+
+function QuickPanel({ title, body, sub }: { title: string; body: string; sub: string }) {
+  return (
+    <div style={{ borderRadius: 22, border: "1px solid #e2e8f0", background: "rgba(255,255,255,0.92)", padding: 18, minHeight: 120 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: "#334155" }}>{title}</div>
+      <div style={{ marginTop: 12, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>{body}</div>
+      <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6, color: "#64748b" }}>{sub}</div>
+    </div>
+  );
+}
+
+function FeatureCard({ href, title, description }: { href: string; title: string; description: string }) {
+  return (
+    <Link href={href} style={{ textDecoration: "none" }}>
+      <Card style={{ borderRadius: 18, padding: 18, height: "100%" }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>{title}</div>
+        <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6, color: "#64748b" }}>{description}</div>
+        <div style={{ marginTop: 14, fontSize: 12, fontWeight: 700, color: "#4f46e5" }}>開く →</div>
+      </Card>
+    </Link>
+  );
+}

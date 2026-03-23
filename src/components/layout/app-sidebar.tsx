@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { Me } from "@/types/api";
 
 const navItems = [
-  { href: "/dashboard", label: "ダッシュボード", icon: "◈" },
-  { href: "/employees", label: "社員", icon: "👥" },
-  { href: "/annual-events", label: "年次イベント", icon: "🗓" },
-  { href: "/followups", label: "フォロー", icon: "🧭" },
-  { href: "/notifications", label: "通知", icon: "🔔" },
+  { href: "/employees", label: "プロフィールブック", sub: "社員データベース", icon: "👤" },
+  { href: "/annual-events", label: "シートガレージ", sub: "年次イベント一覧", icon: "🗂" },
+  { href: "/followups", label: "スマートレビュー", sub: "フォロー進捗", icon: "📝" },
+  { href: "/dashboard", label: "ダッシュボード", sub: "お知らせ / ToDo", icon: "🏠" },
+  { href: "/notifications", label: "通知", sub: "最新アナウンス", icon: "🔔" },
 ];
 
 export function AppSidebar({ me }: { me: Me }) {
@@ -34,8 +34,9 @@ export function AppSidebar({ me }: { me: Me }) {
           background: "rgba(15, 23, 42, 0.45)",
         }}
       >
-        <p style={{ margin: 0, fontSize: 11, letterSpacing: "0.2em", color: "#94a3b8" }}>SIGNED IN AS</p>
-        <p style={{ margin: "8px 0 0", fontSize: 14, fontWeight: 700, color: "#f8fafc" }}>{me.employeeId}</p>
+        <p style={{ margin: 0, fontSize: 11, letterSpacing: "0.2em", color: "#94a3b8" }}>TALENT MANAGEMENT</p>
+        <p style={{ margin: "8px 0 0", fontSize: 18, fontWeight: 800, color: "#f8fafc" }}>メニュー</p>
+        <p style={{ margin: "6px 0 0", fontSize: 12, color: "#cbd5e1" }}>ログイン社員: {me.employeeId}</p>
       </div>
 
       <nav style={{ marginTop: 20, display: "grid", gap: 8 }}>
@@ -62,8 +63,11 @@ export function AppSidebar({ me }: { me: Me }) {
                 fontSize: 14,
               }}
             >
-              <span>{item.icon}</span>
-              <span>{item.label}</span>
+              <span style={{ fontSize: 18 }}>{item.icon}</span>
+              <span>
+                <span style={{ display: "block" }}>{item.label}</span>
+                <span style={{ display: "block", marginTop: 2, fontSize: 11, fontWeight: 500, color: isActive ? "rgba(255,255,255,0.8)" : "#cbd5e1" }}>{item.sub}</span>
+              </span>
             </Link>
           );
         })}

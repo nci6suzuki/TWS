@@ -47,9 +47,9 @@ export function EmployeeFilters({
       <section className="p-5 sm:p-6">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-4">
           <div>
-            <CardTitle style={{ fontSize: 17 }}>🔎 フィルター</CardTitle>
+            <CardTitle style={{ fontSize: 17 }}>🔎 メンバーを検索</CardTitle>
             <CardText style={{ marginTop: 8, fontSize: 13 }}>
-              キーワードで社員情報をすばやく絞り込みできます。
+              Kaonavi風の一覧体験に合わせて、まずはキーワード検索を前面に配置しました。
             </CardText>
           </div>
         </div>

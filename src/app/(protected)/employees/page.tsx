@@ -1,7 +1,7 @@
 // src/app/(protected)/employees/page.tsx
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getEmployees } from "@/lib/queries/employees";
-import { EmployeesTable } from "@/components/tables/employees-table";
+import { EmployeeDirectory } from "@/components/employees/employee-directory";
 import { EmployeeFilters } from "@/components/filters/employee-filters";
 import Link from "next/link";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
@@ -46,17 +46,18 @@ export default async function EmployeesPage({
   return (
     <div className="space-y-5">
       <Card variant="elevated" style={{ padding: 0, overflow: "hidden" }}>
-        <section className="flex flex-wrap items-end justify-between gap-3 bg-slate-50 p-6 sm:p-7">
-          <div>
-            <CardTitle style={{ fontSize: 28 }}>社員一覧</CardTitle>
-            <CardText style={{ marginTop: 10, fontSize: 14 }}>
-              社員情報の閲覧、検索、アカウント招待を行えます。
+        <section className="flex flex-wrap items-end justify-between gap-4 bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_45%,#eef2ff_100%)] p-6 sm:p-8">
+          <div className="max-w-3xl">
+            <div className="text-sm font-bold tracking-[0.18em] text-indigo-600">PROFILE BOOK</div>
+            <CardTitle style={{ marginTop: 10, fontSize: 32 }}>社員一覧</CardTitle>
+            <CardText style={{ marginTop: 12, fontSize: 14, lineHeight: 1.8 }}>
+              添付イメージのように一覧性を高めるため、検索 → 表示切替 → 詳細導線を1画面に整理しました。カード表示/リスト表示を切り替えながら、プロフィールブック感覚で社員情報を確認できます。
             </CardText>
           </div>
           {(me.role === "admin" || me.role === "hr") && (
             <Link
               href="/employees/new"
-              className="inline-flex h-11 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="inline-flex h-12 items-center rounded-2xl bg-slate-900 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
               + 社員登録
             </Link>
@@ -66,9 +67,9 @@ export default async function EmployeesPage({
 
       <EmployeeFilters me={me} initial={sp} />
 
-      <EmployeesTable
+      <EmployeeDirectory
         me={me}
-        data={result.items.map((item: any) => ({
+        employees={result.items.map((item: any) => ({
           ...item,
           followupStatus:
             item.followupStatus === "needs_followup"

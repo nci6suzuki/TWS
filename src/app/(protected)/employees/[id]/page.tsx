@@ -2,8 +2,7 @@
 import { requireAuth } from "@/lib/auth/require-auth";
 import { notFound } from "next/navigation";
 import { getEmployeeById } from "@/lib/queries/employees";
-import { EmployeeTabs } from "@/components/employees/employee-tabs";
-import { EmployeeSummaryCard } from "@/components/employees/employee-summary-card";
+import { EmployeeProfileBook } from "@/components/employees/employee-profile-book";
 
 const TAB_DEFAULT = "basic";
 
@@ -20,10 +19,5 @@ export default async function EmployeeDetailPage({
   const employee = await getEmployeeById({ me, employeeId: params.id });
   if (!employee) return notFound();
 
-  return (
-    <div className="space-y-4">
-      <EmployeeSummaryCard me={me} employee={employee.summary} />
-      <EmployeeTabs me={me} employeeId={params.id} tab={tab} />
-    </div>
-  );
+  return <EmployeeProfileBook me={me} employeeId={params.id} tab={tab} summary={employee.summary} />;
 }
