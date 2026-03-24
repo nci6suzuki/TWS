@@ -129,7 +129,8 @@ async function resolveAuthContext({
   }
 
   const role = normalizeRole(metadataRole ?? employeeRow?.app_role ?? undefined);
-  const employeeId = metadataEmployeeId ?? employeeRow?.id ?? null;
+  // DBの employees.id を正とし、user_metadata 側の古い employeeId で上書きしない
+  const employeeId = employeeRow?.id ?? metadataEmployeeId ?? null;
 
   if (!role || !employeeId) {
     return null;
