@@ -10,6 +10,7 @@ type GetEmployeesInput = {
   positionId?: string;
   gradeId?: string;
   keyword?: string;
+  status?: "active" | "inactive" | "leave";
   page: number;
   limit: number;
   sort?: string;
@@ -57,8 +58,10 @@ export async function getEmployees(input: GetEmployeesInput) {
   if (input.gradeId) q = q.eq("grade_id", input.gradeId);
 
   if (input.keyword) {
-    q = q.or(`name.ilike.%${input.keyword}%,employee_code.ilike.%${input.keyword}%`);
+    q = q.or(`name.ilike.%${input.keyword}%,employee_code.ilike.%${input.keyword}%,email.ilike.%${input.keyword}%`);
   }
+
+  if (input.status) q = q.eq("status", input.status);
 
   // ロール別絞り込み（await の前に適用）
   if (input.me.role === "employee") {

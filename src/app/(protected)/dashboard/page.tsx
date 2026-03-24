@@ -48,6 +48,15 @@ export default async function DashboardPage() {
       </section>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+        <InfoCard title="クイックアクション">
+          <div style={{ display: "grid", gap: 10 }}>
+            <ActionButton href="/employees/new" label="社員登録" description="新しい社員マスタを追加" />
+            <ActionButton href="/interviews/new" label="面談記録を作成" description="面談の実施記録を登録" />
+            <ActionButton href="/annual-events/new" label="イベント登録" description="年次イベントや研修を追加" />
+            <ActionButton href="/followups" label="フォロー一覧を見る" description="未対応案件を確認" />
+          </div>
+        </InfoCard>
+
         <InfoCard title="直近期限のフォロー">
           <ul style={listStyle}>
             {data.dueFollowups.length === 0 ? (
@@ -90,6 +99,23 @@ export default async function DashboardPage() {
       </section>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+        <InfoCard title="今週の予定">
+          <ul style={listStyle}>
+            {data.weeklyEvents.length === 0 ? (
+              <li style={{ color: "#64748b" }}>今週の予定はありません</li>
+            ) : (
+              data.weeklyEvents.map((item: any) => (
+                <li key={item.id} style={itemStyle}>
+                  <div style={{ fontWeight: 700, color: "#0f172a" }}>{item.title}</div>
+                  <div>対象: {item.employeeName}</div>
+                  <div>種別: {item.eventType}</div>
+                  <div style={{ fontWeight: 700, color: "#1d4ed8" }}>日付: {item.scheduledDate}</div>
+                </li>
+              ))
+            )}
+          </ul>
+        </InfoCard>
+
         <InfoCard title="資格期限アラート">
           <ul style={listStyle}>
             {data.qualificationAlerts.length === 0 ? (
@@ -187,6 +213,18 @@ function FeatureCard({ href, title, description }: { href: string; title: string
         <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6, color: "#64748b" }}>{description}</div>
         <div style={{ marginTop: 14, fontSize: 12, fontWeight: 700, color: "#4f46e5" }}>開く →</div>
       </Card>
+    </Link>
+  );
+}
+
+
+function ActionButton({ href, label, description }: { href: string; label: string; description: string }) {
+  return (
+    <Link href={href} style={{ textDecoration: "none" }}>
+      <div style={{ borderRadius: 14, border: "1px solid #cbd5e1", background: "#fff", padding: 14 }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}>{label}</div>
+        <div style={{ marginTop: 4, fontSize: 12, color: "#64748b" }}>{description}</div>
+      </div>
     </Link>
   );
 }

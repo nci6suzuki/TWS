@@ -16,6 +16,7 @@ type EmployeesPageSearchParams = Promise<{
   limit?: string | string[];
   sort?: string | string[];
   order?: string | string[];
+  status?: string | string[];
 }>;
 
 export default async function EmployeesPage({
@@ -34,6 +35,7 @@ export default async function EmployeesPage({
     positionId: typeof sp.positionId === "string" ? sp.positionId : undefined,
     gradeId: typeof sp.gradeId === "string" ? sp.gradeId : undefined,
     keyword: typeof sp.keyword === "string" ? sp.keyword : undefined,
+    status: typeof sp.status === "string" ? (sp.status as "active" | "inactive" | "leave") : undefined,
     page: Number(typeof sp.page === "string" ? sp.page : 1),
     limit: Number(typeof sp.limit === "string" ? sp.limit : 20),
     sort: typeof sp.sort === "string" ? sp.sort : "name",

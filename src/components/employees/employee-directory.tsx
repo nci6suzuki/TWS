@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { EmployeeListItem, Me, Pagination } from "@/types/api";
 import { InviteEmployeeButton } from "@/components/employees/invite-employee-button";
 
@@ -25,6 +26,8 @@ const statusTone: Record<EmployeeListItem["status"], string> = {
 
 export function EmployeeDirectory({ me, employees, pagination }: Props) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const departmentCounts = useMemo(() => {
     return employees.reduce<Record<string, number>>((acc, employee) => {
@@ -34,6 +37,27 @@ export function EmployeeDirectory({ me, employees, pagination }: Props) {
     }, {});
   }, [employees]);
 
+  const branchCounts = useMemo(() => {
+    return employees.reduce<Record<string, number>>((acc, employee) => {
+      const key = employee.branchName || "未設定";
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+  }, [employees]);
+
+  const rangeText = useMemo(() => {
+    if (pagination.total === 0) return "0件";
+    const start = (pagination.page - 1) * pagination.limit + 1;
+    const end = Math.min(pagination.page * pagination.limit, pagination.total);
+    return `${start}-${end} / ${pagination.total}件`;
+  }, [pagination]);
+
+  function hrefForPage(page: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(page));
+    return `${pathname}?${params.toString()}`;
+  }
+
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
       <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
@@ -41,21 +65,14 @@ export function EmployeeDirectory({ me, employees, pagination }: Props) {
           <div>
             <div className="text-sm text-slate-500">メンバー</div>
             <h2 className="mt-1 text-2xl font-bold text-slate-900">{pagination.total}人</h2>
+            <div className="mt-1 text-xs text-slate-500">表示範囲: {rangeText}</div>
           </div>
           <div className="flex items-center gap-3">
             <div className="rounded-full border border-slate-200 bg-slate-50 p-1">
-              <button
-                type="button"
-                onClick={() => setViewMode("grid")}
-                className={buttonClass(viewMode === "grid")}
-              >
+              <button type="button" onClick={() => setViewMode("grid")} className={buttonClass(viewMode === "grid")}>
                 グリッド
               </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("list")}
-                className={buttonClass(viewMode === "list")}
-              >
+              <button type="button" onClick={() => setViewMode("list")} className={buttonClass(viewMode === "list")}>
                 リスト
               </button>
             </div>
@@ -137,37 +154,75 @@ export function EmployeeDirectory({ me, employees, pagination }: Props) {
             </table>
           </div>
         )}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 text-sm text-slate-600">
+          <div>ページ {pagination.page} / {pagination.totalPages}</div>
+          <div className="flex items-center gap-2">
+            <PageButton disabled={pagination.page <= 1} href={hrefForPage(pagination.page - 1)} label="前へ" />
+            <PageButton disabled={pagination.page >= pagination.totalPages} href={hrefForPage(pagination.page + 1)} label="次へ" />
+          </div>
+        </div>
       </section>
 
       <aside className="space-y-4">
-        <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-          <div className="text-xs font-bold tracking-[0.16em] text-indigo-600">詳細条件</div>
-          <h3 className="mt-2 text-lg font-bold text-slate-900">絞り込みサマリー</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            現在の一覧から、所属ごとの人数を確認できます。今後は役職・等級などの詳細条件もここに追加しやすい構成です。
-          </p>
-        </div>
-
-        <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-          <h3 className="text-lg font-bold text-slate-900">所属</h3>
-          <div className="mt-4 space-y-3">
-            {Object.entries(departmentCounts).length === 0 ? (
-              <div className="text-sm text-slate-500">データがありません。</div>
-            ) : (
-              Object.entries(departmentCounts)
-                .sort((a, b) => b[1] - a[1])
-                .map(([department, count]) => (
-                  <div key={department} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-700">{department}</span>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">{count}</span>
-                  </div>
-                ))
-            )}
+        <SummaryCard title="詳細条件" description="現在の一覧から集計したサマリーです。フィルタ適用後の結果をそのまま反映します。">
+          <div className="space-y-3 text-sm">
+            <SummaryRow label="在籍" value={String(employees.filter((item) => item.status === "active").length)} />
+            <SummaryRow label="休職" value={String(employees.filter((item) => item.status === "leave").length)} />
+            <SummaryRow label="退職/無効" value={String(employees.filter((item) => item.status === "inactive").length)} />
           </div>
-        </div>
+        </SummaryCard>
+
+        <SummaryCard title="所属" description="部署別の表示件数です。">
+          <div className="space-y-3">
+            {renderCountMap(departmentCounts)}
+          </div>
+        </SummaryCard>
+
+        <SummaryCard title="拠点" description="支店別の表示件数です。">
+          <div className="space-y-3">
+            {renderCountMap(branchCounts)}
+          </div>
+        </SummaryCard>
       </aside>
     </div>
   );
+}
+
+function renderCountMap(values: Record<string, number>) {
+  const entries = Object.entries(values).sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0) return <div className="text-sm text-slate-500">データがありません。</div>;
+
+  return entries.map(([label, count]) => (
+    <div key={label} className="flex items-center justify-between text-sm">
+      <span className="text-slate-700">{label}</span>
+      <span className="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">{count}</span>
+    </div>
+  ));
+}
+
+function SummaryCard({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+  return (
+    <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
+      <div className="text-xs font-bold tracking-[0.16em] text-indigo-600">{title}</div>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+      <div className="mt-4">{children}</div>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span>{label}</span>
+      <span className="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">{value}</span>
+    </div>
+  );
+}
+
+function PageButton({ disabled, href, label }: { disabled: boolean; href: string; label: string }) {
+  if (disabled) return <span className="rounded-xl border border-slate-200 px-3 py-2 text-slate-300">{label}</span>;
+  return <Link href={href} className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 no-underline hover:border-indigo-300 hover:text-indigo-700">{label}</Link>;
 }
 
 function buttonClass(active: boolean) {

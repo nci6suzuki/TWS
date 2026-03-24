@@ -52,6 +52,7 @@ export type GetEmployeesQuery = {
   positionId?: string;
   gradeId?: string;
   keyword?: string;
+  status?: "active" | "inactive" | "leave";
   page: number;
   limit: number;
   sort?: string;

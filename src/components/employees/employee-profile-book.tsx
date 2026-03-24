@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { EmployeeSummary, Me } from "@/types/api";
 import { EmployeeBasicPanel } from "@/components/employees/panels/employee-basic-panel";
+import { EmployeeOverviewPanel } from "@/components/employees/employee-overview-panel";
 import { EmployeeCareerPanel } from "@/components/employees/panels/employee-career-panel";
 import { EmployeeAnnualEventsPanel } from "@/components/employees/panels/employee-annual-events-panel";
 import { EmployeeInterviewsPanel } from "@/components/employees/panels/employee-interviews-panel";
@@ -87,6 +88,8 @@ export async function EmployeeProfileBook({
           </div>
           <div className="px-6 py-4 text-sm text-slate-500 sm:px-8">見やすい左ナビ + 右コンテンツ構成に変更し、プロフィールブックらしい閲覧体験にしています。</div>
         </div>
+
+        <EmployeeOverviewPanel me={me} employeeId={employeeId} />
 
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.06)] sm:p-6">
           {active === "basic" && <EmployeeBasicPanel me={me} employeeId={employeeId} />}
