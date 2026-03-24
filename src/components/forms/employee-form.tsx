@@ -8,6 +8,7 @@ import { TemplateSelect } from "@/components/selects/template-select";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
 import { useMasterOptions } from "@/components/forms/use-master-options";
 import { createEmployeeSchema } from "@/lib/validations/employee";
+import { isUuid } from "@/lib/utils/is-uuid";
 
 type EmployeeFormData = {
   id?: string;
@@ -208,7 +209,7 @@ export function EmployeeForm({
       if (mode === "create") {
         createEmployeeSchema.parse({
           ...form,
-          hrEmployeeId: me.employeeId,
+          hrEmployeeId: isUuid(me.employeeId) ? me.employeeId : undefined,
         });
       }
 

@@ -3,6 +3,7 @@ import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createEmployee } from "@/lib/services/employee-service";
 import { createEmployeeSchema } from "@/lib/validations/employee";
+import { isUuid } from "@/lib/utils/is-uuid";
 import { ZodError } from "zod";
 
 export async function GET(req: NextRequest) {
@@ -143,7 +144,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const input = createEmployeeSchema.parse({
       ...body,
-      hrEmployeeId: me.employeeId,
+      hrEmployeeId: isUuid(me.employeeId) ? me.employeeId : undefined,
     });
 
     const result = await createEmployee({
