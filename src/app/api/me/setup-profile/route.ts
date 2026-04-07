@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+// import { createClient } from "@supabase/supabase-js";
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -35,19 +35,20 @@ export async function POST(req: Request) {
     if (employeeErr) throw employeeErr;
 
     if (body.newPassword) {
-      const supabaseAuth = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          global: {
-            headers: {
-              Authorization: req.headers.get("Authorization") ?? "",
-            },
-          },
-        }
-      );
+      // const supabaseAuth = createClient(
+      //   process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      //   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      //   {
+      //     global: {
+      //       headers: {
+      //         Authorization: req.headers.get("Authorization") ?? "",
+      //       },
+      //     },
+      //   }
+      // );
 
-      const { error: pwErr } = await supabaseAuth.auth.updateUser({
+      // const { error: pwErr } = await supabaseAuth.auth.updateUser({
+      const { error: pwErr } = await supabase.auth.updateUser({
         password: body.newPassword,
       });
 
