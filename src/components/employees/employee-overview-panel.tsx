@@ -33,6 +33,11 @@ export async function EmployeeOverviewPanel({ me, employeeId }: { me: Me; employ
   const interviews = interviewRes.data ?? [];
   const events = eventRes.data ?? [];
   const nextQualification = qualifications.find((item: any) => item.expires_on);
+  const qualificationName =
+  nextQualification &&
+  (Array.isArray(nextQualification.qualification_master)
+    ? nextQualification.qualification_master[0]?.name
+    : nextQualification.qualification_master?.name);
   const latestInterview = interviews[0];
   const nextEvent = events[0];
 
@@ -57,9 +62,12 @@ export async function EmployeeOverviewPanel({ me, employeeId }: { me: Me; employ
             {latestInterview && (
               <OverviewRow label="最新面談" value={`${formatDateTime(latestInterview.interview_date)} / ${latestInterview.interview_type}`} />
             )}
-            {nextQualification && (
-              <OverviewRow label="資格期限" value={`${nextQualification.qualification_master?.name ?? "資格"} / ${nextQualification.expires_on}`} />
-            )}
+{nextQualification && (
+  <OverviewRow
+    label="資格期限"
+    value={`${qualificationName ?? "資格"} / ${nextQualification.expires_on}`}
+  />
+)}
             {nextEvent && <OverviewRow label="次回イベント" value={`${nextEvent.scheduled_date} / ${nextEvent.title}`} />}
             {!latestInterview && !nextQualification && !nextEvent && (
               <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-slate-500">
