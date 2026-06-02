@@ -29,33 +29,19 @@ const employeeStatusSchema = z
   });
 
 export const createEmployeeSchema = z.object({
-  employeeCode: z
-    .string()
-    .trim()
-    .min(1, "社員番号は必須です")
-    .max(50, "社員番号は50文字以内で入力してください"),
-  name: z
-    .string()
-    .trim()
-    .min(1, "氏名は必須です")
-    .max(120, "氏名は120文字以内で入力してください"),
-  email: z
-    .string()
-    .trim()
-    .min(1, "メールアドレスは必須です")
-    .email("メールアドレスの形式が不正です"),
+  employeeCode: z.string().trim().min(1).max(50),
+  name: z.string().trim().min(1).max(120),
+  email: z.string().trim().min(1).email(),
+
   branchId: z.string().uuid("支店の指定が不正です"),
   departmentId: z.string().uuid("部署の指定が不正です"),
   positionId: z.string().uuid("役職の指定が不正です"),
-  gradeId: z.string().uuid("等級の指定が不正です"),
+
+  gradeId: uuidOrEmpty, // ★ここだけ変更
+
   employmentType: employmentTypeSchema,
-  hireDate: z
-    .string()
-    .trim()
-    .min(1, "入社日は必須です")
-    .refine((value: string) => !Number.isNaN(Date.parse(value)), {
-      message: "入社日の形式が不正です",
-    }),
+  hireDate: z.string().trim().min(1).refine(v => !Number.isNaN(Date.parse(v)), { message: "入社日の形式が不正です" }),
+
   managerEmployeeId: uuidOrEmpty,
   mentorEmployeeId: uuidOrEmpty,
   status: employeeStatusSchema,

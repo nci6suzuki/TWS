@@ -376,7 +376,7 @@ export function EmployeeForm({
               </select>
             </Field>
 
-            <Field label="等級" required>
+            <Field label="等級" >
               <select
                 style={controlStyle}
                 value={form.gradeId}
