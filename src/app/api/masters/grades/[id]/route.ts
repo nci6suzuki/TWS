@@ -7,7 +7,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const me = await requireAuthApi();
+    const me = await requireAuthApi(req);
     const { id } = await params;
 
     if (me.role !== "admin" && me.role !== "hr") {
@@ -40,11 +40,11 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const me = await requireAuthApi();
+    const me = await requireAuthApi(req);
     const { id } = await params;
 
     if (me.role !== "admin" && me.role !== "hr") {
