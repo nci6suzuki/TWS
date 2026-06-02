@@ -1,4 +1,3 @@
-// src/lib/auth/require-auth-api.ts
 import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
 import type { Me } from "@/types/api";
 

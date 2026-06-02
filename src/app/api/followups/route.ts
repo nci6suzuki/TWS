@@ -4,7 +4,7 @@ import { createFollowup } from "@/lib/services/followup-service";
 
 export async function POST(req: NextRequest) {
   try {
-    const me = await requireAuthApi(req);
+    const me = await requireAuthApi();
 
     if (me.role !== "admin" && me.role !== "hr" && me.role !== "manager") {
       return NextResponse.json(

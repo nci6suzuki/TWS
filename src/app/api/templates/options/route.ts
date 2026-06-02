@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuthApi(req);
+    await requireAuthApi();
     const supabase = await createSupabaseServerClient();
 
     const { data, error } = await supabase

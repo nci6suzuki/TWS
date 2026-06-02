@@ -4,7 +4,7 @@ import { requireAuthApi } from "@/lib/auth/require-auth-api";
 
 export async function POST(req: Request) {
   try {
-    const me = await requireAuthApi(req);
+    const me = await requireAuthApi();
 
     if (!["admin", "hr"].includes(me.role)) {
       return NextResponse.json(

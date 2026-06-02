@@ -6,7 +6,7 @@ import { getEmployees } from "@/lib/queries/employees";
 
 export async function GET(req: Request) {
   try {
-    const me = await requireAuthApi(req);
+    const me = await requireAuthApi();
 
     const { searchParams } = new URL(req.url);
     const branchId = searchParams.get("branchId") || undefined;
@@ -45,7 +45,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const me = await requireAuthApi(req);
+    const me = await requireAuthApi();
 
     if (me.role !== "admin" && me.role !== "hr") {
       return NextResponse.json(

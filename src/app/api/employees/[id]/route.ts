@@ -7,7 +7,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const me = await requireAuthApi(req);
+    const me = await requireAuthApi();
 
     if (me.role !== "admin" && me.role !== "hr") {
       return NextResponse.json(

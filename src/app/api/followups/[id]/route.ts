@@ -8,7 +8,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const me = await requireAuthApi(req);
+    const me = await requireAuthApi();
     const { id } = await params;
     const body = await req.json();
 

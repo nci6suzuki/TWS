@@ -5,7 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
-    const me = await requireAuthApi(req);
+    const me = await requireAuthApi();
     const body = await req.json();
     const supabase = await createSupabaseServerClient();
 

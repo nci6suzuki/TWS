@@ -1,4 +1,3 @@
-// src/lib/supabase/server-auth.ts
 import { cookies } from "next/headers";
 import { createServerClient } from "@/lib/supabase/ssr";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/env";

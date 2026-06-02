@@ -5,8 +5,8 @@ import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
 
 export async function GET(req: Request) {
   try {
-    await requireAuthApi(req);
-    const supabase = await createSupabaseServerAuthClient(req);
+    await requireAuthApi();
+    const supabase = await createSupabaseServerAuthClient();
 
     const { data, error } = await supabase
       .from("branches")
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const me = await requireAuthApi(req);
+    const me = await requireAuthApi();
 
     if (me.role !== "admin" && me.role !== "hr") {
       return NextResponse.json(
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabase = await createSupabaseServerAuthClient(req);
+    const supabase = await createSupabaseServerAuthClient();
     const body = await req.json();
 
     const { data, error } = await supabase

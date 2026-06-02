@@ -8,7 +8,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuthApi(req);
+    await requireAuthApi();
 
     const { id } = await params;
     const supabase = await createSupabaseServerClient();
@@ -44,7 +44,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuthApi(req);
+    await requireAuthApi();
 
     const { id } = await params;
     const supabase = await createSupabaseServerClient();

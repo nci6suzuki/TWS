@@ -6,7 +6,7 @@ import { canCreateInterview } from "@/lib/permissions/can";
 import { createInterview } from "@/lib/services/interview-service";
 
 export async function POST(req: NextRequest) {
-  const me = await requireAuthApi(req);
+  const me = await requireAuthApi();
 
   if (!canCreateInterview(me)) {
     return NextResponse.json(

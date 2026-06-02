@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(req: Request) {
   try {
-    await requireAuthApi(req);
+    await requireAuthApi();
     const supabase = await createSupabaseServerClient();
 
     const { data, error } = await supabase
@@ -25,7 +25,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const me = await requireAuthApi(req);
+    const me = await requireAuthApi();
     if (me.role !== "admin" && me.role !== "hr") {
       return NextResponse.json(
         { success: false, error: { code: "FORBIDDEN", message: "権限がありません" } },
