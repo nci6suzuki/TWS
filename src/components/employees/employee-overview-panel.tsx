@@ -29,46 +29,75 @@ export async function EmployeeOverviewPanel({ me, employeeId }: { me: Me; employ
       .limit(5),
   ]);
 
-  const qualifications = qualificationRes.data ?? [];
-  const interviews = interviewRes.data ?? [];
-  const events = eventRes.data ?? [];
-  const nextQualification = qualifications.find((item: any) => item.expires_on);
-  const qualificationName =
-  nextQualification &&
-  (Array.isArray(nextQualification.qualification_master)
-    ? nextQualification.qualification_master[0]?.name
-    : nextQualification.qualification_master?.name);
-  const latestInterview = interviews[0];
-  const nextEvent = events[0];
+  // ★ ここが重要：never[] 推論を回避して any[] に固定
+  const qualifications: any[] = (qualificationRes.data ?? []) as any[];
+  const interviews: any[] = (interviewRes.data ?? []) as any[];
+  const events: any[] = (eventRes.data ?? []) as any[];
+
+  const nextQualification: any = qualifications.find((item: any) => item.expires_on);
+  const latestInterview: any = interviews[0];
+  const nextEvent: any = events[0];
+
+  // ★ qualification_master が配列でもオブジェクトでも取れるようにする
+  const qm: any = nextQualification?.qualification_master;
+  const qualificationName = Array.isArray(qm) ? qm[0]?.name : qm?.name;
 
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-4">
-        <MetricCard label="保有資格" value={String(qualifications.length)} sub={nextQualification ? `次回期限: ${nextQualification.expires_on}` : "期限登録なし"} />
-        <MetricCard label="面談履歴" value={String(interviews.length)} sub={latestInterview ? `最新: ${formatDateTime(latestInterview.interview_date)}` : "面談記録なし"} />
-        <MetricCard label="今後イベント" value={String(events.length)} sub={nextEvent ? `直近: ${nextEvent.scheduled_date}` : "予定なし"} />
-        <MetricCard label="操作" value={canManage ? "管理可" : "参照"} sub={canManage ? "面談・イベント登録に対応" : "参照権限で表示"} />
+        <MetricCard
+          label="保有資格"
+          value={String(qualifications.length)}
+          sub={nextQualification ? `次回期限: ${nextQualification.expires_on}` : "期限登録なし"}
+        />
+        <MetricCard
+          label="面談履歴"
+          value={String(interviews.length)}
+          sub={latestInterview ? `最新: ${formatDateTime(latestInterview.interview_date)}` : "面談記録なし"}
+        />
+        <MetricCard
+          label="今後イベント"
+          value={String(events.length)}
+          sub={nextEvent ? `直近: ${nextEvent.scheduled_date}` : "予定なし"}
+        />
+        <MetricCard
+          label="操作"
+          value={canManage ? "管理可" : "参照"}
+          sub={canManage ? "面談・イベント登録に対応" : "参照権限で表示"}
+        />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
         <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-lg font-bold text-slate-900">直近アクティビティ</h3>
-            <Link href={`/employees/${employeeId}?tab=interviews`} className="text-sm font-semibold text-indigo-700 no-underline hover:underline">
+            <Link
+              href={`/employees/${employeeId}?tab=interviews`}
+              className="text-sm font-semibold text-indigo-700 no-underline hover:underline"
+            >
               すべて見る
             </Link>
           </div>
+
           <div className="mt-4 space-y-3 text-sm">
             {latestInterview && (
-              <OverviewRow label="最新面談" value={`${formatDateTime(latestInterview.interview_date)} / ${latestInterview.interview_type}`} />
+              <OverviewRow
+                label="最新面談"
+                value={`${formatDateTime(latestInterview.interview_date)} / ${latestInterview.interview_type}`}
+              />
             )}
-{nextQualification && (
-  <OverviewRow
-    label="資格期限"
-    value={`${qualificationName ?? "資格"} / ${nextQualification.expires_on}`}
-  />
-)}
-            {nextEvent && <OverviewRow label="次回イベント" value={`${nextEvent.scheduled_date} / ${nextEvent.title}`} />}
+
+            {nextQualification && (
+              <OverviewRow
+                label="資格期限"
+                value={`${qualificationName ?? "資格"} / ${nextQualification.expires_on}`}
+              />
+            )}
+
+            {nextEvent && (
+              <OverviewRow label="次回イベント" value={`${nextEvent.scheduled_date} / ${nextEvent.title}`} />
+            )}
+
             {!latestInterview && !nextQualification && !nextEvent && (
               <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-slate-500">
                 直近アクティビティはまだ登録されていません。
