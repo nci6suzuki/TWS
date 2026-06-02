@@ -10,17 +10,25 @@ type EmployeeScopeRow = {
   department_id?: string | null;
 };
 
+function getBearerToken(req: Request) {
+  const authHeader = req.headers.get("authorization") ?? "";
+  return authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+}
+
 export async function requireAuthApi(req: Request): Promise<Me> {
+  const token = getBearerToken(req);
+  if (!token) throw new Error("UNAUTHORIZED");
+
   const supabase = await createSupabaseServerAuthClient(req);
 
+  // ★必ず token を渡す
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser(token);
 
   if (error || !user) throw new Error("UNAUTHORIZED");
 
-  // employees.user_id を正とする（user_metadata 依存を避ける）
   const { data: employeeRow, error: empErr } = await supabase
     .from("employees")
     .select("id, app_role, branch_id, department_id")
@@ -67,9 +75,7 @@ async function buildScope({
 }) {
   if (role === "admin" || role === "hr") return {};
 
-  if (role === "employee") {
-    return { employeeIds: [employeeId] };
-  }
+  if (role === "employee") return { employeeIds: [employeeId] };
 
   if (role === "manager") {
     return {
