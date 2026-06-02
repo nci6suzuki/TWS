@@ -1,13 +1,10 @@
 // src/lib/auth/require-auth.ts
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { Me, Role } from "@/types/api";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
+import { Me, Role } from "@/types/api";
 
-const ACCESS_TOKEN_COOKIE = "tm-access-token";
-
-type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+type Supabase = Awaited<ReturnType<typeof createSupabaseServerAuthClient>>;
 type EmployeeScopeRow = {
   id: string;
   app_role?: string | null;
@@ -16,14 +13,12 @@ type EmployeeScopeRow = {
 };
 
 export async function requireAuth(): Promise<Me> {
-  const supabase = await createSupabaseServerClient();
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
+  const supabase = await createSupabaseServerAuthClient();
 
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser(accessToken);
+  } = await supabase.auth.getUser();
 
   if (error || !user) redirect("/login");
 
@@ -53,18 +48,17 @@ export async function requireAuth(): Promise<Me> {
   };
 }
 
+// API Route から使う簡易ヘルパー（既存の戻り値形式を維持）
 export async function requireAuthApi(): Promise<
   | { ok: true; me: Me }
   | { ok: false; response: NextResponse }
 > {
-  const supabase = await createSupabaseServerClient();
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
+  const supabase = await createSupabaseServerAuthClient();
 
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser(accessToken);
+  } = await supabase.auth.getUser();
 
   if (error || !user) {
     return {
@@ -85,7 +79,7 @@ export async function requireAuthApi(): Promise<
   if (!authContext) {
     return {
       ok: false,
-      response: NextResponse.json({ message: "Unauthorized" }, { status: 403 }),
+      response: NextResponse.json({ message: "Forbidden" }, { status: 403 }),
     };
   }
 
@@ -124,30 +118,21 @@ async function resolveAuthContext({
     .eq("user_id", userId)
     .maybeSingle<EmployeeScopeRow>();
 
-  if (error) {
-    return null;
-  }
+  if (error) return null;
 
   const role = normalizeRole(metadataRole ?? employeeRow?.app_role ?? undefined);
-  // DBの employees.id を正とし、user_metadata 側の古い employeeId で上書きしない
+  // employees.id を正とする
   const employeeId = employeeRow?.id ?? metadataEmployeeId ?? null;
 
-  if (!role || !employeeId) {
-    return null;
-  }
+  if (!role || !employeeId) return null;
 
-  return {
-    role,
-    employeeId,
-    employeeRow,
-  };
+  return { role, employeeId, employeeRow };
 }
 
 function normalizeRole(value?: string | null): Role | null {
   if (value === "admin" || value === "hr" || value === "manager" || value === "mentor" || value === "employee") {
     return value;
   }
-
   return null;
 }
 
@@ -162,22 +147,17 @@ async function buildScope({
   employeeId: string;
   employeeRow?: EmployeeScopeRow | null;
 }) {
-  if (role === "admin" || role === "hr") {
-    return {};
-  }
+  if (role === "admin" || role === "hr") return {};
 
-  const meRow = employeeRow?.id === employeeId
-    ? employeeRow
-    : await fetchEmployeeScopeRow({ supabase, employeeId });
+  const meRow =
+    employeeRow?.id === employeeId
+      ? employeeRow
+      : await fetchEmployeeScopeRow({ supabase, employeeId });
 
-  if (!meRow) {
-    return {};
-  }
+  if (!meRow) return {};
 
   if (role === "employee") {
-    return {
-      employeeIds: [employeeId],
-    };
+    return { employeeIds: [employeeId] };
   }
 
   if (role === "manager") {
@@ -193,9 +173,7 @@ async function buildScope({
       .select("id")
       .eq("mentor_employee_id", employeeId);
 
-    return {
-      employeeIds: [employeeId, ...(mentees ?? []).map((x: any) => x.id)],
-    };
+    return { employeeIds: [employeeId, ...(mentees ?? []).map((x: any) => x.id)] };
   }
 
   return {};
@@ -214,9 +192,6 @@ async function fetchEmployeeScopeRow({
     .eq("id", employeeId)
     .maybeSingle<EmployeeScopeRow>();
 
-  if (error || !data) {
-    return null;
-  }
-
+  if (error || !data) return null;
   return data;
 }

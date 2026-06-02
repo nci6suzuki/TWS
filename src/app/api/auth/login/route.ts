@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/ssr";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 
-const ACCESS_TOKEN_COOKIE = "tm-access-token";
-const REFRESH_TOKEN_COOKIE = "tm-refresh-token";
-
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const email = String(formData.get("email") ?? "").trim();
@@ -18,30 +15,41 @@ export async function POST(request: NextRequest) {
     throw new Error("SUPABASE ENV is not set");
   }
 
-  const supabase = await createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  // ★ response を先に作り、setAll で sb cookie を詰める
+  let response = NextResponse.next({ request });
 
-  if (error || !data.session) {
+  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        // request 側にも反映（次の処理で参照されることがあるため）
+        cookiesToSet.forEach(({ name, value }) => {
+          request.cookies.set(name, value);
+        });
+
+        // response を作り直して cookie を積む
+        response = NextResponse.next({ request });
+
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options as any);
+        });
+      },
+    },
+  });
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) {
     return NextResponse.redirect(new URL("/login?error=invalid", request.url), { status: 303 });
   }
 
-  const response = NextResponse.redirect(new URL("/dashboard", request.url), { status: 303 });
-
-  response.cookies.set(ACCESS_TOKEN_COOKIE, data.session.access_token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: data.session.expires_in,
+  // ★ sb cookie を載せた response のヘッダーを引き継いでリダイレクト
+  const redirectResponse = NextResponse.redirect(new URL("/dashboard", request.url), { status: 303 });
+  response.headers.forEach((value, key) => {
+    redirectResponse.headers.set(key, value);
   });
 
-  response.cookies.set(REFRESH_TOKEN_COOKIE, data.session.refresh_token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
-
-  return response;
+  return redirectResponse;
 }
