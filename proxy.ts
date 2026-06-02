@@ -1,8 +1,8 @@
-// middleware.ts（プロジェクトルート）
+// proxy.ts（プロジェクトルート）
 import type { NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   return updateSession(req);
 }
 
