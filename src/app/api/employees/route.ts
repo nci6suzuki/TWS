@@ -62,7 +62,7 @@ export async function POST(req: Request) {
       hrEmployeeId: me.employeeId,
     };
 
-    const result = await createEmployee({ me, input });
+    const result = await createEmployee({ input });
 
     return NextResponse.json({ success: true, data: result });
   } catch (e: any) {
