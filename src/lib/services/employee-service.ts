@@ -2,6 +2,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { applyAnnualTemplateToEmployee } from "@/lib/services/template-service";
 import { createEmployeeSchema, type CreateEmployeeInput } from "@/lib/validations/employee";
+import { Me } from "@/types/api";
 
 export async function createEmployee({
   input,

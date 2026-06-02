@@ -19,7 +19,7 @@ export async function PATCH(
     const { id } = await context.params; // ★ここが重要（Promiseをawait）
     const body = await req.json();
 
-    const result = await updateEmployee({ me, employeeId: id, input: body });
+    const result = await updateEmployee({ employeeId: id, input: body });
 
     return NextResponse.json({ success: true, data: result });
   } catch (e: any) {
