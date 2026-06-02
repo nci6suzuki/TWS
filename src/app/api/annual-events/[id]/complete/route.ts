@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuthApi();
+    await requireAuthApi(req);
 
     const { id } = await params;
     const supabase = await createSupabaseServerClient();
