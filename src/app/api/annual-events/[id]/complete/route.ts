@@ -4,7 +4,7 @@ import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -22,12 +22,12 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: { id } });
   } catch (e: any) {
+    const msg = e?.message ?? "完了化に失敗しました";
+    const status = msg === "UNAUTHORIZED" ? 401 : 500;
+
     return NextResponse.json(
-      {
-        success: false,
-        error: { code: "ERROR", message: e?.message ?? "完了化に失敗しました" },
-      },
-      { status: 500 }
+      { success: false, error: { code: msg, message: msg } },
+      { status }
     );
   }
 }
