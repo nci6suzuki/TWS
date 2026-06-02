@@ -1,38 +1,32 @@
-import { createClient } from "@supabase/supabase-js";
+// src/lib/supabase/server-auth.ts
 import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 
-const ACCESS_TOKEN_COOKIE = "tm-access-token";
-
-export async function getTmAccessToken() {
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
-
-  if (!accessToken) {
-    throw new Error("UNAUTHORIZED");
-  }
-
-  return accessToken;
-}
-
+// ★ もう tm-access-token は使わない（残してもOKだが不要）
 export async function createSupabaseServerAuthClient() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error(
-      "Missing Supabase env vars: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY"
-    );
+    throw new Error("Missing Supabase env vars: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY");
   }
 
-  const accessToken = await getTmAccessToken();
+  const cookieStore = cookies();
 
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
+  return createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value;
+      },
+      set(name: string, value: string, options: any) {
+        cookieStore.set({ name, value, ...options });
+      },
+      remove(name: string, options: any) {
+        cookieStore.set({ name, value: "", ...options, maxAge: 0 });
       },
     },
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
   });
+}
+
+// 互換のため残すなら
+export async function getTmAccessToken() {
+  return undefined;
 }
