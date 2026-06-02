@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const me = await requireAuthApi();
+    const me = await requireAuthApi(req);
     const body = await req.json();
     const supabase = await createSupabaseServerClient();
 

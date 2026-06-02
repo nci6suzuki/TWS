@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const me = await requireAuthApi();
+    const me = await requireAuthApi(req);
     const supabase = await createSupabaseServerClient();
 
     const { data, error } = await supabase

@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
-    await requireAuthApi();
+    await requireAuthApi(req);
     const supabase = await createSupabaseServerAuthClient();
     const { searchParams } = new URL(req.url);
     const branchId = searchParams.get("branchId");
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const me = await requireAuthApi();
+    const me = await requireAuthApi(req);
 
     if (me.role !== "admin" && me.role !== "hr") {
       return NextResponse.json(

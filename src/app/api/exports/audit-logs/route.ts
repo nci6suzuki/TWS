@@ -1,8 +1,8 @@
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function GET() {
-  const me = await requireAuthApi();
+export async function GET(req: NextRequest) {
+  const me = await requireAuthApi(req);
   if (!["admin", "hr"].includes(me.role)) {
     return new Response("FORBIDDEN", { status: 403 });
   }

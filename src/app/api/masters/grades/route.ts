@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    await requireAuthApi();
+    await requireAuthApi(req);
     const supabase = await createSupabaseServerAuthClient();
 
     const { data, error } = await supabase
@@ -33,9 +33,9 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const me = await requireAuthApi();
+    const me = await requireAuthApi(req);
 
     if (me.role !== "admin" && me.role !== "hr") {
       return NextResponse.json(

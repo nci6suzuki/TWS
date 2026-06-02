@@ -1,8 +1,8 @@
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function GET() {
-  await requireAuthApi();
+export async function GET(req: NextRequest) {
+  await requireAuthApi(req);
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase

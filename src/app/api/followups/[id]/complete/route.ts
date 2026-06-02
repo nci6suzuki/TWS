@@ -4,11 +4,11 @@ import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { completeFollowup } from "@/lib/services/followup-service";
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const me = await requireAuthApi();
+    const me = await requireAuthApi(req);
     const { id } = await params;
 
     const res = await completeFollowup({ me, followupId: id });

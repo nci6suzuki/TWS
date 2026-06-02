@@ -4,11 +4,11 @@ import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuthApi();
+    await requireAuthApi(req);
 
     const { id } = await params;
     const supabase = await createSupabaseServerClient();
@@ -49,7 +49,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const me = await requireAuthApi();
+    const me = await requireAuthApi(req);
     const { id } = await params;
 
     const supabase = await createSupabaseServerClient();

@@ -6,7 +6,7 @@ import { canManageTemplates } from "@/lib/permissions/can";
 
 export async function POST(req: NextRequest) {
   try {
-    const me = await requireAuthApi();
+    const me = await requireAuthApi(req);
 
     if (!canManageTemplates(me)) {
       return NextResponse.json(
