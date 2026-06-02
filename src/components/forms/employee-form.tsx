@@ -200,45 +200,55 @@ export function EmployeeForm({
     );
   }, [form.branchId, resolvedMasterOptions?.departments]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setErrorMsg(null);
+async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault();
+  setSaving(true);
+  setErrorMsg(null);
 
-    try {
-      if (mode === "create") {
-        createEmployeeSchema.parse({
-          ...form,
-          hrEmployeeId: isUuid(me.employeeId) ? me.employeeId : undefined,
-        });
-      }
-
-      const url = mode === "create" ? "/api/employees" : `/api/employees/${initialData?.id}`;
-      const method = mode === "create" ? "POST" : "PATCH";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+  try {
+    if (mode === "create") {
+      createEmployeeSchema.parse({
+        ...form,
+        hrEmployeeId: isUuid(me.employeeId) ? me.employeeId : undefined,
       });
-
-      const json = await res.json();
-
-      if (!res.ok || !json?.success) {
-        throw new Error(json?.error?.message ?? "保存に失敗しました");
-      }
-
-      const id = mode === "create" ? json.data.id : initialData?.id;
-      router.push(`/employees/${id}?tab=basic`);
-      router.refresh();
-    } catch (e: any) {
-      const validationMessage = Array.isArray(e?.issues) ? e.issues[0]?.message : null;
-      setErrorMsg(validationMessage ?? e?.message ?? "保存に失敗しました");
-    } finally {
-      setSaving(false);
     }
-  }
 
+    const url = mode === "create" ? "/api/employees" : `/api/employees/${initialData?.id}`;
+    const method = mode === "create" ? "POST" : "PATCH";
+
+    // ★ cookie統一なので Authorization は不要
+    // ★ 未選択の "" を事故防止で undefined/null に寄せる
+    const payload = {
+      ...form,
+      gradeId: form.gradeId || undefined,
+      managerEmployeeId: form.managerEmployeeId || undefined,
+      mentorEmployeeId: form.mentorEmployeeId || undefined,
+      templateId: form.templateId || undefined,
+    };
+
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok || !json?.success) {
+      throw new Error(json?.error?.message ?? "保存に失敗しました");
+    }
+
+    const id = mode === "create" ? json.data.id : initialData?.id;
+    router.push(`/employees/${id}?tab=basic`);
+    router.refresh();
+  } catch (e: any) {
+    const validationMessage = Array.isArray(e?.issues) ? e.issues[0]?.message : null;
+    setErrorMsg(validationMessage ?? e?.message ?? "保存に失敗しました");
+  } finally {
+    setSaving(false);
+  }
+}
   return (
     <form onSubmit={handleSubmit} style={{ width: "100%", display: "grid", gap: 18 }}>
       {errorMsg && (
