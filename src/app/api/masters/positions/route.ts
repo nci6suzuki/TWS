@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
 import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
 
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   try {
     await requireAuthApi(req);
     const supabase = await createSupabaseServerAuthClient();
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const me = await requireAuthApi(req);
 
