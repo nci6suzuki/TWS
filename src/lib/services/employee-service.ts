@@ -86,24 +86,40 @@ async function validateCreateEmployeeInput(input: CreateEmployeeInput) {
   const parsedInput = createEmployeeSchema.parse(input);
   const supabase = await createSupabaseServerClient();
 
-  const [existingEmployeeCode, existingEmail, branch, department, position, grade, manager, mentor, template] =
-    await Promise.all([
-      supabase.from("employees").select("id").eq("employee_code", parsedInput.employeeCode).maybeSingle(),
-      supabase.from("employees").select("id").eq("email", parsedInput.email).maybeSingle(),
-      supabase.from("branches").select("id").eq("id", parsedInput.branchId).maybeSingle(),
-      supabase.from("departments").select("id, branch_id").eq("id", parsedInput.departmentId).maybeSingle(),
-      supabase.from("positions").select("id").eq("id", parsedInput.positionId).maybeSingle(),
-      supabase.from("grades").select("id").eq("id", parsedInput.gradeId).maybeSingle(),
-      parsedInput.managerEmployeeId
-        ? supabase.from("employees").select("id").eq("id", parsedInput.managerEmployeeId).maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-      parsedInput.mentorEmployeeId
-        ? supabase.from("employees").select("id").eq("id", parsedInput.mentorEmployeeId).maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-      parsedInput.templateId
-        ? supabase.from("annual_plan_templates").select("id").eq("id", parsedInput.templateId).maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-    ]);
+const [
+  existingEmployeeCode,
+  existingEmail,
+  branch,
+  department,
+  position,
+  grade,
+  manager,
+  mentor,
+  template,
+] = await Promise.all([
+  supabase.from("employees").select("id").eq("employee_code", parsedInput.employeeCode).maybeSingle(),
+  supabase.from("employees").select("id").eq("email", parsedInput.email).maybeSingle(),
+  supabase.from("branches").select("id").eq("id", parsedInput.branchId).maybeSingle(),
+  supabase.from("departments").select("id, branch_id").eq("id", parsedInput.departmentId).maybeSingle(),
+  supabase.from("positions").select("id").eq("id", parsedInput.positionId).maybeSingle(),
+
+  // ★ gradeId があるときだけ問い合わせる
+  parsedInput.gradeId
+    ? supabase.from("grades").select("id").eq("id", parsedInput.gradeId).maybeSingle()
+    : Promise.resolve({ data: null, error: null }),
+
+  parsedInput.managerEmployeeId
+    ? supabase.from("employees").select("id").eq("id", parsedInput.managerEmployeeId).maybeSingle()
+    : Promise.resolve({ data: null, error: null }),
+
+  parsedInput.mentorEmployeeId
+    ? supabase.from("employees").select("id").eq("id", parsedInput.mentorEmployeeId).maybeSingle()
+    : Promise.resolve({ data: null, error: null }),
+
+  parsedInput.templateId
+    ? supabase.from("annual_plan_templates").select("id").eq("id", parsedInput.templateId).maybeSingle()
+    : Promise.resolve({ data: null, error: null }),
+]);
 
   if (existingEmployeeCode.error) throw existingEmployeeCode.error;
   if (existingEmployeeCode.data) throw new Error("この社員番号は既に登録されています");
@@ -123,8 +139,11 @@ async function validateCreateEmployeeInput(input: CreateEmployeeInput) {
   if (position.error) throw position.error;
   if (!position.data) throw new Error("指定された役職が見つかりません");
 
-  if (grade.error) throw grade.error;
-  if (!grade.data) throw new Error("指定された等級が見つかりません");
+// grade は指定されている場合だけ存在チェック
+if (grade.error) throw grade.error;
+if (parsedInput.gradeId && !grade.data) {
+  throw new Error("指定された等級が見つかりません");
+}
 
   if (manager.error) throw manager.error;
   if (parsedInput.managerEmployeeId && !manager.data) {
