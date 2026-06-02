@@ -1,138 +1,51 @@
-import { NextRequest, NextResponse } from "next/server";
+// src/app/api/employees/route.ts
+import { NextResponse } from "next/server";
 import { requireAuthApi } from "@/lib/auth/require-auth-api";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createEmployee } from "@/lib/services/employee-service";
-import { createEmployeeSchema } from "@/lib/validations/employee";
-import { isUuid } from "@/lib/utils/is-uuid";
-import { ZodError } from "zod";
+import { getEmployees } from "@/lib/queries/employees";
 
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   try {
-    const me = await requireAuthApi();
-    const supabase = await createSupabaseServerClient();
+    const me = await requireAuthApi(req);
 
-    const searchParams = req.nextUrl.searchParams;
-    const page = Number(searchParams.get("page") ?? "1");
-    const limit = Number(searchParams.get("limit") ?? "20");
+    const { searchParams } = new URL(req.url);
+    const branchId = searchParams.get("branchId") || undefined;
+    const departmentId = searchParams.get("departmentId") || undefined;
+    const positionId = searchParams.get("positionId") || undefined;
+    const gradeId = searchParams.get("gradeId") || undefined;
+    const keyword = searchParams.get("keyword") || undefined;
+    const page = Number(searchParams.get("page") ?? 1);
+    const limit = Number(searchParams.get("limit") ?? 20);
+    const sort = searchParams.get("sort") || undefined;
+    const order = (searchParams.get("order") as "asc" | "desc" | null) ?? undefined;
 
-    const branchId = searchParams.get("branchId");
-    const departmentId = searchParams.get("departmentId");
-    const positionId = searchParams.get("positionId");
-    const gradeId = searchParams.get("gradeId");
-    const keyword = searchParams.get("keyword");
-    const sort = searchParams.get("sort") ?? "name";
-    const order = searchParams.get("order") === "desc" ? false : true;
-
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    let query = supabase
-      .from("employees")
-      .select(
-        `
-        id,
-        employee_code,
-        name,
-        email,
-        status,
-        branch_id,
-        department_id,
-        position_id,
-        grade_id,
-        branches(id, name, code),
-        departments(id, name),
-        positions(id, name),
-        grades(id, name)
-      `,
-        { count: "exact" }
-      );
-
-    if (branchId) query = query.eq("branch_id", branchId);
-    if (departmentId) query = query.eq("department_id", departmentId);
-    if (positionId) query = query.eq("position_id", positionId);
-    if (gradeId) query = query.eq("grade_id", gradeId);
-
-    if (keyword) {
-      query = query.or(
-        `name.ilike.%${keyword}%,email.ilike.%${keyword}%,employee_code.ilike.%${keyword}%`
-      );
-    }
-
-    if (me.role === "employee") {
-      query = query.eq("id", me.employeeId);
-    } else if (me.role === "manager") {
-      if (me.scope?.branchIds?.length) {
-        query = query.in("branch_id", me.scope.branchIds);
-      }
-    } else if (me.role === "mentor") {
-      if (me.scope?.employeeIds?.length) {
-        query = query.in("id", me.scope.employeeIds);
-      }
-    }
-
-    const { data, error, count } = await query
-      .order(sort, { ascending: order })
-      .range(from, to);
-
-    if (error) throw error;
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        items: data ?? [],
-        pagination: {
-          page,
-          limit,
-          total: count ?? 0,
-          totalPages: Math.max(1, Math.ceil((count ?? 0) / limit)),
-        },
-      },
+    const result = await getEmployees({
+      me,
+      branchId,
+      departmentId,
+      positionId,
+      gradeId,
+      keyword,
+      page,
+      limit,
+      sort,
+      order: order ?? "asc",
     });
+
+    return NextResponse.json({ success: true, data: result });
   } catch (e: any) {
-    console.error("GET /api/employees error:", e);
-
-    if (e instanceof ZodError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: e.issues[0]?.message ?? "入力内容を確認してください",
-          },
-        },
-        { status: 400 }
-      );
-    }
-
-    if (e?.message === "UNAUTHORIZED") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "UNAUTHORIZED",
-            message: "認証が必要です",
-          },
-        },
-        { status: 401 }
-      );
-    }
-
+    const msg = e?.message ?? "ERROR";
+    const status = msg === "UNAUTHORIZED" ? 401 : 500;
     return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: e?.message ?? "ERROR",
-          message: e?.message ?? "取得に失敗しました",
-        },
-      },
-      { status: 500 }
+      { success: false, error: { code: msg, message: msg === "UNAUTHORIZED" ? "認証が必要です" : msg } },
+      { status }
     );
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const me = await requireAuthApi();
+    const me = await requireAuthApi(req);
 
     if (me.role !== "admin" && me.role !== "hr") {
       return NextResponse.json(
@@ -142,54 +55,22 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const input = createEmployeeSchema.parse({
-      ...body,
-      hrEmployeeId: isUuid(me.employeeId) ? me.employeeId : undefined,
-    });
 
-    const result = await createEmployee({
-      input,
-    });
+    // ここで hrEmployeeId を付与（フロントから送らなくてOK）
+    const input = {
+      ...body,
+      hrEmployeeId: me.employeeId,
+    };
+
+    const result = await createEmployee({ me, input });
 
     return NextResponse.json({ success: true, data: result });
   } catch (e: any) {
-    console.error("POST /api/employees error:", e);
-
-    if (e instanceof ZodError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: e.issues[0]?.message ?? "入力内容を確認してください",
-          },
-        },
-        { status: 400 }
-      );
-    }
-
-    if (e?.message === "UNAUTHORIZED") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "UNAUTHORIZED",
-            message: "認証が必要です",
-          },
-        },
-        { status: 401 }
-      );
-    }
-
+    const msg = e?.message ?? "ERROR";
+    const status = msg === "UNAUTHORIZED" ? 401 : 500;
     return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: e?.message ?? "ERROR",
-          message: e?.message ?? "登録に失敗しました",
-        },
-      },
-      { status: 500 }
+      { success: false, error: { code: msg, message: msg === "UNAUTHORIZED" ? "認証が必要です" : msg } },
+      { status }
     );
   }
 }

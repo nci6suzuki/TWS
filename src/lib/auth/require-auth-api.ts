@@ -1,3 +1,4 @@
+// src/lib/auth/require-auth-api.ts
 import { Me, Role } from "@/types/api";
 import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
 
@@ -9,10 +10,9 @@ type EmployeeScopeRow = {
   department_id?: string | null;
 };
 
-export async function requireAuthApi(): Promise<Me> {
-  const supabase = await createSupabaseServerAuthClient();
+export async function requireAuthApi(req: Request): Promise<Me> {
+  const supabase = await createSupabaseServerAuthClient(req);
 
-  // ★ cookieセッションから取得
   const {
     data: { user },
     error,
@@ -20,58 +20,31 @@ export async function requireAuthApi(): Promise<Me> {
 
   if (error || !user) throw new Error("UNAUTHORIZED");
 
-  const authContext = await resolveAuthContext({
-    supabase,
-    userId: user.id,
-    metadataRole: user.user_metadata?.role as Role | undefined,
-    metadataEmployeeId:
-      (user.user_metadata?.employeeId as string | undefined) ??
-      (user.user_metadata?.employee_id as string | undefined),
-  });
+  // employees.user_id を正とする（user_metadata 依存を避ける）
+  const { data: employeeRow, error: empErr } = await supabase
+    .from("employees")
+    .select("id, app_role, branch_id, department_id")
+    .eq("user_id", user.id)
+    .maybeSingle<EmployeeScopeRow>();
 
-  if (!authContext) throw new Error("UNAUTHORIZED");
+  if (empErr || !employeeRow?.id) throw new Error("UNAUTHORIZED");
+
+  const role = normalizeRole(employeeRow.app_role ?? (user.user_metadata?.role as Role | undefined));
+  if (!role) throw new Error("UNAUTHORIZED");
 
   const scope = await buildScope({
     supabase,
-    role: authContext.role,
-    employeeId: authContext.employeeId,
-    employeeRow: authContext.employeeRow,
+    role,
+    employeeId: employeeRow.id,
+    employeeRow,
   });
 
   return {
     userId: user.id,
-    employeeId: authContext.employeeId,
-    role: authContext.role,
+    employeeId: employeeRow.id,
+    role,
     scope,
   };
-}
-
-// 以下 resolveAuthContext / buildScope / fetchEmployeeScopeRow はあなたの既存のままでOK
-async function resolveAuthContext({
-  supabase,
-  userId,
-  metadataRole,
-  metadataEmployeeId,
-}: {
-  supabase: Supabase;
-  userId: string;
-  metadataRole?: Role;
-  metadataEmployeeId?: string;
-}) {
-  const { data: employeeRow, error } = await supabase
-    .from("employees")
-    .select("id, app_role, branch_id, department_id")
-    .eq("user_id", userId)
-    .maybeSingle<EmployeeScopeRow>();
-
-  if (error) return null;
-
-  const role = normalizeRole(metadataRole ?? employeeRow?.app_role ?? undefined);
-  const employeeId = employeeRow?.id ?? metadataEmployeeId ?? null;
-
-  if (!role || !employeeId) return null;
-
-  return { role, employeeId, employeeRow };
 }
 
 function normalizeRole(value?: string | null): Role | null {
@@ -90,37 +63,29 @@ async function buildScope({
   supabase: Supabase;
   role: Role;
   employeeId: string;
-  employeeRow: EmployeeScopeRow | null;
+  employeeRow: EmployeeScopeRow;
 }) {
   if (role === "admin" || role === "hr") return {};
 
-  const meRow = employeeRow?.id === employeeId ? employeeRow : await fetchEmployeeScopeRow({ supabase, employeeId });
-  if (!meRow) return {};
-
-  if (role === "employee") return { employeeIds: [employeeId] };
+  if (role === "employee") {
+    return { employeeIds: [employeeId] };
+  }
 
   if (role === "manager") {
     return {
-      branchIds: meRow.branch_id ? [meRow.branch_id] : [],
-      departmentIds: meRow.department_id ? [meRow.department_id] : [],
+      branchIds: employeeRow.branch_id ? [employeeRow.branch_id] : [],
+      departmentIds: employeeRow.department_id ? [employeeRow.department_id] : [],
     };
   }
 
   if (role === "mentor") {
-    const { data: mentees } = await supabase.from("employees").select("id").eq("mentor_employee_id", employeeId);
+    const { data: mentees } = await supabase
+      .from("employees")
+      .select("id")
+      .eq("mentor_employee_id", employeeId);
+
     return { employeeIds: [employeeId, ...(mentees ?? []).map((x: any) => x.id)] };
   }
 
   return {};
-}
-
-async function fetchEmployeeScopeRow({ supabase, employeeId }: { supabase: Supabase; employeeId: string }) {
-  const { data, error } = await supabase
-    .from("employees")
-    .select("id, app_role, branch_id, department_id")
-    .eq("id", employeeId)
-    .maybeSingle<EmployeeScopeRow>();
-
-  if (error || !data) return null;
-  return data;
 }
