@@ -1,10 +1,13 @@
-// src/app/(protected)/employees/[id]/page.tsx
 import { requireAuth } from "@/lib/auth/require-auth";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getEmployeeById } from "@/lib/queries/employees";
 import { EmployeeProfileBook } from "@/components/employees/employee-profile-book";
 
 const TAB_DEFAULT = "basic";
+
+function isUuid(v: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
+}
 
 export default async function EmployeeDetailPage({
   params,
@@ -16,8 +19,20 @@ export default async function EmployeeDetailPage({
   const me = await requireAuth();
   const tab = searchParams.tab ?? TAB_DEFAULT;
 
+  // 社員番号が来たら code の方へ（正規URLへ）
+  if (!isUuid(params.id)) {
+    redirect(`/employees/code/${params.id}?tab=${tab}`);
+  }
+
   const employee = await getEmployeeById({ me, employeeId: params.id });
   if (!employee) return notFound();
 
-  return <EmployeeProfileBook me={me} employeeId={params.id} tab={tab} summary={employee.summary} />;
+  return (
+    <EmployeeProfileBook
+      me={me}
+      employeeId={params.id}
+      tab={tab}
+      summary={employee.summary}
+    />
+  );
 }

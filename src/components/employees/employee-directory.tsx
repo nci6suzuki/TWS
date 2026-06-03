@@ -88,7 +88,7 @@ export function EmployeeDirectory({ me, employees, pagination }: Props) {
             {employees.map((employee) => (
               <Link
                 key={employee.id}
-                href={`/employees/${employee.id}?tab=basic`}
+                href={employee.employeeCode ? `/employees/code/${employee.employeeCode}?tab=basic` : `/employees/${employee.id}?tab=basic`}
                 className="group rounded-[24px] border border-slate-200 bg-white p-4 text-left no-underline transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-[0_20px_40px_rgba(79,70,229,0.12)]"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -136,7 +136,7 @@ export function EmployeeDirectory({ me, employees, pagination }: Props) {
                 {employees.map((employee) => (
                   <tr key={employee.id} className="border-t border-slate-100 align-top">
                     <td className="px-6 py-4">
-                      <Link href={`/employees/${employee.id}?tab=basic`} className="font-semibold text-slate-900 no-underline hover:text-indigo-700">
+                      <Link href={employee.employeeCode ? `/employees/code/${employee.employeeCode}?tab=basic` : `/employees/${employee.id}?tab=basic`} className="font-semibold text-slate-900 no-underline hover:text-indigo-700">
                         {employee.name}
                       </Link>
                     </td>

@@ -226,3 +226,17 @@ export async function getEmployeeEditData(input: { me: Me; employeeId: string })
     status: data.status ?? "active",
   };
 }
+
+// employees.ts の末尾に追加
+export async function getEmployeeIdByCode(input: { me: Me; employeeCode: string }) {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("employees")
+    .select("id")
+    .eq("employee_code", input.employeeCode)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.id ?? null;
+}
