@@ -227,7 +227,7 @@ export async function getEmployeeEditData(input: { me: Me; employeeId: string })
   };
 }
 
-// employees.ts の末尾に追加
+// ここから追記：社員番号 → UUID
 export async function getEmployeeIdByCode(input: { me: Me; employeeCode: string }) {
   const supabase = await createSupabaseServerClient();
 
@@ -238,5 +238,10 @@ export async function getEmployeeIdByCode(input: { me: Me; employeeCode: string 
     .maybeSingle();
 
   if (error) throw error;
-  return data?.id ?? null;
+
+  // 権限で見えない場合は null になる（RLS/権限が効いていればOK）
+  if (!data?.id) return null;
+
+  // 念のため権限チェック（getEmployeeById と同じ基準に寄せるならここで canViewEmployee を使ってもOK）
+  return data.id;
 }

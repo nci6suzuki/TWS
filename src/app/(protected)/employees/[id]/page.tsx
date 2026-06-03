@@ -1,3 +1,4 @@
+// src/app/(protected)/employees/[id]/page.tsx
 import { requireAuth } from "@/lib/auth/require-auth";
 import { notFound, redirect } from "next/navigation";
 import { getEmployeeById } from "@/lib/queries/employees";
@@ -19,7 +20,7 @@ export default async function EmployeeDetailPage({
   const me = await requireAuth();
   const tab = searchParams.tab ?? TAB_DEFAULT;
 
-  // 社員番号が来たら code の方へ（正規URLへ）
+  // 社員番号っぽい値が来たら正規URLへ
   if (!isUuid(params.id)) {
     redirect(`/employees/code/${params.id}?tab=${tab}`);
   }

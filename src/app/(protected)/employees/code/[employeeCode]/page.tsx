@@ -1,3 +1,4 @@
+// src/app/(protected)/employees/code/[employeeCode]/page.tsx
 import { requireAuth } from "@/lib/auth/require-auth";
 import { notFound } from "next/navigation";
 import { getEmployeeById, getEmployeeIdByCode } from "@/lib/queries/employees";
@@ -15,13 +16,15 @@ export default async function EmployeeByCodePage({
   const me = await requireAuth();
   const tab = searchParams.tab ?? TAB_DEFAULT;
 
-  // 社員番号 → UUID
+  // ① 社員番号 → UUID に変換
   const employeeId = await getEmployeeIdByCode({ me, employeeCode: params.employeeCode });
   if (!employeeId) return notFound();
 
+  // ② 既存の UUID 用クエリで取得（権限チェックもここで効く）
   const employee = await getEmployeeById({ me, employeeId });
   if (!employee) return notFound();
 
+  // ③ 既存の表示コンポーネントをそのまま使う（内部はUUIDでOK）
   return (
     <EmployeeProfileBook
       me={me}
