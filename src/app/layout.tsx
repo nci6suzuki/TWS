@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ReactNode } from "react";
+import "./globals.css"; // ★これが必須
 
 export const metadata: Metadata = {
   title: "Talent Management",
@@ -9,15 +10,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ja">
-      <body
-        style={{
-          margin: 0,
-          fontFamily:
-            "Inter, 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-          background: "#f1f5f9",
-          color: "#0f172a",
-        }}
-      >
+      <body className="min-h-screen bg-slate-50 text-slate-900">
         {children}
       </body>
     </html>
