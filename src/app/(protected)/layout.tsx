@@ -1,29 +1,10 @@
 // src/app/(protected)/layout.tsx
 import { ReactNode } from "react";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { AppSidebar } from "@/components/layout/app-sidebar";
-import { AppHeader } from "@/components/layout/app-header";
-import { PageContainer } from "@/components/layout/page-container";
+import { AppShellV2 } from "@/components/layout/v2/app-shell";
 
 export default async function ProtectedLayout({ children }: { children: ReactNode }) {
-  const me = await requireAuth(); // { userId, employeeId, role, scopes... }
+  await requireAuth(); // 認証だけ通せばOK（meが必要なら後でTopbarに渡す）
 
-  return (
-    <div
-      style={{
-        minHeight: "100dvh",
-        display: "flex",
-        background:
-          "radial-gradient(circle at 10% 10%, rgba(79, 70, 229, 0.16), transparent 28%), radial-gradient(circle at 90% 0%, rgba(14, 165, 233, 0.17), transparent 24%), linear-gradient(160deg, #eef2ff, #f8fafc 50%, #e2e8f0)",
-      }}
-    >
-      <AppSidebar me={me} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        <AppHeader me={me} />
-<main style={{ flex: 1, padding: "24px clamp(16px, 2.4vw, 28px) 32px" }}>
-  <PageContainer size="md">{children}</PageContainer>
-</main>
-      </div>
-    </div>
-  );
+  return <AppShellV2>{children}</AppShellV2>;
 }

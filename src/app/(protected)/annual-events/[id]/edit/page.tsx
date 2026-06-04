@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAnnualEventById } from "@/lib/queries/annual-events";
 import { AnnualEventEditForm } from "@/components/forms/annual-event-edit-form";
-import { PageContainer } from "@/components/layout/page-container";
+import { PageContainer, PageHeader } from "@/components/layout/v2/page";
 
 export default async function AnnualEventEditPage({
   params,

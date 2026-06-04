@@ -5,7 +5,7 @@ import { EmployeeDirectory } from "@/components/employees/employee-directory";
 import { EmployeeFilters } from "@/components/filters/employee-filters";
 import Link from "next/link";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
-import { PageContainer } from "@/components/layout/page-container";
+import { PageContainer, PageHeader } from "@/components/layout/v2/page";
 
 type EmployeesPageSearchParams = Promise<{
   branchId?: string | string[];
@@ -48,26 +48,21 @@ export default async function EmployeesPage({
 
   return (
     <PageContainer size="xl">
-    <div className="space-y-5">
-      <Card variant="elevated" style={{ padding: 0, overflow: "hidden" }}>
-        <section className="flex flex-wrap items-end justify-between gap-4 bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_45%,#eef2ff_100%)] p-6 sm:p-8">
-          <div className="max-w-3xl">
-            <div className="text-sm font-bold tracking-[0.18em] text-indigo-600">PROFILE BOOK</div>
-            <CardTitle style={{ marginTop: 10, fontSize: 32 }}>社員一覧</CardTitle>
-            <CardText style={{ marginTop: 12, fontSize: 14, lineHeight: 1.8 }}>
-              添付イメージのように一覧性を高めるため、検索 → 表示切替 → 詳細導線を1画面に整理しました。カード表示/リスト表示を切り替えながら、プロフィールブック感覚で社員情報を確認できます。
-            </CardText>
-          </div>
-          {(me.role === "admin" || me.role === "hr") && (
+    <div className="space-y-6">
+      <PageHeader
+        title="社員一覧"
+        description="検索・絞り込み・表示切替で社員カルテへ素早くアクセスできます。"
+        actions={
+          (me.role === "admin" || me.role === "hr") ? (
             <Link
               href="/employees/new"
-              className="inline-flex h-12 items-center rounded-2xl bg-slate-900 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
             >
               + 社員登録
             </Link>
-          )}
-        </section>
-      </Card>
+          ) : null
+        }
+      />
 
       <EmployeeFilters me={me} initial={sp} />
 

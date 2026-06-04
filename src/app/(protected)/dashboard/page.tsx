@@ -4,31 +4,23 @@ import { CSSProperties, ReactNode } from "react";
 import { Card, CardTitle } from "@/components/ui/card";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getDashboardData } from "@/lib/queries/dashboard";
-import { PageContainer } from "@/components/layout/page-container";
+import { PageContainer, PageHeader, PageSection } from "@/components/layout/v2/page";
 
 export default async function DashboardPage() {
   const me = await requireAuth();
   const data = await getDashboardData({ me });
 
   return (
-    <PageContainer size="xl">
-    <div style={{ display: "grid", gap: 18 }}>
-      <Card variant="elevated" style={{ borderRadius: 30, padding: 0, overflow: "hidden" }}>
-        <div style={{ display: "grid", gap: 20, gridTemplateColumns: "minmax(0,1.5fr) minmax(320px,0.9fr)", padding: 28, background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 42%, #eef2ff 100%)" }}>
-          <div>
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 800, letterSpacing: "0.2em", color: "#6366f1" }}>TALENT MANAGEMENT HOME</p>
-            <h1 style={{ margin: "10px 0 0", fontSize: 34, color: "#0f172a" }}>ダッシュボード</h1>
-            <p style={{ margin: "14px 0 0", maxWidth: 720, fontSize: 14, lineHeight: 1.8, color: "#475569" }}>
-              Kaonaviライクな「お知らせ」「ToDo」「主要機能導線」を取り込み、日々の利用開始地点として見やすいホーム画面に再構成しました。
-            </p>
-          </div>
-          <div style={{ display: "grid", gap: 12 }}>
-            <QuickPanel title="お知らせ" body={data.notifications[0]?.title ?? "現在のお知らせはありません。"} sub={data.notifications[0]?.body ?? "公開された通知はここに集約されます。"} />
-            <QuickPanel title="ToDo" body={data.dueFollowups[0] ? `${data.dueFollowups[0].employeeName} / ${data.dueFollowups[0].followupType}` : "対応待ちのToDoはありません。"} sub={data.dueFollowups[0] ? `期限: ${data.dueFollowups[0].dueDate}` : "未完了のフォローや面談をここから確認できます。"} />
-          </div>
-        </div>
-      </Card>
+  <PageContainer size="xl">
+    <div className="space-y-6">
+      <PageHeader
+        title="ダッシュボード"
+        description="直近の予定・期限・要対応をまとめて確認できます。"
+      />
 
+      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">
+        <div className="space-y-6">
+          <PageSection title="KPI / 状況">
       <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
         <KpiCard label="今月の面談件数" value={data.kpis.interviewCount} />
         <KpiCard label="未実施フォロー" value={data.kpis.pendingFollowupCount} />
@@ -36,19 +28,28 @@ export default async function DashboardPage() {
         <KpiCard label="今週イベント" value={data.kpis.weekEventCount} />
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
-        <KpiCard label="資格期限 30日以内" value={data.kpis.qualification30Count} />
-        <KpiCard label="資格期限 90日以内" value={data.kpis.qualification90Count} />
-        <KpiCard label="資格失効" value={data.kpis.qualificationExpiredCount} />
-      </section>
 
+      </PageSection>
+
+      <PageSection title="直近のイベント / 面談">
       <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
         <FeatureCard href="/employees" title="プロフィールブック" description="社員検索・カード表示・詳細閲覧" />
         <FeatureCard href="/annual-events" title="シートガレージ" description="年次イベント・進捗確認" />
         <FeatureCard href="/followups" title="スマートレビュー" description="フォロー対象・対応状況" />
         <FeatureCard href="/notifications" title="お知らせ" description="最新通知を一覧確認" />
       </section>
+      </PageSection>
+    </div>
 
+<div className="space-y-6">
+    <PageSection title="アラート" description="資格期限・未完了イベントなど">
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+        <KpiCard label="資格期限 30日以内" value={data.kpis.qualification30Count} />
+        <KpiCard label="資格期限 90日以内" value={data.kpis.qualification90Count} />
+        <KpiCard label="資格失効" value={data.kpis.qualificationExpiredCount} />
+      </section>
+    </PageSection>
+    <PageSection title="クイックアクション">
       <section style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
         <InfoCard title="クイックアクション">
           <div style={{ display: "grid", gap: 10 }}>
@@ -99,59 +100,10 @@ export default async function DashboardPage() {
           </ul>
         </InfoCard>
       </section>
-
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-        <InfoCard title="今週の予定">
-          <ul style={listStyle}>
-            {data.weeklyEvents.length === 0 ? (
-              <li style={{ color: "#64748b" }}>今週の予定はありません</li>
-            ) : (
-              data.weeklyEvents.map((item: any) => (
-                <li key={item.id} style={itemStyle}>
-                  <div style={{ fontWeight: 700, color: "#0f172a" }}>{item.title}</div>
-                  <div>対象: {item.employeeName}</div>
-                  <div>種別: {item.eventType}</div>
-                  <div style={{ fontWeight: 700, color: "#1d4ed8" }}>日付: {item.scheduledDate}</div>
-                </li>
-              ))
-            )}
-          </ul>
-        </InfoCard>
-
-        <InfoCard title="資格期限アラート">
-          <ul style={listStyle}>
-            {data.qualificationAlerts.length === 0 ? (
-              <li style={{ color: "#64748b" }}>対象なし</li>
-            ) : (
-              data.qualificationAlerts.map((item: any) => (
-                <li key={item.id} style={itemStyle}>
-                  <div style={{ fontWeight: 700, color: "#0f172a" }}>{item.employeeName}</div>
-                  <div>資格：{item.qualificationName}</div>
-                  <div style={{ fontWeight: 700, color: "#dc2626" }}>期限：{item.expiresOn}</div>
-                  <div>状態：{item.status}</div>
-                </li>
-              ))
-            )}
-          </ul>
-        </InfoCard>
-
-        <InfoCard title="新着通知">
-          <ul style={listStyle}>
-            {data.notifications.length === 0 ? (
-              <li style={{ color: "#64748b" }}>通知なし</li>
-            ) : (
-              data.notifications.map((item: any) => (
-                <li key={item.id} style={itemStyle}>
-                  <div style={{ fontWeight: 700, color: "#0f172a" }}>{item.title}</div>
-                  <div style={{ color: "#475569" }}>{item.body}</div>
-                  <div style={{ marginTop: 4, fontSize: 12, color: "#64748b" }}>{new Date(item.createdAt).toLocaleString()}</div>
-                </li>
-              ))
-            )}
-          </ul>
-        </InfoCard>
-      </section>
-    </div>
+    </PageSection>
+            </div>
+        </div>
+      </div>
     </PageContainer>
   );
 }

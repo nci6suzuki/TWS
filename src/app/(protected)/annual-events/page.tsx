@@ -3,8 +3,8 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { getAnnualEvents } from "@/lib/queries/annual-events";
 import { AnnualEventsTable } from "@/components/tables/annual-events-table";
 import { AnnualEventFilters } from "@/components/filters/annual-event-filters";
+import { PageContainer, PageHeader } from "@/components/layout/v2/page";
 import Link from "next/link";
-import { PageContainer } from "@/components/layout/page-container";
 
 export default async function AnnualEventsPage({
   searchParams,
@@ -25,14 +25,20 @@ export default async function AnnualEventsPage({
   });
 
   return (
-    <PageContainer size="xl">
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-xl font-semibold">年間イベント一覧</h1>
-        <Link href="/annual-events/new" className="px-4 py-2 rounded border bg-black text-white text-sm">
-          新規登録
-        </Link>
-      </div>
+  <PageContainer size="xl">
+    <div className="space-y-6">
+      <PageHeader
+        title="年間イベント"
+        description="研修・面談・評価などの予定を管理します。"
+        actions={
+          <Link
+            href="/annual-events/new"
+            className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            + イベント登録
+          </Link>
+        }
+      />
 
       <AnnualEventFilters />
       <AnnualEventsTable data={result.items} pagination={result.pagination} />
