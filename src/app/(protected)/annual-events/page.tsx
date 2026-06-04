@@ -25,24 +25,28 @@ export default async function AnnualEventsPage({
   });
 
   return (
-  <PageContainer size="xl">
-    <div className="space-y-6">
-      <PageHeader
-        title="年間イベント"
-        description="研修・面談・評価などの予定を管理します。"
-        actions={
-          <Link
-            href="/annual-events/new"
-            className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            + イベント登録
-          </Link>
-        }
-      />
+    <PageContainer size="xl">
+      <div className="space-y-6">
+        <PageHeader
+          title="年間イベント"
+          description="研修・面談・評価などの予定を管理します。"
+          actions={
+            <div className="flex gap-2">
+              <Link
+                href="/annual-events/new"
+                className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+              >
+                + イベント登録
+              </Link>
+            </div>
+          }
+        />
 
-      <AnnualEventFilters />
-      <AnnualEventsTable data={result.items} pagination={result.pagination} />
-    </div>
+        {/* ★ initial/me を渡してURLとUIを同期 */}
+        <AnnualEventFilters me={me} initial={searchParams} />
+
+        <AnnualEventsTable data={result.items} pagination={result.pagination} />
+      </div>
     </PageContainer>
   );
 }
