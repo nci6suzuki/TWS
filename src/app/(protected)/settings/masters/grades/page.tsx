@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { MasterSimpleManager } from "@/components/settings/master-simple-manager";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function GradeMastersPage() {
   const me = await requireAuth();
@@ -10,6 +11,7 @@ export default async function GradeMastersPage() {
   }
 
   return (
+    <PageContainer size="xl">
     <MasterSimpleManager
       title="等級マスタ"
       fetchUrl="/api/masters/grades"
@@ -20,5 +22,6 @@ export default async function GradeMastersPage() {
         { key: "sort_order", label: "表示順", type: "number" },
       ]}
     />
+    </PageContainer>
   );
 }

@@ -4,6 +4,7 @@ import { InterviewForm } from "@/components/forms/interview-form";
 import { getFollowupById } from "@/lib/queries/followups";
 import { getAnnualEventById } from "@/lib/queries/annual-events";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function InterviewNewPage({
   searchParams,
@@ -19,6 +20,7 @@ export default async function InterviewNewPage({
   const annualEvent = annualEventId ? await getAnnualEventById({ me, id: annualEventId }) : null;
 
   return (
+    <PageContainer size="xl">
     <div className="space-y-5">
       <Card variant="elevated" style={{ padding: 0, overflow: "hidden" }}>
         <section style={{ padding: 24, background: "#f8fafc" }}>
@@ -30,5 +32,6 @@ export default async function InterviewNewPage({
       </Card>
       <InterviewForm me={me} preset={preset} annualEvent={annualEvent} />
     </div>
+    </PageContainer>
   );
 }

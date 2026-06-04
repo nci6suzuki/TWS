@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { DepartmentMasterManager } from "@/components/settings/department-master-manager";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function DepartmentMastersPage() {
   const me = await requireAuth();
@@ -9,5 +10,5 @@ export default async function DepartmentMastersPage() {
     redirect("/unauthorized");
   }
 
-  return <DepartmentMasterManager />;
+  return     <PageContainer size="xl"><DepartmentMasterManager /></PageContainer>;
 }

@@ -2,6 +2,7 @@
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NotificationList } from "@/components/notifications/notification-list";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function NotificationsPage() {
   const me = await requireAuth();
@@ -16,9 +17,11 @@ export default async function NotificationsPage() {
   if (error) throw error;
 
   return (
+    <PageContainer size="xl">
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">通知一覧</h1>
       <NotificationList items={data ?? []} />
     </div>
+    </PageContainer>
   );
 }

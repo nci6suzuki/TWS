@@ -5,6 +5,7 @@ import { EmployeeDirectory } from "@/components/employees/employee-directory";
 import { EmployeeFilters } from "@/components/filters/employee-filters";
 import Link from "next/link";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
+import { PageContainer } from "@/components/layout/page-container";
 
 type EmployeesPageSearchParams = Promise<{
   branchId?: string | string[];
@@ -46,6 +47,7 @@ export default async function EmployeesPage({
   });
 
   return (
+    <PageContainer size="xl">
     <div className="space-y-5">
       <Card variant="elevated" style={{ padding: 0, overflow: "hidden" }}>
         <section className="flex flex-wrap items-end justify-between gap-4 bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_45%,#eef2ff_100%)] p-6 sm:p-8">
@@ -81,5 +83,6 @@ export default async function EmployeesPage({
         pagination={result.pagination}
       />
     </div>
+    </PageContainer>
   );
 }

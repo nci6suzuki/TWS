@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { getTemplateById } from "@/lib/queries/templates";
 import { TemplateForm } from "@/components/forms/template-form";
 import { TemplateDeleteButton } from "@/components/templates/template-delete-button";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function TemplateEditPage({
   params,
@@ -20,6 +21,7 @@ export default async function TemplateEditPage({
   if (!template) return notFound();
 
   return (
+   <PageContainer size="xl">
     <div className="space-y-4 max-w-4xl">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">テンプレート編集</h1>
@@ -28,5 +30,6 @@ export default async function TemplateEditPage({
 
       <TemplateForm mode="edit" initialData={template} />
     </div>
+    </PageContainer>
   );
 }

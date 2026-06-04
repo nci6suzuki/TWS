@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getTemplates } from "@/lib/queries/templates";
+import { PageContainer } from "@/components/layout/page-container";
 
 type TemplateItem = {
   id: string;
@@ -22,6 +23,7 @@ export default async function TemplatesPage() {
   const items: TemplateItem[] = await getTemplates({ me });
 
   return (
+    <PageContainer size="xl">
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">テンプレート管理</h1>
@@ -67,5 +69,6 @@ export default async function TemplatesPage() {
         )}
       </div>
     </div>
+    </PageContainer>
   );
 }

@@ -4,6 +4,7 @@ import { getAnnualEvents } from "@/lib/queries/annual-events";
 import { AnnualEventsTable } from "@/components/tables/annual-events-table";
 import { AnnualEventFilters } from "@/components/filters/annual-event-filters";
 import Link from "next/link";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function AnnualEventsPage({
   searchParams,
@@ -24,6 +25,7 @@ export default async function AnnualEventsPage({
   });
 
   return (
+    <PageContainer size="xl">
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-xl font-semibold">年間イベント一覧</h1>
@@ -35,5 +37,6 @@ export default async function AnnualEventsPage({
       <AnnualEventFilters />
       <AnnualEventsTable data={result.items} pagination={result.pagination} />
     </div>
+    </PageContainer>
   );
 }

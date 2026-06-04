@@ -2,11 +2,13 @@
 import { requireAuth } from "@/lib/auth/require-auth";
 import { AnnualEventForm } from "@/components/forms/annual-event-form";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function AnnualEventNewPage() {
   const me = await requireAuth();
 
   return (
+    <PageContainer size="xl">
     <div className="space-y-5 max-w-3xl">
       <Card variant="elevated" style={{ padding: 0, overflow: "hidden" }}>
         <section style={{ padding: 24, background: "#f8fafc" }}>
@@ -18,5 +20,6 @@ export default async function AnnualEventNewPage() {
       </Card>
       <AnnualEventForm me={me} />
     </div>
+    </PageContainer>
   );
 }

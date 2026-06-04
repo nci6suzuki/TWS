@@ -2,6 +2,7 @@
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getFollowups } from "@/lib/queries/followups";
 import { FollowupsTable } from "@/components/tables/followups-table";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function FollowupsPage({
   searchParams,
@@ -23,9 +24,11 @@ export default async function FollowupsPage({
   });
 
   return (
+    <PageContainer size="xl">
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">フォロー割当一覧</h1>
       <FollowupsTable me={me} data={result.items} pagination={result.pagination} />
     </div>
+    </PageContainer>
   );
 }

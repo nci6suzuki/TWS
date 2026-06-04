@@ -1,10 +1,12 @@
 import { requireAuth } from "@/lib/auth/require-auth";
 import { SetupProfileForm } from "@/components/forms/setup-profile-form";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function SetupProfilePage() {
   const me = await requireAuth();
 
   return (
+    <PageContainer size="xl">
     <div className="max-w-3xl space-y-4">
       <h1 className="text-xl font-semibold">初回設定</h1>
       <p className="text-sm text-gray-600">
@@ -12,5 +14,6 @@ export default async function SetupProfilePage() {
       </p>
       <SetupProfileForm me={me} />
     </div>
+    </PageContainer>
   );
 }

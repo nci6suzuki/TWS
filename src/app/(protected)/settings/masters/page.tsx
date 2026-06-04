@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { PageContainer } from "@/components/layout/page-container";
 
 const items = [
   { href: "/settings/masters/branches", label: "支店マスタ" },
@@ -20,6 +21,7 @@ export default async function MastersPage() {
   }
 
   return (
+    <PageContainer size="xl">
     <div className="space-y-4 max-w-2xl">
       <h1 className="text-xl font-semibold">マスタ管理</h1>
 
@@ -35,5 +37,6 @@ export default async function MastersPage() {
         ))}
       </div>
     </div>
+    </PageContainer>
   );
 }

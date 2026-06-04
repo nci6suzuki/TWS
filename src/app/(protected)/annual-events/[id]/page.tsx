@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { getAnnualEventById } from "@/lib/queries/annual-events";
 import { AnnualEventCompleteButton } from "@/components/annual-events/annual-event-complete-button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function AnnualEventDetailPage({
   params,
@@ -25,6 +26,7 @@ export default async function AnnualEventDetailPage({
     .order("interview_date", { ascending: false });
 
   return (
+    <PageContainer size="xl">
     <div className="space-y-4 max-w-3xl">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">年間イベント 詳細</h1>
@@ -83,6 +85,7 @@ export default async function AnnualEventDetailPage({
         </Link>
       </div>
     </div>
+    </PageContainer>
   );
 }
 

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { EmployeeForm } from "@/components/forms/employee-form";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function EmployeeNewPage() {
   const me = await requireAuth();
@@ -22,6 +23,7 @@ export default async function EmployeeNewPage() {
   ]);
 
   return (
+    <PageContainer size="xl">
     <div style={{ margin: "0 auto", maxWidth: 1040, display: "grid", gap: 18 }}>
       <Card variant="elevated" style={{ padding: 0, overflow: "hidden" }}>
         <section style={{ padding: 28, background: "#f8fafc" }}>
@@ -47,5 +49,6 @@ export default async function EmployeeNewPage() {
         }}
       />
     </div>
+    </PageContainer>
   );
 }

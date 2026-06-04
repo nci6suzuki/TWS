@@ -4,12 +4,14 @@ import { CSSProperties, ReactNode } from "react";
 import { Card, CardTitle } from "@/components/ui/card";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getDashboardData } from "@/lib/queries/dashboard";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function DashboardPage() {
   const me = await requireAuth();
   const data = await getDashboardData({ me });
 
   return (
+    <PageContainer size="xl">
     <div style={{ display: "grid", gap: 18 }}>
       <Card variant="elevated" style={{ borderRadius: 30, padding: 0, overflow: "hidden" }}>
         <div style={{ display: "grid", gap: 20, gridTemplateColumns: "minmax(0,1.5fr) minmax(320px,0.9fr)", padding: 28, background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 42%, #eef2ff 100%)" }}>
@@ -150,6 +152,7 @@ export default async function DashboardPage() {
         </InfoCard>
       </section>
     </div>
+    </PageContainer>
   );
 }
 

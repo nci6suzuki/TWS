@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { TemplateForm } from "@/components/forms/template-form";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function TemplateNewPage() {
   const me = await requireAuth();
@@ -10,9 +11,11 @@ export default async function TemplateNewPage() {
   }
 
   return (
+    <PageContainer size="xl">
     <div className="space-y-4 max-w-4xl">
       <h1 className="text-xl font-semibold">テンプレート新規作成</h1>
       <TemplateForm mode="create" />
     </div>
+    </PageContainer>
   );
 }

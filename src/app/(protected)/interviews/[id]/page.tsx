@@ -2,6 +2,7 @@
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function InterviewDetailPage({ params }: { params: { id: string } }) {
   await requireAuth();
@@ -32,8 +33,9 @@ export default async function InterviewDetailPage({ params }: { params: { id: st
   if (!data) return notFound();
 
   return (
-    <div className="space-y-4 max-w-3xl">
-      <h1 className="text-xl font-semibold">面談記録 詳細</h1>
+    <PageContainer size="xl">
+      <div className="space-y-4 max-w-3xl">
+        <h1 className="text-xl font-semibold">面談記録 詳細</h1>
 
       <div className="p-4 border rounded space-y-1 text-sm">
         <div><span className="font-medium">対象：</span>{data.employees?.[0]?.name}</div>
@@ -52,6 +54,7 @@ export default async function InterviewDetailPage({ params }: { params: { id: st
       <Section title="会社/上長アクション" text={data.action_company} />
       <Section title="次回面談予定日" text={data.next_interview_date} />
     </div>
+    </PageContainer>
   );
 }
 

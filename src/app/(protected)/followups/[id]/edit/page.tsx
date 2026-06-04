@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { getFollowupById } from "@/lib/queries/followups";
 import { FollowupForm } from "@/components/forms/followup-form";
 import { Card, CardText, CardTitle } from "@/components/ui/card";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function FollowupEditPage({
   params,
@@ -16,6 +17,7 @@ export default async function FollowupEditPage({
   if (!followup) return notFound();
 
   return (
+    <PageContainer size="xl">
     <div className="space-y-5 max-w-2xl">
       <Card variant="elevated" style={{ padding: 0, overflow: "hidden" }}>
         <section style={{ padding: 24, background: "#f8fafc" }}>
@@ -27,5 +29,6 @@ export default async function FollowupEditPage({
       </Card>
       <FollowupForm mode="edit" me={me} initialData={followup} />
     </div>
+    </PageContainer>
   );
 }

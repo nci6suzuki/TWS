@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { getAuditLogs } from "@/lib/queries/audit-logs";
 import { AuditLogFilters } from "@/components/filters/audit-log-filters";
 import { AuditLogsTable } from "@/components/tables/audit-logs-table";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function AuditLogsPage({
   searchParams,
@@ -24,10 +25,12 @@ export default async function AuditLogsPage({
   });
 
   return (
+    <PageContainer size="xl">
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">監査ログ</h1>
       <AuditLogFilters />
       <AuditLogsTable data={result.items} pagination={result.pagination} />
     </div>
+    </PageContainer>
   );
 }

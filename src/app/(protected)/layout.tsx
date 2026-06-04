@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function ProtectedLayout({ children }: { children: ReactNode }) {
   const me = await requireAuth(); // { userId, employeeId, role, scopes... }
@@ -19,20 +20,9 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
       <AppSidebar me={me} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <AppHeader me={me} />
-        <main style={{ flex: 1, padding: "24px clamp(16px, 2.4vw, 28px) 32px" }}>
-          <div
-            style={{
-              margin: "0 auto",
-              width: "100%",
-              maxWidth: 1040,
-              display: "grid",
-              gap: 18,
-              alignContent: "start",
-            }}
-          >
-            {children}
-          </div>
-        </main>
+<main style={{ flex: 1, padding: "24px clamp(16px, 2.4vw, 28px) 32px" }}>
+  <PageContainer size="md">{children}</PageContainer>
+</main>
       </div>
     </div>
   );

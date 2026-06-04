@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getFollowupById } from "@/lib/queries/followups";
 import { FollowupCompleteButton } from "@/components/followups/followup-complete-button";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function FollowupDetailPage({
   params,
@@ -16,6 +17,7 @@ export default async function FollowupDetailPage({
   if (!followup) return notFound();
 
   return (
+    <PageContainer size="xl">
     <div className="space-y-4 max-w-3xl">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">フォロー割当 詳細</h1>
@@ -48,6 +50,7 @@ export default async function FollowupDetailPage({
         </Link>
       </div>
     </div>
+    </PageContainer>
   );
 }
 

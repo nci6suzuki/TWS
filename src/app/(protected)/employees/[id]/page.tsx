@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { notFound, redirect } from "next/navigation";
 import { getEmployeeById } from "@/lib/queries/employees";
 import { EmployeeProfileBook } from "@/components/employees/employee-profile-book";
+import { PageContainer } from "@/components/layout/page-container";
 
 const TAB_DEFAULT = "basic";
 
@@ -29,11 +30,13 @@ export default async function EmployeeDetailPage({
   if (!employee) return notFound();
 
   return (
+    <PageContainer size="xl">
     <EmployeeProfileBook
       me={me}
       employeeId={params.id}
       tab={tab}
       summary={employee.summary}
     />
+    </PageContainer>
   );
 }

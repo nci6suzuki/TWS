@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { MasterSimpleManager } from "@/components/settings/master-simple-manager";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function BranchMastersPage() {
   const me = await requireAuth();
@@ -10,6 +11,7 @@ export default async function BranchMastersPage() {
   }
 
   return (
+    <PageContainer size="xl">
     <MasterSimpleManager
       title="支店マスタ"
       fetchUrl="/api/masters/branches"
@@ -20,5 +22,6 @@ export default async function BranchMastersPage() {
         { key: "code", label: "コード" },
       ]}
     />
+    </PageContainer>
   );
 }
