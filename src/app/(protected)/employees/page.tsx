@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerDbClient } from "@/lib/supabase/server-db";
 
 export default async function EmployeesPage() {
-  await requireAuth();
-  const supabase = await createSupabaseServerClient();
+  const me = await requireAuth();
+  const supabase = await createSupabaseServerDbClient();
 
   const { data, error } = await supabase
     .from("employees")
@@ -15,7 +15,7 @@ export default async function EmployeesPage() {
   if (error) {
     return (
       <div className="rounded-2xl border bg-white p-6">
-        <div className="text-lg font-bold">社員一覧</div>
+        <div className="text-xl font-bold">社員一覧</div>
         <div className="mt-2 text-sm text-rose-600">読み込みに失敗：{error.message}</div>
       </div>
     );
@@ -26,14 +26,16 @@ export default async function EmployeesPage() {
       <div className="rounded-2xl border bg-white p-6 flex items-end justify-between">
         <div>
           <div className="text-2xl font-bold">社員一覧</div>
-          <div className="mt-2 text-sm text-slate-600">まずは最小の一覧表示です（RLS動作確認用）。</div>
+          <div className="mt-2 text-sm text-slate-600">ログイン：{me.role}</div>
         </div>
-        <Link
-          href="/employees/new"
-          className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
-        >
-          + 社員登録
-        </Link>
+        {(me.role === "admin" || me.role === "hr") && (
+          <Link
+            href="/employees/new"
+            className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            + 社員登録
+          </Link>
+        )}
       </div>
 
       <div className="rounded-2xl border bg-white p-4 overflow-auto">
@@ -45,7 +47,6 @@ export default async function EmployeesPage() {
               <th className="py-2 text-left">メール</th>
               <th className="py-2 text-left">ロール</th>
               <th className="py-2 text-left">状態</th>
-              <th className="py-2 text-left">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -56,15 +57,12 @@ export default async function EmployeesPage() {
                 <td className="py-2">{e.email}</td>
                 <td className="py-2">{e.app_role}</td>
                 <td className="py-2">{e.status}</td>
-                <td className="py-2">
-                  <span className="text-xs text-slate-500">（次に詳細を作ります）</span>
-                </td>
               </tr>
             ))}
             {(data ?? []).length === 0 && (
               <tr>
-                <td colSpan={6} className="py-6 text-center text-slate-500">
-                  表示できる社員がいません（RLS or データ未投入）
+                <td colSpan={5} className="py-6 text-center text-slate-500">
+                  表示できる社員がいません
                 </td>
               </tr>
             )}

@@ -1,18 +1,14 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerDbClient } from "@/lib/supabase/server-db";
 
 export default async function EmployeeNewPage() {
   const me = await requireAuth();
-
-  if (me.role !== "admin" && me.role !== "hr") {
-    redirect("/unauthorized");
-  }
+  if (me.role !== "admin" && me.role !== "hr") redirect("/unauthorized");
 
   async function createEmployee(formData: FormData) {
     "use server";
-
-    const supabase = await createSupabaseServerClient();
+    const supabase = await createSupabaseServerDbClient();
 
     const payload = {
       employee_code: String(formData.get("employee_code") ?? "").trim(),
@@ -21,14 +17,10 @@ export default async function EmployeeNewPage() {
       app_role: String(formData.get("app_role") ?? "employee"),
       status: String(formData.get("status") ?? "active"),
       employment_type: String(formData.get("employment_type") ?? "full_time"),
-      hire_date: String(formData.get("hire_date") ?? "") || null,
     };
 
     const { error } = await supabase.from("employees").insert(payload);
-    if (error) {
-      // 画面に出すため query に載せる（最小）
-      redirect(`/employees/new?error=${encodeURIComponent(error.message)}`);
-    }
+    if (error) redirect(`/employees/new?error=${encodeURIComponent(error.message)}`);
 
     redirect("/employees");
   }
@@ -36,10 +28,8 @@ export default async function EmployeeNewPage() {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border bg-white p-6">
-        <div className="text-2xl font-bold">社員登録（最小）</div>
-        <div className="mt-2 text-sm text-slate-600">
-          まずはRLS確認用の最小フォームです。後でマスタ連動の本フォームに拡張します。
-        </div>
+        <div className="text-2xl font-bold">社員登録</div>
+        <div className="mt-2 text-sm text-slate-600">最小フォーム（後でマスタ連動に拡張）</div>
       </div>
 
       <div className="rounded-2xl border bg-white p-6">
@@ -47,7 +37,6 @@ export default async function EmployeeNewPage() {
           <Field label="社員番号" name="employee_code" required />
           <Field label="氏名" name="name" required />
           <Field label="メール" name="email" required type="email" />
-          <Field label="入社日" name="hire_date" type="date" />
 
           <Select
             label="ロール"
@@ -60,7 +49,6 @@ export default async function EmployeeNewPage() {
               ["admin", "admin"],
             ]}
           />
-
           <Select
             label="在籍状態"
             name="status"
@@ -70,7 +58,6 @@ export default async function EmployeeNewPage() {
               ["inactive", "inactive"],
             ]}
           />
-
           <Select
             label="雇用区分"
             name="employment_type"
@@ -99,41 +86,18 @@ export default async function EmployeeNewPage() {
   );
 }
 
-function Field({
-  label,
-  name,
-  required,
-  type = "text",
-}: {
-  label: string;
-  name: string;
-  required?: boolean;
-  type?: string;
-}) {
+function Field({ label, name, required, type = "text" }: { label: string; name: string; required?: boolean; type?: string }) {
   return (
     <label className="grid gap-1">
       <span className="text-sm font-semibold text-slate-700">
         {label} {required ? <span className="text-rose-600">*</span> : null}
       </span>
-      <input
-        name={name}
-        type={type}
-        required={required}
-        className="rounded-xl border p-3 text-sm"
-      />
+      <input name={name} type={type} required={required} className="rounded-xl border p-3 text-sm" />
     </label>
   );
 }
 
-function Select({
-  label,
-  name,
-  options,
-}: {
-  label: string;
-  name: string;
-  options: Array<[string, string]>;
-}) {
+function Select({ label, name, options }: { label: string; name: string; options: Array<[string, string]> }) {
   return (
     <label className="grid gap-1">
       <span className="text-sm font-semibold text-slate-700">{label}</span>
