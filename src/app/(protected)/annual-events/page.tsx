@@ -1,21 +1,21 @@
 import Link from "next/link";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerDbClient } from "@/lib/supabase/server-db";
 
 export default async function AnnualEventsPage() {
   await requireAuth();
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseServerDbClient();
 
   const { data, error } = await supabase
     .from("employee_annual_events")
-    .select("id, scheduled_date, title, event_type, status, priority")
+    .select("id, scheduled_date, title, event_type, status, priority, employee_id")
     .order("scheduled_date", { ascending: true })
     .limit(200);
 
   if (error) {
     return (
       <div className="rounded-2xl border bg-white p-6">
-        <div className="text-lg font-bold">年間イベント</div>
+        <div className="text-xl font-bold">年間イベント</div>
         <div className="mt-2 text-sm text-rose-600">読み込みに失敗：{error.message}</div>
       </div>
     );
@@ -26,7 +26,9 @@ export default async function AnnualEventsPage() {
       <div className="rounded-2xl border bg-white p-6 flex items-end justify-between">
         <div>
           <div className="text-2xl font-bold">年間イベント</div>
-          <div className="mt-2 text-sm text-slate-600">まずは最小の一覧表示です（RLS動作確認用）。</div>
+          <div className="mt-2 text-sm text-slate-600">
+            まずは最小の一覧表示（RLS動作確認用）。
+          </div>
         </div>
         <Link
           href="/annual-events/new"
@@ -37,7 +39,7 @@ export default async function AnnualEventsPage() {
       </div>
 
       <div className="rounded-2xl border bg-white p-4 overflow-auto">
-        <table className="min-w-[900px] w-full text-sm">
+        <table className="min-w-[960px] w-full text-sm">
           <thead className="text-slate-500">
             <tr className="border-b">
               <th className="py-2 text-left">予定日</th>
@@ -57,6 +59,7 @@ export default async function AnnualEventsPage() {
                 <td className="py-2">{e.priority}</td>
               </tr>
             ))}
+
             {(data ?? []).length === 0 && (
               <tr>
                 <td colSpan={5} className="py-6 text-center text-slate-500">
