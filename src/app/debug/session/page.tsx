@@ -14,6 +14,16 @@ export default async function DebugSessionPage() {
   const { data, error } = await supabase.auth.getUser();
   const { data: uidFromDb, error: uidFromDbErr } = await supabase.rpc("current_user_id");
 
+  const uid = data?.user?.id ?? null;
+  
+  const { data: emp, error: empErr } = uid
+  ? await supabase
+      .from("employees")
+      .select("employee_code, app_role, user_id, email")
+      .eq("user_id", uid)
+      .maybeSingle()
+  : { data: null, error: null };
+
   return (
     <div style={{ padding: 24, fontFamily: "ui-sans-serif, system-ui" }}>
       <h1 style={{ fontSize: 20, fontWeight: 700 }}>Debug / Session</h1>
@@ -36,6 +46,11 @@ export default async function DebugSessionPage() {
       <pre style={{ whiteSpace: "pre-wrap" }}>
         {JSON.stringify({ uidFromDb, uidFromDbErr: uidFromDbErr?.message ?? null }, null, 2)}
       </pre>
+
+      <h2 style={{ marginTop: 16, fontWeight: 700 }}>employees lookup</h2>
+<pre style={{ whiteSpace: "pre-wrap" }}>
+  {JSON.stringify({ emp, empErr: empErr?.message ?? null }, null, 2)}
+</pre>
     </div>
   );
 }
