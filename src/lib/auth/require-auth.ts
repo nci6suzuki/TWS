@@ -7,7 +7,7 @@ export async function requireAuth() {
 
   if (!user) redirect("/login");
 
-  // employees ひも付け（RLSで見える前提）
+  // employees.user_id と紐付いている前提
   const { data: emp } = await supabase
     .from("employees")
     .select("id, app_role")

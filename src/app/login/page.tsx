@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 
 export default function LoginPage() {
@@ -10,13 +9,11 @@ export default function LoginPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
-
     const form = new FormData();
     form.append("email", email);
     form.append("password", password);
 
     const res = await fetch("/api/auth/login", { method: "POST", body: form });
-    // route側がredirectするので、ここでは location を追従
     if (res.redirected) window.location.href = res.url;
     else setMsg("ログインに失敗しました");
   }

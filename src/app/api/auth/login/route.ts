@@ -12,7 +12,6 @@ export async function POST(request: NextRequest) {
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
   const cookieJar: Array<{ name: string; value: string; options?: any }> = [];
 
   const supabase = createServerClient(url, key, {
@@ -29,7 +28,6 @@ export async function POST(request: NextRequest) {
   });
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-
   if (error) {
     return NextResponse.redirect(new URL("/login?error=invalid", request.url), { status: 303 });
   }
