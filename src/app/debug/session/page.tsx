@@ -12,6 +12,7 @@ export default async function DebugSessionPage() {
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.getUser();
+  const { data: uidFromDb, error: uidFromDbErr } = await supabase.rpc("current_user_id");
 
   return (
     <div style={{ padding: 24, fontFamily: "ui-sans-serif, system-ui" }}>
@@ -29,6 +30,11 @@ export default async function DebugSessionPage() {
           null,
           2
         )}
+      </pre>
+
+      <h2 style={{ marginTop: 16, fontWeight: 700 }}>db rpc: current_user_id()</h2>
+      <pre style={{ whiteSpace: "pre-wrap" }}>
+        {JSON.stringify({ uidFromDb, uidFromDbErr: uidFromDbErr?.message ?? null }, null, 2)}
       </pre>
     </div>
   );
