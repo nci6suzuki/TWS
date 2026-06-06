@@ -1,29 +1,34 @@
+// src/lib/supabase/server-db.ts
 import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 
-function getAccessTokenFromSbCookie(): string | null {
-  const cookieStore = cookies();
+async function getAccessTokenFromSbCookie(): Promise<string | null> {
+  const cookieStore = await cookies(); // ★ await が必要
   const all = cookieStore.getAll();
 
   // sb-<project>-auth-token を探す
-  const sb = all.find((c) => c.name.startsWith("sb-") && c.name.endsWith("-auth-token"));
+  const sb = all.find(
+    (c) => c.name.startsWith("sb-") && c.name.endsWith("-auth-token")
+  );
   if (!sb?.value) return null;
 
-  // value は "base64-xxxx" 形式が多い
-  const raw = sb.value.startsWith("base64-") ? sb.value.slice("base64-".length) : sb.value;
+  const raw = sb.value.startsWith("base64-")
+    ? sb.value.slice("base64-".length)
+    : sb.value;
 
   try {
-    const json = JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
+    // Edge runtime でも動くよう Buffer を使わず atob を使う
+    const json = JSON.parse(atob(raw));
     return json?.access_token ?? null;
   } catch {
     return null;
   }
 }
 
-export function createSupabaseServerDbClient() {
+export async function createSupabaseServerDbClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  const accessToken = getAccessTokenFromSbCookie();
+  const accessToken = await getAccessTokenFromSbCookie();
 
   return createClient(url, anon, {
     global: {
