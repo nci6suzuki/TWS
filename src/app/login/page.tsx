@@ -1,33 +1,60 @@
-"use client";
-import { useState } from "react";
+// src/app/login/page.tsx
+import Link from "next/link";
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [msg, setMsg] = useState<string | null>(null);
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: { error?: string };
+}) {
+  const error = searchParams?.error;
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setMsg(null);
-    const form = new FormData();
-    form.append("email", email);
-    form.append("password", password);
-
-    const res = await fetch("/api/auth/login", { method: "POST", body: form });
-    if (res.redirected) window.location.href = res.url;
-    else setMsg("ログインに失敗しました");
-  }
+  const message =
+    error === "missing"
+      ? "メール/パスワードを入力してください"
+      : error === "invalid"
+      ? "メールまたはパスワードが違います"
+      : null;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
-      <form onSubmit={onSubmit} className="w-full max-w-sm rounded-2xl border bg-white p-6 space-y-4">
+      <form
+        action="/api/auth/login"
+        method="post"
+        className="w-full max-w-sm rounded-2xl border bg-white p-6 space-y-4"
+      >
         <div className="text-xl font-bold">ログイン</div>
-        <input className="w-full rounded-xl border p-3" placeholder="email" value={email} onChange={(e)=>setEmail(e.target.value)} />
-        <input className="w-full rounded-xl border p-3" placeholder="password" type="password" value={password} onChange={(e)=>setPassword(e.target.value)} />
-        {msg && <div className="text-sm text-rose-600">{msg}</div>}
+
+        <label className="grid gap-1">
+          <span className="text-sm font-semibold text-slate-700">メール</span>
+          <input
+            name="email"
+            type="email"
+            className="w-full rounded-xl border p-3"
+            placeholder="email"
+            required
+          />
+        </label>
+
+        <label className="grid gap-1">
+          <span className="text-sm font-semibold text-slate-700">パスワード</span>
+          <input
+            name="password"
+            type="password"
+            className="w-full rounded-xl border p-3"
+            placeholder="password"
+            required
+          />
+        </label>
+
+        {message && <div className="text-sm text-rose-600">{message}</div>}
+
         <button className="w-full h-11 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800">
           ログイン
         </button>
+
+        <div className="text-xs text-slate-500">
+          ※ログインできない場合は管理者に確認してください。
+        </div>
       </form>
     </div>
   );
