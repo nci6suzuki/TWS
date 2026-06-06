@@ -52,7 +52,11 @@ export default async function EmployeesPage() {
           <tbody>
             {(data ?? []).map((e) => (
               <tr key={e.id} className="border-b last:border-b-0">
-                <td className="py-2 font-semibold">{e.employee_code}</td>
+                <td className="py-2 font-semibold">
+                    <Link className="text-indigo-600 hover:underline" href={`/employees/code/${e.employee_code}`}>
+                    {e.employee_code}
+                    </Link>
+                </td>
                 <td className="py-2">{e.name}</td>
                 <td className="py-2">{e.email}</td>
                 <td className="py-2">{e.app_role}</td>
