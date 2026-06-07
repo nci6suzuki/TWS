@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { getEmployeeIdByCode } from "@/lib/queries/employees";
-import { getEmployeeProfileBookById } from "@/lib/queries/employee-profile";
+import { getEmployeeProfileBookByCode } from "@/lib/queries/employee-profile";
 import { EmployeeProfileBook } from "@/components/employees/employee-profile-book";
 
 const TAB_DEFAULT = "basic";
@@ -16,10 +15,7 @@ export default async function EmployeeByCodePage({
   await requireAuth();
   const tab = searchParams.tab ?? TAB_DEFAULT;
 
-  const employeeId = await getEmployeeIdByCode(params.employeeCode);
-  if (!employeeId) return notFound();
-
-  const book = await getEmployeeProfileBookById(employeeId);
+  const book = await getEmployeeProfileBookByCode(params.employeeCode);
   if (!book) return notFound();
 
   return (
