@@ -88,11 +88,22 @@ export default async function AnnualEventsPage({
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <KPI label="未完了" value={pendingCount ?? 0} href="/annual-events?status=pending&view=cards" />
-        <KPI label="期限超過" value={overdueCount ?? 0} tone="danger" href="/annual-events?overdue=1&view=cards" />
-        <KPI label="表示件数" value={data?.length ?? 0} tone="ok" />
-      </div>
+<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+  <div className="card p-4 bg-slate-50">
+    <div className="text-xs font-semibold tracking-[0.12em] text-slate-500">未完了</div>
+    <div className="mt-2 text-3xl font-extrabold">{pendingCount ?? 0}</div>
+  </div>
+
+  <div className="card p-4 bg-rose-50 border-rose-200">
+    <div className="text-xs font-semibold tracking-[0.12em] text-rose-600">期限超過</div>
+    <div className="mt-2 text-3xl font-extrabold text-rose-700">{overdueCount ?? 0}</div>
+  </div>
+
+  <div className="card p-4 bg-slate-50">
+    <div className="text-xs font-semibold tracking-[0.12em] text-slate-500">表示件数</div>
+    <div className="mt-2 text-3xl font-extrabold">{data?.length ?? 0}</div>
+  </div>
+</div>
 
       <Card>
         <div className="text-sm font-bold text-slate-900">検索・絞り込み</div>
