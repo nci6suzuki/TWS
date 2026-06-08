@@ -202,7 +202,11 @@ export function EmployeeProfileBook({
                   events.map((e: any) => (
                     <tr key={e.id} className="border-b last:border-b-0">
                       <td className="py-2">{e.scheduled_date}</td>
-                      <td className="py-2 font-semibold">{e.title}</td>
+                      <td className="py-2 font-semibold">
+                        <Link className="text-indigo-600 hover:underline" href={`/annual-events/${e.id}`}>
+                          {e.title}
+                        </Link>
+                      </td>
                       <td className="py-2">{e.event_type}</td>
                       <td className="py-2">{e.status}</td>
                       <td className="py-2">{e.priority}</td>
