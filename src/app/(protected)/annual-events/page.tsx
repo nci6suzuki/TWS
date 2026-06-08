@@ -21,7 +21,6 @@ export default async function AnnualEventsPage({
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // KPI
   const { count: pendingCount } = await supabase
     .from("employee_annual_events")
     .select("id", { count: "exact", head: true })
@@ -33,7 +32,6 @@ export default async function AnnualEventsPage({
     .eq("status", "pending")
     .lt("scheduled_date", today);
 
-  // list query
   let query = supabase
     .from("employee_annual_events")
     .select("id, scheduled_date, title, event_type, status, priority")
@@ -48,17 +46,6 @@ export default async function AnnualEventsPage({
 
   const { data, error } = await query;
   if (error) throw error;
-
-  const metaChips = (
-    <div className="flex flex-wrap gap-2">
-      <Chip tone="info">view: {view}</Chip>
-      {status && <Chip>状態: {status}</Chip>}
-      {type && <Chip>種別: {type}</Chip>}
-      {/^\d{4}$/.test(year) && <Chip>年度: {year}</Chip>}
-      {q && <Chip>検索: {q}</Chip>}
-      {overdue === "1" && <Chip tone="danger">期限超過フィルタ</Chip>}
-    </div>
-  );
 
   const baseParams = new URLSearchParams();
   if (status) baseParams.set("status", status);
@@ -78,7 +65,16 @@ export default async function AnnualEventsPage({
       <Hero
         title="年間イベント"
         subtitle="未完了・期限超過を可視化し、検索→処理まで一画面で完結します。"
-        meta={metaChips}
+        meta={
+          <div className="flex flex-wrap gap-2">
+            <Chip tone="info">view: {view}</Chip>
+            {status && <Chip>状態: {status}</Chip>}
+            {type && <Chip>種別: {type}</Chip>}
+            {/^\d{4}$/.test(year) && <Chip>年度: {year}</Chip>}
+            {q && <Chip>検索: {q}</Chip>}
+            {overdue === "1" && <Chip tone="danger">期限超過フィルタ</Chip>}
+          </div>
+        }
         right={
           <>
             <GhostButton href={toView("cards")}>Cards</GhostButton>
@@ -88,24 +84,13 @@ export default async function AnnualEventsPage({
         }
       />
 
-<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-  <div className="card p-4 bg-slate-50">
-    <div className="text-xs font-semibold tracking-[0.12em] text-slate-500">未完了</div>
-    <div className="mt-2 text-3xl font-extrabold">{pendingCount ?? 0}</div>
-  </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <KPI label="未完了" value={pendingCount ?? 0} href="/annual-events?status=pending&view=cards" />
+        <KPI label="期限超過" value={overdueCount ?? 0} tone="danger" href="/annual-events?overdue=1&view=cards" />
+        <KPI label="表示件数" value={data?.length ?? 0} tone="ok" />
+      </div>
 
-  <div className="card p-4 bg-rose-50 border-rose-200">
-    <div className="text-xs font-semibold tracking-[0.12em] text-rose-600">期限超過</div>
-    <div className="mt-2 text-3xl font-extrabold text-rose-700">{overdueCount ?? 0}</div>
-  </div>
-
-  <div className="card p-4 bg-slate-50">
-    <div className="text-xs font-semibold tracking-[0.12em] text-slate-500">表示件数</div>
-    <div className="mt-2 text-3xl font-extrabold">{data?.length ?? 0}</div>
-  </div>
-</div>
-
-      <Card>
+      <Card className="p-5">
         <div className="text-sm font-bold text-slate-900">検索・絞り込み</div>
         <div className="mt-3">
           <AnnualEventFilters />
@@ -120,7 +105,7 @@ export default async function AnnualEventsPage({
               <div
                 key={e.id}
                 className={[
-                  "rounded-2xl border bg-white p-5 transition",
+                  "rounded-2xl border border-slate-200 bg-white p-5 transition",
                   isOverdue ? "border-rose-200 bg-rose-50" : "hover:bg-slate-50",
                 ].join(" ")}
               >
@@ -142,16 +127,10 @@ export default async function AnnualEventsPage({
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <Link
-                    className="inline-flex h-9 items-center rounded-xl border bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                    href={`/annual-events/${e.id}`}
-                  >
+                  <Link className="btn-ghost inline-flex h-9 rounded-xl border px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50" href={`/annual-events/${e.id}`}>
                     詳細
                   </Link>
-                  <Link
-                    className="inline-flex h-9 items-center rounded-xl border bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                    href={`/annual-events/${e.id}/edit`}
-                  >
+                  <Link className="btn-ghost inline-flex h-9 rounded-xl border px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50" href={`/annual-events/${e.id}/edit`}>
                     編集
                   </Link>
                   <form action={`/api/annual-events/${e.id}/complete`} method="post">

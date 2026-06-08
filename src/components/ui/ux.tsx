@@ -13,11 +13,13 @@ export function Hero({
   meta?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-3xl border bg-white p-6 md:p-7 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+    <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-7 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="text-xs font-bold tracking-[0.18em] text-indigo-600">WORKFLOW</div>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">{title}</h1>
+          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">
+            {title}
+          </h1>
           {subtitle && <p className="mt-2 text-sm text-slate-600">{subtitle}</p>}
           {meta && <div className="mt-4">{meta}</div>}
         </div>
@@ -27,32 +29,18 @@ export function Hero({
   );
 }
 
-export function KPI({
-  label,
-  value,
-  tone = "normal",
-  href,
+export function Card({
+  children,
+  className = "",
 }: {
-  label: string;
-  value: number | string;
-  tone?: "normal" | "danger" | "ok";
-  href?: string;
+  children: React.ReactNode;
+  className?: string;
 }) {
-  const cls =
-    tone === "danger"
-      ? "border-rose-200 bg-rose-50 text-rose-700"
-      : tone === "ok"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-      : "border-slate-200 bg-slate-50 text-slate-700";
-
-  const inner = (
-    <div className={`rounded-2xl border p-4 ${cls}`}>
-      <div className="text-xs font-semibold tracking-[0.12em] opacity-80">{label}</div>
-      <div className="mt-2 text-3xl font-extrabold leading-none">{value}</div>
+  return (
+    <div className={`rounded-2xl border border-slate-200 bg-white ${className}`}>
+      {children}
     </div>
   );
-
-  return href ? <Link href={href} className="hover:opacity-90">{inner}</Link> : inner;
 }
 
 export function Chip({
@@ -71,7 +59,13 @@ export function Chip({
       ? "border-indigo-200 bg-indigo-50 text-indigo-700"
       : "border-slate-200 bg-slate-50 text-slate-700";
 
-  return <span className={`inline-flex items-center rounded-xl border px-3 py-1 text-xs font-semibold ${cls}`}>{children}</span>;
+  return (
+    <span
+      className={`inline-flex items-center rounded-xl border px-3 py-1 text-xs font-semibold ${cls}`}
+    >
+      {children}
+    </span>
+  );
 }
 
 export function PrimaryButton({
@@ -101,19 +95,47 @@ export function GhostButton({
   return (
     <Link
       href={href}
-      className="inline-flex h-10 items-center rounded-xl border bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+      className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
     >
       {children}
     </Link>
   );
 }
 
-export function Card({
-  children,
-  className = "",
+export function KPI({
+  label,
+  value,
+  tone = "normal",
+  href,
 }: {
-  children: React.ReactNode;
-  className?: string;
+  label: string;
+  value: number | string;
+  tone?: "normal" | "danger" | "ok";
+  href?: string;
 }) {
-  return <div className={`rounded-2xl border bg-white p-4 ${className}`}>{children}</div>;
+  const base =
+    "rounded-2xl border p-4 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition";
+  const cls =
+    tone === "danger"
+      ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100/70"
+      : tone === "ok"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100/60"
+      : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50";
+
+  const inner = (
+    <div className={`${base} ${cls}`}>
+      <div className="text-xs font-semibold tracking-[0.12em] opacity-75">
+        {label}
+      </div>
+      <div className="mt-2 text-3xl font-extrabold leading-none">{value}</div>
+    </div>
+  );
+
+  return href ? (
+    <Link href={href} className="block">
+      {inner}
+    </Link>
+  ) : (
+    inner
+  );
 }
