@@ -8,6 +8,7 @@ type Form = {
   eventType: string;
   year: string;
   keyword: string;
+  overdue: string;
 };
 
 export function AnnualEventFilters() {
@@ -20,6 +21,7 @@ export function AnnualEventFilters() {
       eventType: sp.get("type") ?? "",      // onboarding/training/interview/evaluation/other
       year: sp.get("year") ?? "",           // 2026 等
       keyword: sp.get("q") ?? "",
+      overdue: sp.get("overdue") ?? "",
     };
   }, [sp]);
 
@@ -31,6 +33,7 @@ export function AnnualEventFilters() {
     if (form.eventType) p.set("type", form.eventType);
     if (form.year) p.set("year", form.year);
     if (form.keyword) p.set("q", form.keyword);
+    if (form.overdue) p.set("overdue", form.overdue);
     router.push(`/annual-events?${p.toString()}`);
   }
 
@@ -100,6 +103,17 @@ export function AnnualEventFilters() {
           active={form.status === "pending"}
           label="未完了のみ"
           onClick={() => setForm((v) => ({ ...v, status: v.status === "pending" ? "" : "pending" }))}
+        />
+        <QuickChip
+        active={form.overdue === "1"}
+        label="期限超過だけ"
+        onClick={() =>
+          setForm((v) => ({
+            ...v,
+            overdue: v.overdue === "1" ? "" : "1",
+            status: "pending", // 期限超過は未完了前提にしたいので同時セット
+          }))
+        }
         />
       </div>
     </div>

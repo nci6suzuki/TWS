@@ -15,6 +15,7 @@ export default async function AnnualEventsPage({
   const type = searchParams.type ?? "";
   const year = searchParams.year ?? "";
   const q = searchParams.q ?? "";
+  const overdue = searchParams.overdue ?? "";
 
   let query = supabase
     .from("employee_annual_events")
@@ -25,6 +26,11 @@ export default async function AnnualEventsPage({
   if (status) query = query.eq("status", status);
   if (type) query = query.eq("event_type", type);
   if (q) query = query.ilike("title", `%${q}%`);
+
+  if (overdue === "1") {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  query = query.lt("scheduled_date", today).eq("status", "pending");
+  }
 
   // 年度絞り込み（YYYY の場合のみ適用）
   if (/^\d{4}$/.test(year)) {
