@@ -2,9 +2,7 @@ import Link from "next/link";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseServerDbClient } from "@/lib/supabase/server-db";
 import { AnnualEventFilters } from "@/components/annual-events/annual-event-filters";
-import { PageContainer, PageHeader, Section, EmptyState } from "@/components/ui/page";
-import { Badge } from "@/components/ui/stat";
-import { TableCard, Th, Td } from "@/components/ui/table";
+import { Hero, KPI, Chip, PrimaryButton, GhostButton, Card } from "@/components/ui/ux";
 
 export default async function AnnualEventsPage({
   searchParams,
@@ -19,10 +17,11 @@ export default async function AnnualEventsPage({
   const year = searchParams.year ?? "";
   const q = searchParams.q ?? "";
   const overdue = searchParams.overdue ?? "";
+  const view = (searchParams.view ?? "cards") as "cards" | "list";
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // --- header counts ---
+  // KPI
   const { count: pendingCount } = await supabase
     .from("employee_annual_events")
     .select("id", { count: "exact", head: true })
@@ -34,7 +33,7 @@ export default async function AnnualEventsPage({
     .eq("status", "pending")
     .lt("scheduled_date", today);
 
-  // --- list query ---
+  // list query
   let query = supabase
     .from("employee_annual_events")
     .select("id, scheduled_date, title, event_type, status, priority")
@@ -44,111 +43,156 @@ export default async function AnnualEventsPage({
   if (status) query = query.eq("status", status);
   if (type) query = query.eq("event_type", type);
   if (q) query = query.ilike("title", `%${q}%`);
-
-  if (/^\d{4}$/.test(year)) {
-    query = query.gte("scheduled_date", `${year}-01-01`).lte("scheduled_date", `${year}-12-31`);
-  }
-
-  if (overdue === "1") {
-    query = query.lt("scheduled_date", today).eq("status", "pending");
-  }
+  if (/^\d{4}$/.test(year)) query = query.gte("scheduled_date", `${year}-01-01`).lte("scheduled_date", `${year}-12-31`);
+  if (overdue === "1") query = query.lt("scheduled_date", today).eq("status", "pending");
 
   const { data, error } = await query;
   if (error) throw error;
 
-  const meta = (
+  const metaChips = (
     <div className="flex flex-wrap gap-2">
-      <Link
-        href="/annual-events?status=pending"
-        className="hover:opacity-90"
-      >
-        <Badge>未完了 {pendingCount ?? 0}</Badge>
-      </Link>
-      <Link
-        href="/annual-events?overdue=1"
-        className="hover:opacity-90"
-      >
-        <Badge tone="danger">期限超過 {overdueCount ?? 0}</Badge>
-      </Link>
-      {status && <Badge>状態: {status}</Badge>}
-      {type && <Badge>種別: {type}</Badge>}
-      {/^\d{4}$/.test(year) && <Badge>年度: {year}</Badge>}
-      {q && <Badge>検索: {q}</Badge>}
-      {overdue === "1" && <Badge tone="danger">期限超過フィルタ</Badge>}
+      <Chip tone="info">view: {view}</Chip>
+      {status && <Chip>状態: {status}</Chip>}
+      {type && <Chip>種別: {type}</Chip>}
+      {/^\d{4}$/.test(year) && <Chip>年度: {year}</Chip>}
+      {q && <Chip>検索: {q}</Chip>}
+      {overdue === "1" && <Chip tone="danger">期限超過フィルタ</Chip>}
     </div>
   );
 
+  const baseParams = new URLSearchParams();
+  if (status) baseParams.set("status", status);
+  if (type) baseParams.set("type", type);
+  if (year) baseParams.set("year", year);
+  if (q) baseParams.set("q", q);
+  if (overdue) baseParams.set("overdue", overdue);
+
+  const toView = (v: "cards" | "list") => {
+    const p = new URLSearchParams(baseParams);
+    p.set("view", v);
+    return `/annual-events?${p.toString()}`;
+  };
+
   return (
-    <PageContainer>
-      <PageHeader
+    <div className="space-y-6">
+      <Hero
         title="年間イベント"
-        description="未完了・期限超過の可視化 → そのまま絞り込み。運用で迷わない一覧にします。"
-        meta={meta}
-        actions={
-          <Link
-            href="/annual-events/new"
-            className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            + イベント登録
-          </Link>
+        subtitle="未完了・期限超過を可視化し、検索→処理まで一画面で完結します。"
+        meta={metaChips}
+        right={
+          <>
+            <GhostButton href={toView("cards")}>Cards</GhostButton>
+            <GhostButton href={toView("list")}>List</GhostButton>
+            <PrimaryButton href="/annual-events/new">+ イベント登録</PrimaryButton>
+          </>
         }
       />
 
-      <Section title="検索・絞り込み" description="条件をセットして一覧を更新します。">
-        <AnnualEventFilters />
-      </Section>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <KPI label="未完了" value={pendingCount ?? 0} href="/annual-events?status=pending&view=cards" />
+        <KPI label="期限超過" value={overdueCount ?? 0} tone="danger" href="/annual-events?overdue=1&view=cards" />
+        <KPI label="表示件数" value={data?.length ?? 0} tone="ok" />
+      </div>
 
-      <Section title="一覧" description="タイトルから詳細へ。編集・完了化は右側の操作から。">
-        {(!data || data.length === 0) ? (
-          <EmptyState
-            title="該当するイベントがありません"
-            description="条件をリセットするか、新規にイベントを登録してください。"
-            action={
-              <Link
-                href="/annual-events/new"
-                className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+      <Card>
+        <div className="text-sm font-bold text-slate-900">検索・絞り込み</div>
+        <div className="mt-3">
+          <AnnualEventFilters />
+        </div>
+      </Card>
+
+      {view === "cards" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {(data ?? []).map((e) => {
+            const isOverdue = e.status === "pending" && e.scheduled_date < today;
+            return (
+              <div
+                key={e.id}
+                className={[
+                  "rounded-2xl border bg-white p-5 transition",
+                  isOverdue ? "border-rose-200 bg-rose-50" : "hover:bg-slate-50",
+                ].join(" ")}
               >
-                + イベント登録
-              </Link>
-            }
-          />
-        ) : (
-          <TableCard>
-            <table className="min-w-[1100px] w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <Th>予定日</Th>
-                  <Th>タイトル</Th>
-                  <Th>種別</Th>
-                  <Th>状態</Th>
-                  <Th>優先度</Th>
-                  <Th>操作</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((e) => (
-                  <tr key={e.id} className="border-b last:border-b-0">
-                    <Td>{e.scheduled_date}</Td>
-                    <Td>
-                      <Link className="font-semibold text-indigo-600 hover:underline" href={`/annual-events/${e.id}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-semibold tracking-[0.12em] text-slate-400">
+                      {e.scheduled_date} / {e.event_type}
+                    </div>
+                    <Link className="mt-2 block text-lg font-extrabold text-slate-900 hover:underline" href={`/annual-events/${e.id}`}>
+                      {e.title}
+                    </Link>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <Chip tone={e.status === "done" ? "ok" : isOverdue ? "danger" : "gray"}>
+                      {isOverdue ? "期限超過" : e.status}
+                    </Chip>
+                    <Chip>優先度 {e.priority}</Chip>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link
+                    className="inline-flex h-9 items-center rounded-xl border bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    href={`/annual-events/${e.id}`}
+                  >
+                    詳細
+                  </Link>
+                  <Link
+                    className="inline-flex h-9 items-center rounded-xl border bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    href={`/annual-events/${e.id}/edit`}
+                  >
+                    編集
+                  </Link>
+                  <form action={`/api/annual-events/${e.id}/complete`} method="post">
+                    <button
+                      disabled={e.status === "done"}
+                      className={[
+                        "inline-flex h-9 items-center rounded-xl px-3 text-sm font-semibold text-white",
+                        e.status === "done" ? "bg-slate-400 cursor-not-allowed" : "bg-slate-900 hover:bg-slate-800",
+                      ].join(" ")}
+                    >
+                      完了化
+                    </button>
+                  </form>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <Card className="p-0 overflow-auto">
+          <table className="min-w-[1100px] w-full text-sm">
+            <thead className="sticky top-0 bg-white">
+              <tr className="border-b text-slate-500">
+                <th className="py-3 px-4 text-left">予定日</th>
+                <th className="py-3 px-4 text-left">タイトル</th>
+                <th className="py-3 px-4 text-left">種別</th>
+                <th className="py-3 px-4 text-left">状態</th>
+                <th className="py-3 px-4 text-left">優先度</th>
+                <th className="py-3 px-4 text-left">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data ?? []).map((e) => {
+                const isOverdue = e.status === "pending" && e.scheduled_date < today;
+                return (
+                  <tr key={e.id} className="border-b last:border-b-0 hover:bg-slate-50">
+                    <td className="py-3 px-4">{e.scheduled_date}</td>
+                    <td className="py-3 px-4 font-semibold">
+                      <Link className="text-indigo-600 hover:underline" href={`/annual-events/${e.id}`}>
                         {e.title}
                       </Link>
-                    </Td>
-                    <Td>{e.event_type}</Td>
-                    <Td>{e.status}</Td>
-                    <Td>{e.priority}</Td>
-                    <Td>
+                      {isOverdue && <span className="ml-2"><Chip tone="danger">期限超過</Chip></span>}
+                    </td>
+                    <td className="py-3 px-4">{e.event_type}</td>
+                    <td className="py-3 px-4">{e.status}</td>
+                    <td className="py-3 px-4">{e.priority}</td>
+                    <td className="py-3 px-4">
                       <div className="flex flex-wrap gap-2">
-                        <Link
-                          className="inline-flex h-8 items-center rounded-lg border bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                          href={`/annual-events/${e.id}`}
-                        >
+                        <Link className="inline-flex h-8 items-center rounded-lg border bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50" href={`/annual-events/${e.id}`}>
                           詳細
                         </Link>
-                        <Link
-                          className="inline-flex h-8 items-center rounded-lg border bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                          href={`/annual-events/${e.id}/edit`}
-                        >
+                        <Link className="inline-flex h-8 items-center rounded-lg border bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50" href={`/annual-events/${e.id}/edit`}>
                           編集
                         </Link>
                         <form action={`/api/annual-events/${e.id}/complete`} method="post">
@@ -156,23 +200,21 @@ export default async function AnnualEventsPage({
                             disabled={e.status === "done"}
                             className={[
                               "inline-flex h-8 items-center rounded-lg px-3 text-xs font-semibold text-white",
-                              e.status === "done"
-                                ? "bg-slate-400 cursor-not-allowed"
-                                : "bg-slate-900 hover:bg-slate-800",
+                              e.status === "done" ? "bg-slate-400 cursor-not-allowed" : "bg-slate-900 hover:bg-slate-800",
                             ].join(" ")}
                           >
                             完了化
                           </button>
                         </form>
                       </div>
-                    </Td>
+                    </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableCard>
-        )}
-      </Section>
-    </PageContainer>
+                );
+              })}
+            </tbody>
+          </table>
+        </Card>
+      )}
+    </div>
   );
 }
