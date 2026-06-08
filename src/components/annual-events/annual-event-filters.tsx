@@ -8,7 +8,7 @@ type Form = {
   eventType: string;
   year: string;
   keyword: string;
-  overdue: string;
+  overdue: string; // "1" or ""
 };
 
 export function AnnualEventFilters() {
@@ -17,9 +17,9 @@ export function AnnualEventFilters() {
 
   const init = useMemo<Form>(() => {
     return {
-      status: sp.get("status") ?? "",       // pending/done/canceled
-      eventType: sp.get("type") ?? "",      // onboarding/training/interview/evaluation/other
-      year: sp.get("year") ?? "",           // 2026 等
+      status: sp.get("status") ?? "",
+      eventType: sp.get("type") ?? "",
+      year: sp.get("year") ?? "",
       keyword: sp.get("q") ?? "",
       overdue: sp.get("overdue") ?? "",
     };
@@ -83,7 +83,7 @@ export function AnnualEventFilters() {
         />
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={apply}
@@ -104,16 +104,17 @@ export function AnnualEventFilters() {
           label="未完了のみ"
           onClick={() => setForm((v) => ({ ...v, status: v.status === "pending" ? "" : "pending" }))}
         />
+
         <QuickChip
-        active={form.overdue === "1"}
-        label="期限超過だけ"
-        onClick={() =>
-          setForm((v) => ({
-            ...v,
-            overdue: v.overdue === "1" ? "" : "1",
-            status: "pending", // 期限超過は未完了前提にしたいので同時セット
-          }))
-        }
+          active={form.overdue === "1"}
+          label="期限超過だけ"
+          onClick={() =>
+            setForm((v) => ({
+              ...v,
+              overdue: v.overdue === "1" ? "" : "1",
+              status: "pending",
+            }))
+          }
         />
       </div>
     </div>
