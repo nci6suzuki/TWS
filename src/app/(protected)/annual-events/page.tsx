@@ -70,7 +70,8 @@ export default async function AnnualEventsPage({
   };
 
   return (
-    <div className="space-y-6">
+  <main className="min-h-screen bg-slate-50">
+    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 md:px-8 md:py-10">
       <Hero
         title="年間イベント"
         subtitle="未完了・期限超過を可視化し、検索→処理まで一画面で完結します。"
@@ -115,8 +116,10 @@ export default async function AnnualEventsPage({
               <div
                 key={e.id}
                 className={[
-                  "rounded-2xl border border-slate-200 bg-white p-5 transition",
-                  isOverdue ? "border-rose-200 bg-rose-50" : "hover:bg-slate-50",
+                  "rounded-3xl border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
+                  isOverdue
+                  ? "border-rose-200 bg-rose-50"
+                  : "border-slate-200 hover:bg-white",
                 ].join(" ")}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -236,5 +239,6 @@ export default async function AnnualEventsPage({
         </Card>
       )}
     </div>
-  );
+  </main>
+);
 }

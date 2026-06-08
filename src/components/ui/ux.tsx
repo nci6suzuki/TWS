@@ -1,66 +1,56 @@
 import Link from "next/link";
-import React from "react";
+import type { ReactNode } from "react";
 
-export function Hero({
-  title,
-  subtitle,
-  right,
-  meta,
-}: {
-  title: string;
-  subtitle?: string;
-  right?: React.ReactNode;
-  meta?: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-7 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <div className="text-xs font-bold tracking-[0.18em] text-indigo-600">WORKFLOW</div>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">
-            {title}
-          </h1>
-          {subtitle && <p className="mt-2 text-sm text-slate-600">{subtitle}</p>}
-          {meta && <div className="mt-4">{meta}</div>}
-        </div>
-        {right && <div className="flex flex-wrap gap-2">{right}</div>}
-      </div>
-    </div>
-  );
+type Tone = "default" | "info" | "ok" | "danger" | "gray";
+
+function toneClass(tone: Tone = "default") {
+  switch (tone) {
+    case "info":
+      return "border-blue-200 bg-blue-50 text-blue-700";
+    case "ok":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    case "danger":
+      return "border-rose-200 bg-rose-50 text-rose-700";
+    case "gray":
+      return "border-slate-200 bg-slate-100 text-slate-600";
+    default:
+      return "border-slate-200 bg-white text-slate-700";
+  }
 }
 
 export function Card({
   children,
   className = "",
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (
-    <div className={`rounded-2xl border border-slate-200 bg-white ${className}`}>
+    <section
+      className={[
+        "rounded-3xl border border-slate-200 bg-white shadow-sm",
+        className,
+      ].join(" ")}
+    >
       {children}
-    </div>
+    </section>
   );
 }
 
 export function Chip({
   children,
-  tone = "gray",
+  tone = "default",
 }: {
-  children: React.ReactNode;
-  tone?: "gray" | "danger" | "ok" | "info";
+  children: ReactNode;
+  tone?: Tone;
 }) {
-  const cls =
-    tone === "danger"
-      ? "border-rose-200 bg-rose-50 text-rose-700"
-      : tone === "ok"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-      : tone === "info"
-      ? "border-indigo-200 bg-indigo-50 text-indigo-700"
-      : "border-slate-200 bg-slate-50 text-slate-700";
-
   return (
-    <span className={`inline-flex items-center rounded-xl border px-3 py-1 text-xs font-semibold ${cls}`}>
+    <span
+      className={[
+        "inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold",
+        toneClass(tone),
+      ].join(" ")}
+    >
       {children}
     </span>
   );
@@ -71,12 +61,12 @@ export function PrimaryButton({
   children,
 }: {
   href: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <Link
       href={href}
-      className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+      className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-md"
     >
       {children}
     </Link>
@@ -88,12 +78,12 @@ export function GhostButton({
   children,
 }: {
   href: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <Link
       href={href}
-      className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+      className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md"
     >
       {children}
     </Link>
@@ -103,34 +93,93 @@ export function GhostButton({
 export function KPI({
   label,
   value,
-  tone = "normal",
+  tone = "default",
   href,
 }: {
   label: string;
   value: number | string;
-  tone?: "normal" | "danger" | "ok";
+  tone?: Tone;
   href?: string;
 }) {
-  const base = "rounded-2xl border p-4 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition";
-  const cls =
-    tone === "danger"
-      ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100/70"
-      : tone === "ok"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100/60"
-      : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50";
-
   const inner = (
-    <div className={`${base} ${cls}`}>
-      <div className="text-xs font-semibold tracking-[0.12em] opacity-75">{label}</div>
-      <div className="mt-2 text-3xl font-extrabold leading-none">{value}</div>
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-bold text-slate-500">{label}</p>
+        <span
+          className={[
+            "h-3 w-3 rounded-full",
+            tone === "danger"
+              ? "bg-rose-500"
+              : tone === "ok"
+                ? "bg-emerald-500"
+                : tone === "info"
+                  ? "bg-blue-500"
+                  : "bg-slate-400",
+          ].join(" ")}
+        />
+      </div>
+      <p
+        className={[
+          "mt-3 text-4xl font-black tracking-tight",
+          tone === "danger"
+            ? "text-rose-600"
+            : tone === "ok"
+              ? "text-emerald-600"
+              : "text-slate-900",
+        ].join(" ")}
+      >
+        {value}
+      </p>
     </div>
   );
 
-  return href ? (
+  if (!href) return inner;
+
+  return (
     <Link href={href} className="block">
       {inner}
     </Link>
-  ) : (
-    inner
+  );
+}
+
+export function Hero({
+  title,
+  subtitle,
+  meta,
+  right,
+}: {
+  title: string;
+  subtitle?: string;
+  meta?: ReactNode;
+  right?: ReactNode;
+}) {
+  return (
+    <section className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+      <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-slate-100 blur-3xl" />
+      <div className="absolute bottom-0 left-20 h-32 w-32 rounded-full bg-blue-50 blur-3xl" />
+
+      <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.35em] text-slate-400">
+            Workflow
+          </p>
+          <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 md:text-5xl">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="mt-3 max-w-2xl text-sm font-medium leading-7 text-slate-600">
+              {subtitle}
+            </p>
+          )}
+          {meta && <div className="mt-5">{meta}</div>}
+        </div>
+
+        {right && (
+          <div className="flex flex-wrap items-center gap-3">
+            {right}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
