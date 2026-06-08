@@ -60,9 +60,7 @@ export function Chip({
       : "border-slate-200 bg-slate-50 text-slate-700";
 
   return (
-    <span
-      className={`inline-flex items-center rounded-xl border px-3 py-1 text-xs font-semibold ${cls}`}
-    >
+    <span className={`inline-flex items-center rounded-xl border px-3 py-1 text-xs font-semibold ${cls}`}>
       {children}
     </span>
   );
@@ -113,8 +111,7 @@ export function KPI({
   tone?: "normal" | "danger" | "ok";
   href?: string;
 }) {
-  const base =
-    "rounded-2xl border p-4 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition";
+  const base = "rounded-2xl border p-4 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition";
   const cls =
     tone === "danger"
       ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100/70"
@@ -124,9 +121,7 @@ export function KPI({
 
   const inner = (
     <div className={`${base} ${cls}`}>
-      <div className="text-xs font-semibold tracking-[0.12em] opacity-75">
-        {label}
-      </div>
+      <div className="text-xs font-semibold tracking-[0.12em] opacity-75">{label}</div>
       <div className="mt-2 text-3xl font-extrabold leading-none">{value}</div>
     </div>
   );

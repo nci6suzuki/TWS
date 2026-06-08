@@ -21,6 +21,7 @@ export default async function AnnualEventsPage({
 
   const today = new Date().toISOString().slice(0, 10);
 
+  // KPI
   const { count: pendingCount } = await supabase
     .from("employee_annual_events")
     .select("id", { count: "exact", head: true })
@@ -32,6 +33,7 @@ export default async function AnnualEventsPage({
     .eq("status", "pending")
     .lt("scheduled_date", today);
 
+  // list query
   let query = supabase
     .from("employee_annual_events")
     .select("id, scheduled_date, title, event_type, status, priority")
@@ -41,12 +43,19 @@ export default async function AnnualEventsPage({
   if (status) query = query.eq("status", status);
   if (type) query = query.eq("event_type", type);
   if (q) query = query.ilike("title", `%${q}%`);
-  if (/^\d{4}$/.test(year)) query = query.gte("scheduled_date", `${year}-01-01`).lte("scheduled_date", `${year}-12-31`);
-  if (overdue === "1") query = query.lt("scheduled_date", today).eq("status", "pending");
+
+  if (/^\d{4}$/.test(year)) {
+    query = query.gte("scheduled_date", `${year}-01-01`).lte("scheduled_date", `${year}-12-31`);
+  }
+
+  if (overdue === "1") {
+    query = query.lt("scheduled_date", today).eq("status", "pending");
+  }
 
   const { data, error } = await query;
   if (error) throw error;
 
+  // URL保持しつつ view 切替
   const baseParams = new URLSearchParams();
   if (status) baseParams.set("status", status);
   if (type) baseParams.set("type", type);
@@ -101,6 +110,7 @@ export default async function AnnualEventsPage({
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {(data ?? []).map((e) => {
             const isOverdue = e.status === "pending" && e.scheduled_date < today;
+
             return (
               <div
                 key={e.id}
@@ -114,10 +124,14 @@ export default async function AnnualEventsPage({
                     <div className="text-xs font-semibold tracking-[0.12em] text-slate-400">
                       {e.scheduled_date} / {e.event_type}
                     </div>
-                    <Link className="mt-2 block text-lg font-extrabold text-slate-900 hover:underline" href={`/annual-events/${e.id}`}>
+                    <Link
+                      className="mt-2 block text-lg font-extrabold text-slate-900 hover:underline"
+                      href={`/annual-events/${e.id}`}
+                    >
                       {e.title}
                     </Link>
                   </div>
+
                   <div className="flex flex-col items-end gap-2">
                     <Chip tone={e.status === "done" ? "ok" : isOverdue ? "danger" : "gray"}>
                       {isOverdue ? "期限超過" : e.status}
@@ -127,10 +141,16 @@ export default async function AnnualEventsPage({
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <Link className="btn-ghost inline-flex h-9 rounded-xl border px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50" href={`/annual-events/${e.id}`}>
+                  <Link
+                    className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    href={`/annual-events/${e.id}`}
+                  >
                     詳細
                   </Link>
-                  <Link className="btn-ghost inline-flex h-9 rounded-xl border px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50" href={`/annual-events/${e.id}/edit`}>
+                  <Link
+                    className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    href={`/annual-events/${e.id}/edit`}
+                  >
                     編集
                   </Link>
                   <form action={`/api/annual-events/${e.id}/complete`} method="post">
@@ -172,17 +192,27 @@ export default async function AnnualEventsPage({
                       <Link className="text-indigo-600 hover:underline" href={`/annual-events/${e.id}`}>
                         {e.title}
                       </Link>
-                      {isOverdue && <span className="ml-2"><Chip tone="danger">期限超過</Chip></span>}
+                      {isOverdue && (
+                        <span className="ml-2">
+                          <Chip tone="danger">期限超過</Chip>
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4">{e.event_type}</td>
                     <td className="py-3 px-4">{e.status}</td>
                     <td className="py-3 px-4">{e.priority}</td>
                     <td className="py-3 px-4">
                       <div className="flex flex-wrap gap-2">
-                        <Link className="inline-flex h-8 items-center rounded-lg border bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50" href={`/annual-events/${e.id}`}>
+                        <Link
+                          className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          href={`/annual-events/${e.id}`}
+                        >
                           詳細
                         </Link>
-                        <Link className="inline-flex h-8 items-center rounded-lg border bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50" href={`/annual-events/${e.id}/edit`}>
+                        <Link
+                          className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          href={`/annual-events/${e.id}/edit`}
+                        >
                           編集
                         </Link>
                         <form action={`/api/annual-events/${e.id}/complete`} method="post">
