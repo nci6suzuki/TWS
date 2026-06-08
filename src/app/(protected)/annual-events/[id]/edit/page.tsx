@@ -1,6 +1,8 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseServerDbClient } from "@/lib/supabase/server-db";
+import { PageContainer, PageHeader, Section } from "@/components/ui/page";
+import Link from "next/link";
 
 export default async function AnnualEventEditPage({
   params,
@@ -41,13 +43,23 @@ export default async function AnnualEventEditPage({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border bg-white p-6">
-        <div className="text-2xl font-bold">年間イベント 編集</div>
-        <div className="mt-2 text-sm text-slate-600">{event.title}</div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="年間イベント 編集"
+        description="タイトル・予定日・状態・説明を更新します。"
+        actions={
+          <div className="flex gap-2">
+            <Link
+              href={`/annual-events/${id}`}
+              className="inline-flex h-10 items-center rounded-xl border bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              戻る
+            </Link>
+          </div>
+        }
+      />
 
-      <div className="rounded-2xl border bg-white p-6">
+      <Section title="編集フォーム" description="保存すると詳細画面に戻ります。">
         <form action={updateEvent} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="タイトル" name="title" required defaultValue={event.title} />
           <Field label="予定日" name="scheduled_date" required type="date" defaultValue={String(event.scheduled_date)} />
@@ -92,7 +104,7 @@ export default async function AnnualEventEditPage({
             <textarea
               name="description"
               defaultValue={event.description ?? ""}
-              className="rounded-xl border p-3 text-sm min-h-[120px]"
+              className="rounded-xl border p-3 text-sm min-h-[140px]"
             />
           </label>
 
@@ -100,16 +112,16 @@ export default async function AnnualEventEditPage({
             <button className="h-11 rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white hover:bg-slate-800">
               保存
             </button>
-            <a
+            <Link
               href={`/annual-events/${id}`}
               className="h-11 inline-flex items-center rounded-xl border bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
-              戻る
-            </a>
+              キャンセル
+            </Link>
           </div>
         </form>
-      </div>
-    </div>
+      </Section>
+    </PageContainer>
   );
 }
 
