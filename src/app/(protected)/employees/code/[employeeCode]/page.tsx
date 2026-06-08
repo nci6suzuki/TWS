@@ -31,6 +31,13 @@
 //   );
 // }
 
-export default function Page({ params }: { params: { employeeCode: string } }) {
-  return <div style={{ padding: 24 }}>employeeCode = {params.employeeCode}</div>;
+export default function Page(props: any) {
+  return (
+    <div style={{ padding: 24, fontFamily: "ui-sans-serif, system-ui" }}>
+      <div style={{ fontWeight: 700 }}>DEBUG PARAMS</div>
+      <pre style={{ marginTop: 12, whiteSpace: "pre-wrap" }}>
+        {JSON.stringify(props, null, 2)}
+      </pre>
+    </div>
+  );
 }
