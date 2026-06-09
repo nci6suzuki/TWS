@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseServerDbClient } from "@/lib/supabase/server-db";
 import { PageShell } from "@/components/ui/page-shell";
 import { Hero, KPI, Chip, PrimaryButton, Card } from "@/components/ui/ux";
+import { InviteButton } from "@/components/employees/invite-button";
 
 export default async function EmployeesPage() {
   const me = await requireAuth();
@@ -10,7 +11,7 @@ export default async function EmployeesPage() {
 
   const { data, error } = await supabase
     .from("employees")
-    .select("id, employee_code, name, email, app_role, status")
+    .select("id, employee_code, name, email, app_role, status, user_id, last_invited_at")
     .order("employee_code", { ascending: true })
     .limit(200);
 
@@ -98,6 +99,7 @@ export default async function EmployeesPage() {
                 <th className="px-5 py-3 text-left font-black">メール</th>
                 <th className="px-5 py-3 text-left font-black">ロール</th>
                 <th className="px-5 py-3 text-left font-black">状態</th>
+                <th className="px-5 py-3 text-left font-black">招待</th>
               </tr>
             </thead>
 
@@ -141,12 +143,40 @@ export default async function EmployeesPage() {
                       {e.status}
                     </Chip>
                   </td>
+                  <td className="px-5 py-4">
+  {(me.role === "admin" || me.role === "hr") ? (
+    <div className="flex flex-wrap items-center gap-2">
+      {/* 状態チップ */}
+      {e.user_id ? (
+        <>
+          <Chip tone="ok">招待済</Chip>
+          {/* 再招待したいなら */}
+          <InviteButton employeeId={e.id} force label="再招待" />
+        </>
+      ) : (
+        <>
+          <Chip tone="danger">未招待</Chip>
+          <InviteButton employeeId={e.id} />
+        </>
+      )}
+
+      {/* 招待日時（任意表示） */}
+      {e.last_invited_at && (
+        <span className="text-xs font-semibold text-slate-500">
+          {new Date(e.last_invited_at).toLocaleString("ja-JP")}
+        </span>
+      )}
+    </div>
+  ) : (
+    <span className="text-xs font-semibold text-slate-400">-</span>
+  )}
+</td>
                 </tr>
               ))}
 
               {employees.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-10 text-center">
+                  <td colSpan={6} className="px-5 py-10 text-center">
                     <div className="text-sm font-bold text-slate-500">
                       表示できる社員がいません
                     </div>
