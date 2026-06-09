@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseServerDbClient } from "@/lib/supabase/server-db";
 import { AnnualEventFilters } from "@/components/annual-events/annual-event-filters";
 import { Hero, KPI, Chip, PrimaryButton, GhostButton, Card } from "@/components/ui/ux";
+import { PageShell } from "@/components/ui/page-shell";
 
 export default async function AnnualEventsPage({
   searchParams,
@@ -70,6 +71,7 @@ export default async function AnnualEventsPage({
   };
 
   return (
+<PageShell>
   <main className="min-h-screen bg-slate-50">
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 md:px-8 md:py-10">
       <Hero
@@ -240,5 +242,6 @@ export default async function AnnualEventsPage({
       )}
     </div>
   </main>
+  </PageShell>
 );
 }
