@@ -109,12 +109,14 @@ const { data: qualifications } = await supabase
     .order("scheduled_date", { ascending: true })
     .limit(50);
 
-  const { data: interviews } = await supabase
-    .from("interview_records")
-    .select("id, interview_date, interview_type, interviewer_employee_id, notes, next_actions, annual_event_id")
-    .eq("employee_id", employeeId)
-    .order("interview_date", { ascending: false })
-    .limit(30);
+const { data: interviews } = await supabase
+  .from("employee_interviews")
+  .select(
+    "id, interview_date, interview_type, interviewer_name, summary, action_items, next_interview_date, created_at"
+  )
+  .eq("employee_id", employeeId)
+  .order("interview_date", { ascending: false })
+  .order("created_at", { ascending: false });
 
   return {
     employee: emp,

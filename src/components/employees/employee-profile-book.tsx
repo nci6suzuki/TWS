@@ -161,6 +161,13 @@ const qualificationAlertCount =
 </Link>
 
 <Link
+  href={`/employees/code/${employee.employee_code}/interviews`}
+  className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+>
+  面談管理
+</Link>
+
+<Link
   href="/employees"
   className="inline-flex h-10 items-center rounded-xl border bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
 >
@@ -409,38 +416,99 @@ const qualificationAlertCount =
         </div>
       )}
 
-      {tab === "interviews" && (
-        <div className="rounded-2xl border bg-white p-6 space-y-4">
-          <div className="text-lg font-bold">面談履歴</div>
+{tab === "interviews" && (
+  <div className="rounded-2xl border bg-white p-6 space-y-4">
+    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div>
+        <div className="text-lg font-bold">面談履歴</div>
+        <p className="mt-1 text-sm font-semibold text-slate-500">
+          面談履歴、次回アクション、次回面談予定を確認できます。
+        </p>
+      </div>
 
-          <div className="grid gap-3">
-            {interviews.length === 0 ? (
-              <div className="rounded-2xl border border-dashed bg-white p-6 text-center text-sm text-slate-500">
-                面談がありません
-              </div>
-            ) : (
-              interviews.map((i: any) => (
-                <div key={i.id} className="rounded-2xl border bg-white p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="font-semibold text-slate-900">
-                      {i.interview_type} / {new Date(i.interview_date).toLocaleString("ja-JP")}
-                    </div>
-                    <span className="text-xs text-slate-500">id: {i.id}</span>
-                  </div>
-                  <div className="mt-2 text-sm text-slate-700 whitespace-pre-wrap">
-                    {i.notes ?? "-"}
-                  </div>
-                  {i.next_actions && (
-                    <div className="mt-2 text-xs text-slate-600 whitespace-pre-wrap">
-                      次アクション：{i.next_actions}
-                    </div>
-                  )}
+      <Link
+        href={`/employees/code/${employee.employee_code}/interviews`}
+        className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+      >
+        面談管理
+      </Link>
+    </div>
+
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="rounded-2xl border bg-slate-50 p-4">
+        <div className="text-xs font-black tracking-[0.12em] text-slate-500">
+          面談件数
+        </div>
+        <div className="mt-2 text-2xl font-black text-slate-900">
+          {interviews.length}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+        <div className="text-xs font-black tracking-[0.12em] text-indigo-700">
+          アクションあり
+        </div>
+        <div className="mt-2 text-2xl font-black text-indigo-700">
+          {interviews.filter((i: any) => i.action_items).length}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+        <div className="text-xs font-black tracking-[0.12em] text-emerald-700">
+          次回面談予定あり
+        </div>
+        <div className="mt-2 text-2xl font-black text-emerald-700">
+          {interviews.filter((i: any) => i.next_interview_date).length}
+        </div>
+      </div>
+    </div>
+
+    <div className="space-y-3">
+      {interviews.length === 0 ? (
+        <div className="rounded-2xl border bg-slate-50 p-6 text-center text-sm font-bold text-slate-500">
+          面談履歴がありません
+        </div>
+      ) : (
+        interviews.map((i: any) => (
+          <div key={i.id} className="rounded-2xl border bg-slate-50 p-4">
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded-xl border bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                {i.interview_date}
+              </span>
+              <span className="rounded-xl border bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                {getInterviewTypeLabel(i.interview_type)}
+              </span>
+              {i.next_interview_date && (
+                <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  次回: {i.next_interview_date}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-3 text-sm font-black text-slate-900">
+              面談者：{i.interviewer_name || "-"}
+            </div>
+
+            <div className="mt-3 whitespace-pre-wrap text-sm font-semibold text-slate-700">
+              {i.summary || "-"}
+            </div>
+
+            {i.action_items && (
+              <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50 p-3">
+                <div className="text-xs font-black text-indigo-700">
+                  次回アクション
                 </div>
-              ))
+                <div className="mt-1 whitespace-pre-wrap text-sm font-semibold text-indigo-700">
+                  {i.action_items}
+                </div>
+              </div>
             )}
           </div>
-        </div>
+        ))
       )}
+    </div>
+  </div>
+)}
     </div>
   );
 }
@@ -460,4 +528,12 @@ function Card({
       <div className="mt-2 text-sm text-slate-700 whitespace-pre-wrap">{text}</div>
     </div>
   );
+}
+
+function getInterviewTypeLabel(type: string) {
+  if (type === "regular") return "定期面談";
+  if (type === "follow") return "フォロー面談";
+  if (type === "evaluation") return "評価面談";
+  if (type === "career") return "キャリア面談";
+  return "その他";
 }
