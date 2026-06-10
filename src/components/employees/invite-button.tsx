@@ -16,15 +16,27 @@ export function InviteButton({
   const [loading, setLoading] = useState(false);
 
   async function onInvite() {
+    if (force && !confirm("再招待メールを送信します。よろしいですか？")) {
+      return;
+    }
+
+    if (!force && !confirm("この社員に招待メールを送信します。よろしいですか？")) {
+      return;
+    }
+
     setLoading(true);
+
     try {
       const res = await fetch("/api/admin/invite-employee", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ employeeId, force }),
       });
 
       const json = await res.json();
+
       if (!res.ok || !json?.success) {
         alert(json?.error?.message ?? "招待に失敗しました");
         return;
@@ -43,8 +55,10 @@ export function InviteButton({
       disabled={disabled || loading}
       onClick={onInvite}
       className={[
-        "inline-flex h-8 items-center rounded-lg px-3 text-xs font-black text-white",
-        disabled || loading ? "bg-slate-400 cursor-not-allowed" : "bg-slate-900 hover:bg-slate-800",
+        "inline-flex h-8 items-center rounded-lg px-3 text-xs font-black text-white transition",
+        disabled || loading
+          ? "cursor-not-allowed bg-slate-400"
+          : "bg-slate-900 hover:bg-slate-800",
       ].join(" ")}
     >
       {loading ? "送信中..." : label ?? (force ? "再招待" : "招待")}

@@ -5,23 +5,38 @@ import { PageShell } from "@/components/ui/page-shell";
 import { Hero, KPI, Chip, PrimaryButton, Card } from "@/components/ui/ux";
 import { InviteButton } from "@/components/employees/invite-button";
 
-export default async function EmployeesPage() {
+export default async function EmployeesPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | undefined>;
+}) {
   const me = await requireAuth();
   const supabase = await createSupabaseServerDbClient();
 
+  const inviteFilter = searchParams.invite ?? "";
+
   const { data, error } = await supabase
     .from("employees")
-    .select("id, employee_code, name, email, app_role, status, user_id, last_invited_at")
+    .select(
+      "id, employee_code, name, email, app_role, status, user_id, last_invited_at"
+    )
     .order("employee_code", { ascending: true })
     .limit(200);
 
-  const employees = data ?? [];
+  const allEmployees = data ?? [];
 
-  const activeCount = employees.filter((e) => e.status === "active").length;
-  const inactiveCount = employees.filter((e) => e.status !== "active").length;
-  const adminCount = employees.filter(
+  const employees =
+    inviteFilter === "uninvited"
+      ? allEmployees.filter((e) => !e.user_id)
+      : allEmployees;
+
+  const activeCount = allEmployees.filter((e) => e.status === "active").length;
+  const inactiveCount = allEmployees.filter((e) => e.status !== "active").length;
+  const adminCount = allEmployees.filter(
     (e) => e.app_role === "admin" || e.app_role === "hr"
   ).length;
+  const uninvitedCount = allEmployees.filter((e) => !e.user_id).length;
+  const invitedCount = allEmployees.filter((e) => !!e.user_id).length;
 
   if (error) {
     return (
@@ -40,16 +55,23 @@ export default async function EmployeesPage() {
     <PageShell>
       <Hero
         title="社員一覧"
-        subtitle="社員情報、ロール、在籍状態を確認し、社員カルテへ素早くアクセスできます。"
+        subtitle="社員情報、ロール、在籍状態、招待状況を確認し、社員カルテへ素早くアクセスできます。"
         meta={
           <div className="flex flex-wrap gap-2">
             <Chip tone="info">Employee Management</Chip>
             <Chip>ログイン権限: {me.role}</Chip>
             <Chip>表示件数: {employees.length}</Chip>
+            {inviteFilter === "uninvited" && (
+              <Chip tone="danger">未招待のみ表示中</Chip>
+            )}
           </div>
         }
         right={
           <>
+            <PrimaryButton href="/employees">全社員</PrimaryButton>
+            <PrimaryButton href="/employees?invite=uninvited">
+              未招待だけ
+            </PrimaryButton>
             {(me.role === "admin" || me.role === "hr") && (
               <PrimaryButton href="/employees/new">+ 社員登録</PrimaryButton>
             )}
@@ -57,11 +79,17 @@ export default async function EmployeesPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        <KPI label="社員数" value={employees.length} />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+        <KPI label="社員数" value={allEmployees.length} />
         <KPI label="在籍中" value={activeCount} tone="ok" />
         <KPI label="休職・退職等" value={inactiveCount} tone="danger" />
-        <KPI label="管理権限" value={adminCount} tone="info" />
+        <KPI label="招待済" value={invitedCount} tone="ok" />
+        <KPI
+          label="未招待"
+          value={uninvitedCount}
+          tone="danger"
+          href="/employees?invite=uninvited"
+        />
       </div>
 
       <Card className="p-5">
@@ -69,13 +97,16 @@ export default async function EmployeesPage() {
           <div>
             <h2 className="text-lg font-black text-slate-900">社員検索</h2>
             <p className="mt-1 text-sm font-medium text-slate-500">
-              現在は社員番号順で最大200件を表示しています。
+              現在は社員番号順で最大200件を表示しています。未招待の社員だけに絞り込めます。
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <Chip>社員番号順</Chip>
             <Chip tone="gray">最大200件</Chip>
+            <Chip tone={inviteFilter === "uninvited" ? "danger" : "gray"}>
+              {inviteFilter === "uninvited" ? "未招待のみ" : "全社員"}
+            </Chip>
           </div>
         </div>
       </Card>
@@ -85,13 +116,13 @@ export default async function EmployeesPage() {
           <div>
             <h2 className="text-lg font-black text-slate-900">社員一覧</h2>
             <p className="mt-1 text-sm font-medium text-slate-500">
-              社員番号をクリックすると、社員カルテを表示します。
+              社員番号をクリックすると、社員カルテを表示します。招待列からログイン招待を送信できます。
             </p>
           </div>
         </div>
 
         <div className="overflow-auto">
-          <table className="min-w-[900px] w-full text-sm">
+          <table className="min-w-[1150px] w-full text-sm">
             <thead className="bg-slate-50 text-slate-500">
               <tr className="border-b border-slate-100">
                 <th className="px-5 py-3 text-left font-black">社員番号</th>
@@ -143,34 +174,40 @@ export default async function EmployeesPage() {
                       {e.status}
                     </Chip>
                   </td>
-                  <td className="px-5 py-4">
-  {(me.role === "admin" || me.role === "hr") ? (
-    <div className="flex flex-wrap items-center gap-2">
-      {/* 状態チップ */}
-      {e.user_id ? (
-        <>
-          <Chip tone="ok">招待済</Chip>
-          {/* 再招待したいなら */}
-          <InviteButton employeeId={e.id} force label="再招待" />
-        </>
-      ) : (
-        <>
-          <Chip tone="danger">未招待</Chip>
-          <InviteButton employeeId={e.id} />
-        </>
-      )}
 
-      {/* 招待日時（任意表示） */}
-      {e.last_invited_at && (
-        <span className="text-xs font-semibold text-slate-500">
-          {new Date(e.last_invited_at).toLocaleString("ja-JP")}
-        </span>
-      )}
-    </div>
-  ) : (
-    <span className="text-xs font-semibold text-slate-400">-</span>
-  )}
-</td>
+                  <td className="px-5 py-4">
+                    {me.role === "admin" || me.role === "hr" ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        {e.user_id ? (
+                          <>
+                            <Chip tone="ok">招待済</Chip>
+                            <InviteButton
+                              employeeId={e.id}
+                              force
+                              label="再招待"
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <Chip tone="danger">未招待</Chip>
+                            <InviteButton employeeId={e.id} />
+                          </>
+                        )}
+
+                        {e.last_invited_at && (
+                          <span className="text-xs font-semibold text-slate-500">
+                            {new Date(e.last_invited_at).toLocaleString(
+                              "ja-JP"
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs font-semibold text-slate-400">
+                        -
+                      </span>
+                    )}
+                  </td>
                 </tr>
               ))}
 
