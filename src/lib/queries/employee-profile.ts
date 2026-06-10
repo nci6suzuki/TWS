@@ -96,18 +96,11 @@ export async function getEmployeeProfileBookByCode(employeeCode: string) {
     .eq("employee_id", employeeId)
     .maybeSingle();
 
-  const { data: qualifications } = await supabase
-    .from("employee_qualifications")
-    .select(`
-      id,
-      acquired_on,
-      expires_on,
-      status,
-      note,
-      qualification_master:qualification_id ( id, name )
-    `)
-    .eq("employee_id", employeeId)
-    .order("expires_on", { ascending: true });
+const { data: qualifications } = await supabase
+  .from("employee_qualifications")
+  .select("id, qualification_name, acquired_on, expires_on, status, memo")
+  .eq("employee_id", employeeId)
+  .order("expires_on", { ascending: true, nullsFirst: false });
 
   const { data: events } = await supabase
     .from("employee_annual_events")

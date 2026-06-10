@@ -27,6 +27,54 @@ const tabs = [
   { key: "interviews", label: "面談履歴" },
 ];
 
+function getToday() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getAlertDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + 30);
+  return d.toISOString().slice(0, 10);
+}
+
+function getQualificationName(q: any) {
+  return (
+    q.qualification_name ??
+    (Array.isArray(q.qualification_master)
+      ? q.qualification_master?.[0]?.name
+      : q.qualification_master?.name) ??
+    "資格"
+  );
+}
+
+function AlertBadge({
+  type,
+}: {
+  type: "expired" | "soon" | "ok";
+}) {
+  if (type === "expired") {
+    return (
+      <span className="inline-flex items-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+        期限切れ
+      </span>
+    );
+  }
+
+  if (type === "soon") {
+    return (
+      <span className="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+        30日以内
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+      有効
+    </span>
+  );
+}
+
 function TabLink({ href, active, label }: { href: string; active: boolean; label: string }) {
   return (
     <Link
@@ -60,6 +108,23 @@ export function EmployeeProfileBook({
   activeTab,
 }: Props) {
   const tab = tabs.some((t) => t.key === activeTab) ? activeTab : "basic";
+
+  const today = getToday();
+const alertDate = getAlertDate();
+
+const expiredQualifications = qualifications.filter(
+  (q: any) => q.expires_on && q.expires_on < today
+);
+
+const expiringSoonQualifications = qualifications.filter(
+  (q: any) =>
+    q.expires_on &&
+    q.expires_on >= today &&
+    q.expires_on <= alertDate
+);
+
+const qualificationAlertCount =
+  expiredQualifications.length + expiringSoonQualifications.length;
 
   return (
     <div className="space-y-6">
@@ -103,6 +168,29 @@ export function EmployeeProfileBook({
 </Link>
 </div>
         </div>
+
+{qualificationAlertCount > 0 && (
+  <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div>
+        <div className="text-sm font-black text-amber-800">
+          資格更新アラートがあります
+        </div>
+        <div className="mt-1 text-sm font-semibold text-amber-700">
+          期限切れ {expiredQualifications.length}件 / 30日以内{" "}
+          {expiringSoonQualifications.length}件
+        </div>
+      </div>
+
+      <Link
+        href={`/employees/code/${employee.employee_code}?tab=qualifications`}
+        className="inline-flex h-9 items-center justify-center rounded-xl bg-amber-600 px-4 text-sm font-black text-white hover:bg-amber-700"
+      >
+        資格タブを見る
+      </Link>
+    </div>
+  </div>
+)}
 
         {/* Tabs */}
         <div className="mt-5 flex flex-wrap gap-2">
@@ -152,44 +240,131 @@ export function EmployeeProfileBook({
         </div>
       )}
 
-      {tab === "qualifications" && (
-        <div className="rounded-2xl border bg-white p-6 space-y-4">
-          <div className="text-lg font-bold">資格</div>
+{tab === "qualifications" && (
+  <div className="rounded-2xl border bg-white p-6 space-y-4">
+    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div>
+        <div className="text-lg font-bold">資格</div>
+        <p className="mt-1 text-sm font-semibold text-slate-500">
+          保有資格、取得日、有効期限、更新状況を確認できます。
+        </p>
+      </div>
 
-          <div className="rounded-2xl border bg-slate-50 p-4 overflow-auto">
-            <table className="min-w-[900px] w-full text-sm">
-              <thead className="text-slate-500">
-                <tr className="border-b">
-                  <th className="py-2 text-left">資格名</th>
-                  <th className="py-2 text-left">取得日</th>
-                  <th className="py-2 text-left">期限</th>
-                  <th className="py-2 text-left">状態</th>
-                </tr>
-              </thead>
-              <tbody>
-                {qualifications.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="py-6 text-center text-slate-500">資格がありません</td>
-                  </tr>
-                ) : (
-                  qualifications.map((q: any) => (
-                    <tr key={q.id} className="border-b last:border-b-0">
-                      <td className="py-2 font-semibold">
-                        {Array.isArray(q.qualification_master)
-                          ? q.qualification_master?.[0]?.name ?? "資格"
-                          : q.qualification_master?.name ?? "資格"}
-                      </td>
-                      <td className="py-2">{q.acquired_on ?? "-"}</td>
-                      <td className="py-2">{q.expires_on ?? "-"}</td>
-                      <td className="py-2">{q.status ?? "-"}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+      <Link
+        href={`/employees/code/${employee.employee_code}/qualifications`}
+        className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+      >
+        資格管理
+      </Link>
+    </div>
+
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="rounded-2xl border bg-slate-50 p-4">
+        <div className="text-xs font-black tracking-[0.12em] text-slate-500">
+          登録資格数
         </div>
-      )}
+        <div className="mt-2 text-2xl font-black text-slate-900">
+          {qualifications.length}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <div className="text-xs font-black tracking-[0.12em] text-amber-700">
+          30日以内
+        </div>
+        <div className="mt-2 text-2xl font-black text-amber-700">
+          {expiringSoonQualifications.length}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+        <div className="text-xs font-black tracking-[0.12em] text-rose-700">
+          期限切れ
+        </div>
+        <div className="mt-2 text-2xl font-black text-rose-700">
+          {expiredQualifications.length}
+        </div>
+      </div>
+    </div>
+
+    <div className="rounded-2xl border bg-slate-50 p-4 overflow-auto">
+      <table className="min-w-[900px] w-full text-sm">
+        <thead className="text-slate-500">
+          <tr className="border-b">
+            <th className="py-2 text-left">資格名</th>
+            <th className="py-2 text-left">取得日</th>
+            <th className="py-2 text-left">期限</th>
+            <th className="py-2 text-left">状態</th>
+            <th className="py-2 text-left">メモ</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {qualifications.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="py-6 text-center text-slate-500">
+                資格がありません
+              </td>
+            </tr>
+          ) : (
+            qualifications.map((q: any) => {
+              const isExpired = q.expires_on && q.expires_on < today;
+              const isSoon =
+                q.expires_on &&
+                q.expires_on >= today &&
+                q.expires_on <= alertDate;
+
+              return (
+                <tr key={q.id} className="border-b last:border-b-0">
+                  <td className="py-3 font-semibold text-slate-900">
+                    {getQualificationName(q)}
+                  </td>
+
+                  <td className="py-3 text-slate-600">
+                    {q.acquired_on ?? "-"}
+                  </td>
+
+                  <td className="py-3">
+                    {q.expires_on ? (
+                      <span
+                        className={[
+                          "font-semibold",
+                          isExpired
+                            ? "text-rose-600"
+                            : isSoon
+                            ? "text-amber-600"
+                            : "text-slate-600",
+                        ].join(" ")}
+                      >
+                        {q.expires_on}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">-</span>
+                    )}
+                  </td>
+
+                  <td className="py-3">
+                    {isExpired ? (
+                      <AlertBadge type="expired" />
+                    ) : isSoon ? (
+                      <AlertBadge type="soon" />
+                    ) : (
+                      <AlertBadge type="ok" />
+                    )}
+                  </td>
+
+                  <td className="py-3 text-slate-600">
+                    {q.memo ?? "-"}
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
 
       {tab === "schedule" && (
         <div className="rounded-2xl border bg-white p-6 space-y-4">
