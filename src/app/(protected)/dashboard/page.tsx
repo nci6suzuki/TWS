@@ -122,7 +122,7 @@ export default async function DashboardPage() {
           <KPI
             label="期限切れ"
             value={expiredQualifications.length}
-            tone={expiredQualifications.length > 0 ? "danger" : "normal"}
+            tone={expiredQualifications.length > 0 ? "danger" : "ok"}
           />
           <KPI
             label="30日以内"
