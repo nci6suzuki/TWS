@@ -120,6 +120,98 @@ export default async function InterviewEditPage({
       .eq("id", targetInterviewId);
 
     if (error) {
+/**
+ * 次回面談予定日がある場合、連動する年間イベントを upsert 的に更新
+ */
+if (nextInterviewDate) {
+  const { data: existingEvent, error: findEventError } = await admin
+    .from("employee_annual_events")
+    .select("id")
+    .eq("source_type", "employee_interview")
+    .eq("source_id", targetInterviewId)
+    .maybeSingle();
+
+  if (findEventError) {
+    redirect(
+      `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
+        findEventError.message
+      )}`
+    );
+  }
+
+  const eventPayload = {
+    title: "次回面談",
+    event_type: "interview",
+    scheduled_date: nextInterviewDate,
+    status: "pending",
+    priority: 2,
+    description: actionItems
+      ? `面談履歴から自動作成\n\n次回アクション:\n${actionItems}`
+      : "面談履歴から自動作成",
+    source_type: "employee_interview",
+    source_id: targetInterviewId,
+  };
+
+  if (existingEvent?.id) {
+    const { error: eventUpdateError } = await admin
+      .from("employee_annual_events")
+      .update(eventPayload)
+      .eq("id", existingEvent.id);
+
+    if (eventUpdateError) {
+      redirect(
+        `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
+          eventUpdateError.message
+        )}`
+      );
+    }
+  } else {
+    const { data: targetInterview, error: interviewFindError } = await admin
+      .from("employee_interviews")
+      .select("employee_id")
+      .eq("id", targetInterviewId)
+      .maybeSingle();
+
+    if (interviewFindError || !targetInterview) {
+      redirect(
+        `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
+          interviewFindError?.message ?? "面談情報を取得できませんでした"
+        )}`
+      );
+    }
+
+    const { error: eventInsertError } = await admin
+      .from("employee_annual_events")
+      .insert({
+        employee_id: targetInterview.employee_id,
+        ...eventPayload,
+      });
+
+    if (eventInsertError) {
+      redirect(
+        `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
+          eventInsertError.message
+        )}`
+      );
+    }
+  }
+}
+
+if (!nextInterviewDate) {
+  const { error: eventDeleteError } = await admin
+    .from("employee_annual_events")
+    .delete()
+    .eq("source_type", "employee_interview")
+    .eq("source_id", targetInterviewId);
+
+  if (eventDeleteError) {
+    redirect(
+      `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
+        eventDeleteError.message
+      )}`
+    );
+  }
+}
       redirect(
         `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
           error.message

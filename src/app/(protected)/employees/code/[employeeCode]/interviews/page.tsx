@@ -101,26 +101,61 @@ export default async function EmployeeInterviewsPage({
       );
     }
 
-    const { error } = await admin.from("employee_interviews").insert({
+const { data: insertedInterview, error } = await admin
+  .from("employee_interviews")
+  .insert({
+    employee_id: targetEmployeeId,
+    interview_date: interviewDate,
+    interview_type: interviewType,
+    interviewer_name: interviewerName,
+    summary,
+    action_items: actionItems,
+    next_interview_date: nextInterviewDate,
+    updated_at: new Date().toISOString(),
+  })
+  .select("id")
+  .single();
+
+if (error) {
+  redirect(
+    `/employees/code/${targetEmployeeCode}/interviews?error=${encodeURIComponent(
+      error.message
+    )}`
+  );
+}
+
+/**
+ * 次回面談予定日がある場合、年間イベントを自動作成
+ */
+if (nextInterviewDate && insertedInterview?.id) {
+  const eventTitle = "次回面談";
+
+  const { error: eventError } = await admin
+    .from("employee_annual_events")
+    .insert({
       employee_id: targetEmployeeId,
-      interview_date: interviewDate,
-      interview_type: interviewType,
-      interviewer_name: interviewerName,
-      summary,
-      action_items: actionItems,
-      next_interview_date: nextInterviewDate,
-      updated_at: new Date().toISOString(),
+      title: eventTitle,
+      event_type: "interview",
+      scheduled_date: nextInterviewDate,
+      status: "pending",
+      priority: 2,
+      description: actionItems
+        ? `面談履歴から自動作成\n\n次回アクション:\n${actionItems}`
+        : "面談履歴から自動作成",
+      source_type: "employee_interview",
+      source_id: insertedInterview.id,
     });
 
-    if (error) {
-      redirect(
-        `/employees/code/${targetEmployeeCode}/interviews?error=${encodeURIComponent(
-          error.message
-        )}`
-      );
-    }
+  if (eventError) {
+    redirect(
+      `/employees/code/${targetEmployeeCode}/interviews?error=${encodeURIComponent(
+        `面談履歴は登録されましたが、年間イベント作成に失敗しました: ${eventError.message}`
+      )}`
+    );
+  }
+}
 
-    redirect(`/employees/code/${targetEmployeeCode}/interviews`);
+redirect(`/employees/code/${targetEmployeeCode}/interviews`);
   }
 
   async function deleteInterview(formData: FormData) {
@@ -140,10 +175,16 @@ export default async function EmployeeInterviewsPage({
       redirect(`/employees/code/${targetEmployeeCode}/interviews`);
     }
 
-    const { error } = await admin
-      .from("employee_interviews")
-      .delete()
-      .eq("id", interviewId);
+await admin
+  .from("employee_annual_events")
+  .delete()
+  .eq("source_type", "employee_interview")
+  .eq("source_id", interviewId);
+
+const { error } = await admin
+  .from("employee_interviews")
+  .delete()
+  .eq("id", interviewId);
 
     if (error) {
       redirect(
