@@ -44,7 +44,7 @@ export default async function AnnualEventsPage({
   // list query
   let query = supabase
     .from("employee_annual_events")
-    .select("id, scheduled_date, title, event_type, status, priority")
+    .select("id, employee_id, scheduled_date, title, event_type, status, priority, source_type, source_id")
     .order("scheduled_date", { ascending: true })
     .limit(200);
 
@@ -144,12 +144,17 @@ export default async function AnnualEventsPage({
                     </Link>
                   </div>
 
-                  <div className="flex flex-col items-end gap-2">
-                    <Chip tone={e.status === "done" ? "ok" : isOverdue ? "danger" : "gray"}>
-                      {isOverdue ? "期限超過" : e.status}
-                    </Chip>
-                    <Chip>優先度 {e.priority}</Chip>
-                  </div>
+<div className="flex flex-col items-end gap-2">
+  <Chip tone={e.status === "done" ? "ok" : isOverdue ? "danger" : "gray"}>
+    {isOverdue ? "期限超過" : e.status}
+  </Chip>
+
+  {e.source_type === "employee_interview" && (
+    <Chip tone="info">面談連動</Chip>
+  )}
+
+  <Chip>優先度 {e.priority}</Chip>
+</div>
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
