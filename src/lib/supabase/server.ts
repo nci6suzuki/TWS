@@ -8,9 +8,18 @@ export async function createSupabaseServerClient() {
 
   return createServerClient(url, key, {
     cookies: {
-      getAll: () => cookieStore.getAll(),
-      setAll: (cookiesToSet) => {
-        cookiesToSet.forEach((c) => cookieStore.set({ name: c.name, value: c.value, ...c.options }));
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        } catch {
+          // Server ComponentではCookieを書き込めない場合があるため無視
+          // セッション更新はmiddleware側で行う
+        }
       },
     },
   });
