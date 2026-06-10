@@ -54,18 +54,26 @@ export default async function AnnualEventDetailPage({
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Chip tone={event.status === "done" ? "ok" : "info"}>
-                {event.status}
-              </Chip>
-              <Chip>{event.event_type}</Chip>
-              <Link
-                href="/annual-events"
-                className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
-              >
-                一覧へ戻る
-              </Link>
-            </div>
+<div className="flex flex-wrap gap-2">
+  <Chip tone={event.status === "done" ? "ok" : "info"}>
+    {event.status}
+  </Chip>
+  <Chip>{event.event_type}</Chip>
+
+  <Link
+    href={`/annual-events/${event.id}/edit`}
+    className="inline-flex h-9 items-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800"
+  >
+    編集
+  </Link>
+
+  <Link
+    href="/annual-events"
+    className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+  >
+    一覧へ戻る
+  </Link>
+</div>
           </div>
         </Card>
 
