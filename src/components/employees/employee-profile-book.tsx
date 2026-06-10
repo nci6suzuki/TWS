@@ -81,19 +81,26 @@ export function EmployeeProfileBook({
     status: {employee.status}
   </span>
 
-  <Link
-    href={`/employees/code/${employee.employee_code}/edit`}
-    className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
-  >
-    編集
-  </Link>
+<Link
+  href={`/employees/code/${employee.employee_code}/edit`}
+  className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+>
+  編集
+</Link>
 
-  <Link
-    href="/employees"
-    className="inline-flex h-10 items-center rounded-xl border bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-  >
-    一覧へ戻る
-  </Link>
+<Link
+  href={`/employees/code/${employee.employee_code}/qualifications`}
+  className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+>
+  資格管理
+</Link>
+
+<Link
+  href="/employees"
+  className="inline-flex h-10 items-center rounded-xl border bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+>
+  一覧へ戻る
+</Link>
 </div>
         </div>
 
