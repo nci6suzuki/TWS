@@ -353,26 +353,35 @@ async function addQualification(formData: FormData) {
                       </td>
 
                       {canManage && (
-                        <td className="px-5 py-4">
-                          <form action={deleteQualification}>
-                            <input
-                              type="hidden"
-                              name="qualification_id"
-                              value={q.id}
-                            />
-                            <input
-                              type="hidden"
-                              name="employee_code"
-                              value={employee.employee_code}
-                            />
-                            <button
-                              type="submit"
-                              className="inline-flex h-8 items-center rounded-lg bg-rose-600 px-3 text-xs font-black text-white hover:bg-rose-700"
-                            >
-                              削除
-                            </button>
-                          </form>
-                        </td>
+<td className="px-5 py-4">
+  <div className="flex flex-wrap gap-2">
+    <Link
+      href={`/employees/code/${employee.employee_code}/qualifications/${q.id}/edit`}
+      className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50"
+    >
+      編集
+    </Link>
+
+    <form action={deleteQualification}>
+      <input
+        type="hidden"
+        name="qualification_id"
+        value={q.id}
+      />
+      <input
+        type="hidden"
+        name="employee_code"
+        value={employee.employee_code}
+      />
+      <button
+        type="submit"
+        className="inline-flex h-8 items-center rounded-lg bg-rose-600 px-3 text-xs font-black text-white hover:bg-rose-700"
+      >
+        削除
+      </button>
+    </form>
+  </div>
+</td>
                       )}
                     </tr>
                   );
