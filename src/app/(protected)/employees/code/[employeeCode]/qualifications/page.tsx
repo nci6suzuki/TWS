@@ -9,11 +9,20 @@ export const runtime = "nodejs";
 
 export default async function EmployeeQualificationsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ employeeCode: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const me = await requireAuth();
   const { employeeCode } = await params;
+  const sp = await searchParams;
+
+  const errorParam = sp.error;
+  const errorMessage = Array.isArray(errorParam)
+    ? errorParam[0] ?? ""
+    : errorParam ?? "";
+
   const admin = createSupabaseAdminClient();
 
   const { data: employee, error: employeeError } = await admin
@@ -42,51 +51,80 @@ export default async function EmployeeQualificationsPage({
 
   if (qError) throw qError;
 
-  async function addQualification(formData: FormData) {
-    "use server";
+async function addQualification(formData: FormData) {
+  "use server";
 
-    const me = await requireAuth();
-    if (me.role !== "admin" && me.role !== "hr") redirect("/unauthorized");
+  const me = await requireAuth();
+  if (me.role !== "admin" && me.role !== "hr") redirect("/unauthorized");
 
-    const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient();
 
-    const targetEmployeeId = String(formData.get("employee_id") ?? "").trim();
-    const targetEmployeeCode = String(
-      formData.get("employee_code") ?? ""
-    ).trim();
+  const targetEmployeeId = String(formData.get("employee_id") ?? "").trim();
+  const targetEmployeeCode = String(
+    formData.get("employee_code") ?? ""
+  ).trim();
 
-    const qualificationName = String(
-      formData.get("qualification_name") ?? ""
-    ).trim();
+  const qualificationName = String(
+    formData.get("qualification_name") ?? ""
+  ).trim();
 
-    const acquiredOn = String(formData.get("acquired_on") ?? "").trim() || null;
-    const expiresOn = String(formData.get("expires_on") ?? "").trim() || null;
-    const memo = String(formData.get("memo") ?? "").trim();
+  const acquiredOnRaw = String(formData.get("acquired_on") ?? "").trim();
+  const expiresOnRaw = String(formData.get("expires_on") ?? "").trim();
+  const memo = String(formData.get("memo") ?? "").trim();
 
-    if (!targetEmployeeId || !qualificationName) {
-      redirect(`/employees/code/${targetEmployeeCode}/qualifications`);
-    }
+  const acquiredOn = acquiredOnRaw === "" ? null : acquiredOnRaw;
+  const expiresOn = expiresOnRaw === "" ? null : expiresOnRaw;
 
-    const { error } = await admin.from("employee_qualifications").insert({
-      employee_id: targetEmployeeId,
-      qualification_name: qualificationName,
-      acquired_on: acquiredOn,
-      expires_on: expiresOn,
-      status: "active",
-      memo,
-      updated_at: new Date().toISOString(),
-    });
-
-    if (error) {
-      redirect(
-        `/employees/code/${targetEmployeeCode}/qualifications?error=${encodeURIComponent(
-          error.message
-        )}`
-      );
-    }
-
-    redirect(`/employees/code/${targetEmployeeCode}/qualifications`);
+  if (!targetEmployeeId || !targetEmployeeCode) {
+    redirect(
+      `/employees/code/${targetEmployeeCode || employeeCode}/qualifications?error=${encodeURIComponent(
+        "社員情報を取得できませんでした"
+      )}`
+    );
   }
+
+  if (!qualificationName) {
+    redirect(
+      `/employees/code/${targetEmployeeCode}/qualifications?error=${encodeURIComponent(
+        "資格名を入力してください"
+      )}`
+    );
+  }
+
+  const { data: target, error: targetError } = await admin
+    .from("employees")
+    .select("id, employee_code")
+    .eq("id", targetEmployeeId)
+    .maybeSingle();
+
+  if (targetError || !target) {
+    redirect(
+      `/employees/code/${targetEmployeeCode}/qualifications?error=${encodeURIComponent(
+        targetError?.message ?? "対象社員が見つかりません"
+      )}`
+    );
+  }
+
+  const { error } = await admin.from("employee_qualifications").insert({
+    employee_id: targetEmployeeId,
+    qualification_name: qualificationName,
+    acquired_on: acquiredOn,
+    expires_on: expiresOn,
+    status: "active",
+    memo,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    redirect(
+      `/employees/code/${targetEmployeeCode}/qualifications?error=${encodeURIComponent(
+        error.message
+      )}`
+    );
+  }
+
+  redirect(`/employees/code/${targetEmployeeCode}/qualifications`);
+}
 
   async function deleteQualification(formData: FormData) {
     "use server";
@@ -191,6 +229,17 @@ export default async function EmployeeQualificationsPage({
             </div>
           </Card>
         </div>
+
+{errorMessage && (
+  <Card className="border-rose-200 bg-rose-50 p-5">
+    <div className="text-sm font-black text-rose-700">
+      エラーが発生しました
+    </div>
+    <div className="mt-1 text-sm font-semibold text-rose-600">
+      {errorMessage}
+    </div>
+  </Card>
+)}
 
         {canManage && (
           <Card className="p-6">
