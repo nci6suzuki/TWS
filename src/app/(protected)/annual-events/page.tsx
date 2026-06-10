@@ -8,17 +8,24 @@ import { PageShell } from "@/components/ui/page-shell";
 export default async function AnnualEventsPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const sp = await searchParams;
+
   await requireAuth();
   const supabase = await createSupabaseServerDbClient();
 
-  const status = searchParams.status ?? "";
-  const type = searchParams.type ?? "";
-  const year = searchParams.year ?? "";
-  const q = searchParams.q ?? "";
-  const overdue = searchParams.overdue ?? "";
-  const view = (searchParams.view ?? "cards") as "cards" | "list";
+  const getParam = (key: string) => {
+    const v = sp[key];
+    return Array.isArray(v) ? v[0] ?? "" : v ?? "";
+  };
+
+  const status = getParam("status");
+  const type = getParam("type");
+  const year = getParam("year");
+  const q = getParam("q");
+  const overdue = getParam("overdue");
+  const view = (getParam("view") || "cards") as "cards" | "list";
 
   const today = new Date().toISOString().slice(0, 10);
 

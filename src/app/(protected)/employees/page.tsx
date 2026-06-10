@@ -8,12 +8,17 @@ import { InviteButton } from "@/components/employees/invite-button";
 export default async function EmployeesPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const sp = await searchParams;
+
   const me = await requireAuth();
   const supabase = await createSupabaseServerDbClient();
 
-  const inviteFilter = searchParams.invite ?? "";
+  const inviteParam = sp.invite;
+  const inviteFilter = Array.isArray(inviteParam)
+    ? inviteParam[0] ?? ""
+    : inviteParam ?? "";
 
   const { data, error } = await supabase
     .from("employees")
