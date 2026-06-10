@@ -1,3 +1,5 @@
+/* /globals.css */
+
 @import "tailwindcss";
 
 :root {
@@ -14,4 +16,30 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
+}
+
+/* 共通フォーム */
+.input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #a5b4fc;
+  box-shadow: 0 0 0 4px #e0e7ff;
+}
+
+.input:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+textarea.input {
+  resize: vertical;
 }

@@ -73,20 +73,28 @@ export function EmployeeProfileBook({
             </div>
             <div className="mt-2 text-sm text-slate-600">{employee.email}</div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-xl border bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
-              role: {employee.app_role}
-            </span>
-            <span className="rounded-xl border bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
-              status: {employee.status}
-            </span>
-            <Link
-              href="/employees"
-              className="inline-flex h-10 items-center rounded-xl border bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              一覧へ戻る
-            </Link>
-          </div>
+<div className="flex flex-wrap gap-2">
+  <span className="rounded-xl border bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+    role: {employee.app_role}
+  </span>
+  <span className="rounded-xl border bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+    status: {employee.status}
+  </span>
+
+  <Link
+    href={`/employees/code/${employee.employee_code}/edit`}
+    className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+  >
+    編集
+  </Link>
+
+  <Link
+    href="/employees"
+    className="inline-flex h-10 items-center rounded-xl border bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+  >
+    一覧へ戻る
+  </Link>
+</div>
         </div>
 
         {/* Tabs */}
