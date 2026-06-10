@@ -158,44 +158,54 @@ if (nextInterviewDate && insertedInterview?.id) {
 redirect(`/employees/code/${targetEmployeeCode}/interviews`);
   }
 
-  async function deleteInterview(formData: FormData) {
-    "use server";
+async function deleteInterview(formData: FormData) {
+  "use server";
 
-    const me = await requireAuth();
-    if (me.role !== "admin" && me.role !== "hr") redirect("/unauthorized");
+  const me = await requireAuth();
+  if (me.role !== "admin" && me.role !== "hr") redirect("/unauthorized");
 
-    const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient();
 
-    const interviewId = String(formData.get("interview_id") ?? "").trim();
-    const targetEmployeeCode = String(
-      formData.get("employee_code") ?? ""
-    ).trim();
+  const interviewId = String(formData.get("interview_id") ?? "").trim();
+  const targetEmployeeCode = String(
+    formData.get("employee_code") ?? ""
+  ).trim();
 
-    if (!interviewId) {
-      redirect(`/employees/code/${targetEmployeeCode}/interviews`);
-    }
-
-await admin
-  .from("employee_annual_events")
-  .delete()
-  .eq("source_type", "employee_interview")
-  .eq("source_id", interviewId);
-
-const { error } = await admin
-  .from("employee_interviews")
-  .delete()
-  .eq("id", interviewId);
-
-    if (error) {
-      redirect(
-        `/employees/code/${targetEmployeeCode}/interviews?error=${encodeURIComponent(
-          error.message
-        )}`
-      );
-    }
-
+  if (!interviewId) {
     redirect(`/employees/code/${targetEmployeeCode}/interviews`);
   }
+
+  // 先に連動している年間イベントを削除
+  const { error: eventDeleteError } = await admin
+    .from("employee_annual_events")
+    .delete()
+    .eq("source_type", "employee_interview")
+    .eq("source_id", interviewId);
+
+  if (eventDeleteError) {
+    redirect(
+      `/employees/code/${targetEmployeeCode}/interviews?error=${encodeURIComponent(
+        eventDeleteError.message
+      )}`
+    );
+  }
+
+  // その後、面談履歴を削除
+  const { error } = await admin
+    .from("employee_interviews")
+    .delete()
+    .eq("id", interviewId);
+
+  if (error) {
+    redirect(
+      `/employees/code/${targetEmployeeCode}/interviews?error=${encodeURIComponent(
+        error.message
+      )}`
+    );
+  }
+
+  redirect(`/employees/code/${targetEmployeeCode}/interviews`);
+}
 
   const nextActionCount = (interviews ?? []).filter(
     (i) => i.action_items && i.action_items.trim() !== ""

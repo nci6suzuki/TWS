@@ -50,96 +50,121 @@ export default async function InterviewEditPage({
   if (interviewError) throw interviewError;
   if (!interview) notFound();
 
-  async function updateInterview(formData: FormData) {
-    "use server";
+async function updateInterview(formData: FormData) {
+  "use server";
 
-    const me = await requireAuth();
-    if (me.role !== "admin" && me.role !== "hr") {
-      redirect("/unauthorized");
-    }
+  const me = await requireAuth();
+  if (me.role !== "admin" && me.role !== "hr") {
+    redirect("/unauthorized");
+  }
 
-    const admin = createSupabaseAdminClient();
+  const admin = createSupabaseAdminClient();
 
-    const targetEmployeeCode = String(
-      formData.get("employee_code") ?? ""
-    ).trim();
+  const targetEmployeeCode = String(
+    formData.get("employee_code") ?? ""
+  ).trim();
 
-    const targetInterviewId = String(
-      formData.get("interview_id") ?? ""
-    ).trim();
+  const targetInterviewId = String(
+    formData.get("interview_id") ?? ""
+  ).trim();
 
-    const interviewDate =
-      String(formData.get("interview_date") ?? "").trim() ||
-      new Date().toISOString().slice(0, 10);
+  const interviewDate =
+    String(formData.get("interview_date") ?? "").trim() ||
+    new Date().toISOString().slice(0, 10);
 
-    const interviewType = String(
-      formData.get("interview_type") ?? "regular"
-    ).trim();
+  const interviewType = String(
+    formData.get("interview_type") ?? "regular"
+  ).trim();
 
-    const interviewerName = String(
-      formData.get("interviewer_name") ?? ""
-    ).trim();
+  const interviewerName = String(
+    formData.get("interviewer_name") ?? ""
+  ).trim();
 
-    const summary = String(formData.get("summary") ?? "").trim();
-    const actionItems = String(formData.get("action_items") ?? "").trim();
+  const summary = String(formData.get("summary") ?? "").trim();
+  const actionItems = String(formData.get("action_items") ?? "").trim();
 
-    const nextInterviewDateRaw = String(
-      formData.get("next_interview_date") ?? ""
-    ).trim();
+  const nextInterviewDateRaw = String(
+    formData.get("next_interview_date") ?? ""
+  ).trim();
 
-    const nextInterviewDate =
-      nextInterviewDateRaw === "" ? null : nextInterviewDateRaw;
+  const nextInterviewDate =
+    nextInterviewDateRaw === "" ? null : nextInterviewDateRaw;
 
-    if (!targetInterviewId) {
-      redirect(
-        `/employees/code/${targetEmployeeCode}/interviews?error=${encodeURIComponent(
-          "面談IDを取得できませんでした"
-        )}`
-      );
-    }
-
-    if (!summary) {
-      redirect(
-        `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
-          "面談内容を入力してください"
-        )}`
-      );
-    }
-
-    const { error } = await admin
-      .from("employee_interviews")
-      .update({
-        interview_date: interviewDate,
-        interview_type: interviewType,
-        interviewer_name: interviewerName,
-        summary,
-        action_items: actionItems,
-        next_interview_date: nextInterviewDate,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", targetInterviewId);
-
-    if (error) {
-/**
- * 次回面談予定日がある場合、連動する年間イベントを upsert 的に更新
- */
-if (nextInterviewDate) {
-  const { data: existingEvent, error: findEventError } = await admin
-    .from("employee_annual_events")
-    .select("id")
-    .eq("source_type", "employee_interview")
-    .eq("source_id", targetInterviewId)
-    .maybeSingle();
-
-  if (findEventError) {
+  if (!targetInterviewId) {
     redirect(
-      `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
-        findEventError.message
+      `/employees/code/${targetEmployeeCode}/interviews?error=${encodeURIComponent(
+        "面談IDを取得できませんでした"
       )}`
     );
   }
 
+  if (!summary) {
+    redirect(
+      `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
+        "面談内容を入力してください"
+      )}`
+    );
+  }
+
+  // 対象面談の employee_id を取得
+  const { data: targetInterview, error: targetInterviewError } = await admin
+    .from("employee_interviews")
+    .select("id, employee_id")
+    .eq("id", targetInterviewId)
+    .maybeSingle();
+
+  if (targetInterviewError || !targetInterview) {
+    redirect(
+      `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
+        targetInterviewError?.message ?? "面談情報を取得できませんでした"
+      )}`
+    );
+  }
+
+  // 面談履歴を更新
+  const { error } = await admin
+    .from("employee_interviews")
+    .update({
+      interview_date: interviewDate,
+      interview_type: interviewType,
+      interviewer_name: interviewerName,
+      summary,
+      action_items: actionItems,
+      next_interview_date: nextInterviewDate,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", targetInterviewId);
+
+  if (error) {
+    redirect(
+      `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
+        error.message
+      )}`
+    );
+  }
+
+  // 次回面談予定日が空なら、連動イベントを削除
+  if (!nextInterviewDate) {
+    const { error: deleteEventError } = await admin
+      .from("employee_annual_events")
+      .delete()
+      .eq("source_type", "employee_interview")
+      .eq("source_id", targetInterviewId);
+
+    if (deleteEventError) {
+      redirect(
+        `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
+          deleteEventError.message
+        )}`
+      );
+    }
+
+    redirect(`/employees/code/${targetEmployeeCode}/interviews`);
+  }
+
+  // 次回面談予定日がある場合、連動イベントを更新。無ければ作成。
   const eventPayload = {
+    employee_id: targetInterview.employee_id,
     title: "次回面談",
     event_type: "interview",
     scheduled_date: nextInterviewDate,
@@ -152,76 +177,39 @@ if (nextInterviewDate) {
     source_id: targetInterviewId,
   };
 
-  if (existingEvent?.id) {
-    const { error: eventUpdateError } = await admin
-      .from("employee_annual_events")
-      .update(eventPayload)
-      .eq("id", existingEvent.id);
-
-    if (eventUpdateError) {
-      redirect(
-        `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
-          eventUpdateError.message
-        )}`
-      );
-    }
-  } else {
-    const { data: targetInterview, error: interviewFindError } = await admin
-      .from("employee_interviews")
-      .select("employee_id")
-      .eq("id", targetInterviewId)
-      .maybeSingle();
-
-    if (interviewFindError || !targetInterview) {
-      redirect(
-        `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
-          interviewFindError?.message ?? "面談情報を取得できませんでした"
-        )}`
-      );
-    }
-
-    const { error: eventInsertError } = await admin
-      .from("employee_annual_events")
-      .insert({
-        employee_id: targetInterview.employee_id,
-        ...eventPayload,
-      });
-
-    if (eventInsertError) {
-      redirect(
-        `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
-          eventInsertError.message
-        )}`
-      );
-    }
-  }
-}
-
-if (!nextInterviewDate) {
-  const { error: eventDeleteError } = await admin
+  // まず既存の連動イベントをまとめて更新
+  const { data: updatedEvents, error: updateEventError } = await admin
     .from("employee_annual_events")
-    .delete()
+    .update(eventPayload)
     .eq("source_type", "employee_interview")
-    .eq("source_id", targetInterviewId);
+    .eq("source_id", targetInterviewId)
+    .select("id");
 
-  if (eventDeleteError) {
+  if (updateEventError) {
     redirect(
       `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
-        eventDeleteError.message
+        updateEventError.message
       )}`
     );
   }
-}
+
+  // 更新対象が無ければ新規作成
+  if (!updatedEvents || updatedEvents.length === 0) {
+    const { error: insertEventError } = await admin
+      .from("employee_annual_events")
+      .insert(eventPayload);
+
+    if (insertEventError) {
       redirect(
         `/employees/code/${targetEmployeeCode}/interviews/${targetInterviewId}/edit?error=${encodeURIComponent(
-          error.message
+          insertEventError.message
         )}`
       );
     }
-
-    redirect(`/employees/code/${targetEmployeeCode}/interviews`);
   }
 
+  redirect(`/employees/code/${targetEmployeeCode}/interviews`);
+}
   return (
     <PageShell>
       <div className="mx-auto max-w-4xl space-y-6">
