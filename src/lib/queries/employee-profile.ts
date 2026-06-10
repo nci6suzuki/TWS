@@ -111,9 +111,9 @@ const { data: qualifications } = await supabase
 
 const { data: interviews } = await supabase
   .from("employee_interviews")
-  .select(
-    "id, interview_date, interview_type, interviewer_name, summary, action_items, next_interview_date, created_at"
-  )
+.select(
+  "id, interview_date, interview_type, interviewer_name, summary, action_items, next_interview_date, next_interview_completed_at, created_at"
+)
   .eq("employee_id", employeeId)
   .order("interview_date", { ascending: false })
   .order("created_at", { ascending: false });

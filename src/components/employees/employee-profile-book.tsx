@@ -478,11 +478,17 @@ const qualificationAlertCount =
               <span className="rounded-xl border bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                 {getInterviewTypeLabel(i.interview_type)}
               </span>
-              {i.next_interview_date && (
-                <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  次回: {i.next_interview_date}
-                </span>
-              )}
+{i.next_interview_date && !i.next_interview_completed_at && (
+  <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+    次回: {i.next_interview_date}
+  </span>
+)}
+
+{i.next_interview_completed_at && (
+  <span className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+    次回面談完了: {String(i.next_interview_completed_at).slice(0, 10)}
+  </span>
+)}
             </div>
 
             <div className="mt-3 text-sm font-black text-slate-900">

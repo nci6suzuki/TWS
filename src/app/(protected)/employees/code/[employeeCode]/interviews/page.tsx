@@ -42,9 +42,9 @@ export default async function EmployeeInterviewsPage({
 
   const { data: interviews, error: interviewsError } = await admin
     .from("employee_interviews")
-    .select(
-      "id, interview_date, interview_type, interviewer_name, summary, action_items, next_interview_date, created_at"
-    )
+.select(
+  "id, interview_date, interview_type, interviewer_name, summary, action_items, next_interview_date, next_interview_completed_at, created_at"
+)
     .eq("employee_id", employee.id)
     .order("interview_date", { ascending: false })
     .order("created_at", { ascending: false });
@@ -390,9 +390,16 @@ async function deleteInterview(formData: FormData) {
                     <div className="flex flex-wrap gap-2">
                       <Chip tone="info">{i.interview_date}</Chip>
                       <Chip>{getInterviewTypeLabel(i.interview_type)}</Chip>
-                      {i.next_interview_date && (
-                        <Chip tone="ok">次回: {i.next_interview_date}</Chip>
-                      )}
+{i.next_interview_date && !i.next_interview_completed_at && (
+  <Chip tone="ok">次回: {i.next_interview_date}</Chip>
+)}
+
+{i.next_interview_completed_at && (
+  <Chip tone="info">
+    次回面談完了:{" "}
+    {String(i.next_interview_completed_at).slice(0, 10)}
+  </Chip>
+)}
                     </div>
 
                     <div className="mt-3 text-sm font-black text-slate-900">
