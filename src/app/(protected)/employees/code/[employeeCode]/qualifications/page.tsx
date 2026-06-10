@@ -162,6 +162,9 @@ async function addQualification(formData: FormData) {
   }
 
   const today = new Date().toISOString().slice(0, 10);
+  const alertDateObj = new Date();
+  alertDateObj.setDate(alertDateObj.getDate() + 30);
+  const alertDate = alertDateObj.toISOString().slice(0, 10);
 
   const activeCount = (qualifications ?? []).filter(
     (q) => q.status === "active"
@@ -169,6 +172,13 @@ async function addQualification(formData: FormData) {
 
   const expiredCount = (qualifications ?? []).filter(
     (q) => q.expires_on && q.expires_on < today
+  ).length;
+  
+  const expiringSoonCount = (qualifications ?? []).filter(
+    (q) =>
+        q.expires_on &&
+        q.expires_on >= today &&
+        q.expires_on <= alertDate
   ).length;
 
   return (
@@ -201,34 +211,43 @@ async function addQualification(formData: FormData) {
           </div>
         </Card>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <Card className="p-5">
-            <div className="text-xs font-black tracking-[0.12em] text-slate-500">
-              登録資格数
-            </div>
-            <div className="mt-2 text-3xl font-black text-slate-900">
-              {qualifications?.length ?? 0}
-            </div>
-          </Card>
+<div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+  <Card className="p-5">
+    <div className="text-xs font-black tracking-[0.12em] text-slate-500">
+      登録資格数
+    </div>
+    <div className="mt-2 text-3xl font-black text-slate-900">
+      {qualifications?.length ?? 0}
+    </div>
+  </Card>
 
-          <Card className="p-5">
-            <div className="text-xs font-black tracking-[0.12em] text-slate-500">
-              有効
-            </div>
-            <div className="mt-2 text-3xl font-black text-emerald-600">
-              {activeCount}
-            </div>
-          </Card>
+  <Card className="p-5">
+    <div className="text-xs font-black tracking-[0.12em] text-slate-500">
+      有効
+    </div>
+    <div className="mt-2 text-3xl font-black text-emerald-600">
+      {activeCount}
+    </div>
+  </Card>
 
-          <Card className="p-5">
-            <div className="text-xs font-black tracking-[0.12em] text-slate-500">
-              期限切れ
-            </div>
-            <div className="mt-2 text-3xl font-black text-rose-600">
-              {expiredCount}
-            </div>
-          </Card>
-        </div>
+  <Card className="p-5">
+    <div className="text-xs font-black tracking-[0.12em] text-slate-500">
+      30日以内
+    </div>
+    <div className="mt-2 text-3xl font-black text-amber-600">
+      {expiringSoonCount}
+    </div>
+  </Card>
+
+  <Card className="p-5">
+    <div className="text-xs font-black tracking-[0.12em] text-slate-500">
+      期限切れ
+    </div>
+    <div className="mt-2 text-3xl font-black text-rose-600">
+      {expiredCount}
+    </div>
+  </Card>
+</div>
 
 {errorMessage && (
   <Card className="border-rose-200 bg-rose-50 p-5">
@@ -256,7 +275,7 @@ async function addQualification(formData: FormData) {
                 value={employee.employee_code}
               />
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                 <Field label="資格名">
                   <input
                     name="qualification_name"
@@ -322,6 +341,8 @@ async function addQualification(formData: FormData) {
               <tbody>
                 {(qualifications ?? []).map((q) => {
                   const isExpired = q.expires_on && q.expires_on < today;
+                  const isExpiringSoon =
+                  q.expires_on && q.expires_on >= today && q.expires_on <= alertDate;
 
                   return (
                     <tr
@@ -336,15 +357,34 @@ async function addQualification(formData: FormData) {
                         {q.acquired_on ?? "-"}
                       </td>
 
-                      <td className="px-5 py-4 text-slate-600">
-                        {q.expires_on ?? "-"}
-                      </td>
+                      <td className="px-5 py-4">
+                        {q.expires_on ? (
+                            <div
+                            className={[
+                                "font-semibold",
+                                isExpired
+                                ? "text-rose-600"
+                                : isExpiringSoon
+                                ? "text-amber-600"
+                                : "text-slate-600",
+                            ].join(" ")}
+                            >
+                            {q.expires_on}
+                            </div>
+                            ) : (
+                            <span className="text-slate-400">-</span>
+                            )}
+                    </td>
 
                       <td className="px-5 py-4">
                         {isExpired ? (
-                          <Chip tone="danger">期限切れ</Chip>
+                            <Chip tone="danger">期限切れ</Chip>
+                        ) : isExpiringSoon ? (
+                        <span className="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                            30日以内
+                        </span>
                         ) : (
-                          <Chip tone="ok">有効</Chip>
+                        <Chip tone="ok">有効</Chip>
                         )}
                       </td>
 
