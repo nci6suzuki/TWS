@@ -369,22 +369,31 @@ export default async function EmployeeInterviewsPage({
                     )}
                   </div>
 
-                  {canManage && (
-                    <form action={deleteInterview}>
-                      <input type="hidden" name="interview_id" value={i.id} />
-                      <input
-                        type="hidden"
-                        name="employee_code"
-                        value={employee.employee_code}
-                      />
-                      <button
-                        type="submit"
-                        className="inline-flex h-8 items-center rounded-lg bg-rose-600 px-3 text-xs font-black text-white hover:bg-rose-700"
-                      >
-                        削除
-                      </button>
-                    </form>
-                  )}
+{canManage && (
+  <div className="flex flex-wrap gap-2">
+    <Link
+      href={`/employees/code/${employee.employee_code}/interviews/${i.id}/edit`}
+      className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50"
+    >
+      編集
+    </Link>
+
+    <form action={deleteInterview}>
+      <input type="hidden" name="interview_id" value={i.id} />
+      <input
+        type="hidden"
+        name="employee_code"
+        value={employee.employee_code}
+      />
+      <button
+        type="submit"
+        className="inline-flex h-8 items-center rounded-lg bg-rose-600 px-3 text-xs font-black text-white hover:bg-rose-700"
+      >
+        削除
+      </button>
+    </form>
+  </div>
+)}
                 </div>
               </div>
             ))}
