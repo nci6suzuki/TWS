@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { PageShell } from "@/components/ui/page-shell";
 import { Card, Chip } from "@/components/ui/ux";
+import { DeleteQualificationButton } from "@/components/employees/delete-qualification-button";
 
 export const runtime = "nodejs";
 
@@ -402,24 +403,11 @@ async function addQualification(formData: FormData) {
       編集
     </Link>
 
-    <form action={deleteQualification}>
-      <input
-        type="hidden"
-        name="qualification_id"
-        value={q.id}
-      />
-      <input
-        type="hidden"
-        name="employee_code"
-        value={employee.employee_code}
-      />
-      <button
-        type="submit"
-        className="inline-flex h-8 items-center rounded-lg bg-rose-600 px-3 text-xs font-black text-white hover:bg-rose-700"
-      >
-        削除
-      </button>
-    </form>
+<DeleteQualificationButton
+  employeeCode={employee.employee_code}
+  qualificationId={q.id}
+  returnTo={`/employees/code/${employee.employee_code}/qualifications`}
+/>
   </div>
 </td>
                       )}

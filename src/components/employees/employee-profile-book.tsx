@@ -1,7 +1,8 @@
 // src/components/employees/employee-profile-book.tsx
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { DeleteAnnualEventButton } from "@/components/annual-events/delete-annual-event-button";
+import { DeleteQualificationButton } from "@/components/employees/delete-qualification-button";
+import { DeleteInterviewButton } from "@/components/employees/delete-interview-button";
 
 type Props = {
   employee: {
@@ -28,105 +29,6 @@ const tabs = [
   { key: "schedule", label: "年間スケジュール" },
   { key: "interviews", label: "面談履歴" },
 ];
-
-function getToday() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function getAlertDate() {
-  const d = new Date();
-  d.setDate(d.getDate() + 30);
-  return d.toISOString().slice(0, 10);
-}
-
-function getQualificationName(q: any) {
-  return (
-    q.qualification_name ??
-    (Array.isArray(q.qualification_master)
-      ? q.qualification_master?.[0]?.name
-      : q.qualification_master?.name) ??
-    "資格"
-  );
-}
-
-function getInterviewTypeLabel(type: string) {
-  if (type === "regular") return "定期面談";
-  if (type === "follow") return "フォロー面談";
-  if (type === "evaluation") return "評価面談";
-  if (type === "career") return "キャリア面談";
-  return "その他";
-}
-
-function getEventTypeLabel(type: string) {
-  if (type === "interview") return "面談";
-  if (type === "training") return "研修";
-  if (type === "evaluation") return "評価";
-  if (type === "qualification") return "資格";
-  if (type === "contract") return "契約・更新";
-  return "その他";
-}
-
-function AlertBadge({ type }: { type: "expired" | "soon" | "ok" }) {
-  if (type === "expired") {
-    return (
-      <span className="inline-flex items-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
-        期限切れ
-      </span>
-    );
-  }
-
-  if (type === "soon") {
-    return (
-      <span className="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-        30日以内
-      </span>
-    );
-  }
-
-  return (
-    <span className="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-      有効
-    </span>
-  );
-}
-
-function EventBadge({
-  status,
-  isOverdue,
-}: {
-  status: string;
-  isOverdue: boolean;
-}) {
-  if (status === "done") {
-    return (
-      <span className="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-        完了
-      </span>
-    );
-  }
-
-  if (status === "canceled") {
-    return (
-      <span className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-        中止
-      </span>
-    );
-  }
-
-  if (isOverdue) {
-    return (
-      <span className="inline-flex items-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
-        期限超過
-      </span>
-    );
-  }
-
-  return (
-    <span className="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-      未完了
-    </span>
-  );
-}
 
 function TabLink({
   href,
@@ -159,6 +61,33 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
+function getQualificationName(q: any) {
+  return (
+    q.qualification_name ??
+    (Array.isArray(q.qualification_master)
+      ? q.qualification_master?.[0]?.name
+      : q.qualification_master?.name) ??
+    "資格"
+  );
+}
+
+function getInterviewTypeLabel(type: string) {
+  if (type === "regular") return "定期面談";
+  if (type === "follow") return "フォロー面談";
+  if (type === "evaluation") return "評価面談";
+  if (type === "career") return "キャリア面談";
+  return type || "その他";
+}
+
+function getEventTypeLabel(type: string) {
+  if (type === "interview") return "面談";
+  if (type === "training") return "研修";
+  if (type === "evaluation") return "評価";
+  if (type === "qualification") return "資格";
+  if (type === "contract") return "契約・更新";
+  return type || "その他";
+}
+
 export function EmployeeProfileBook({
   employee,
   profile,
@@ -170,34 +99,11 @@ export function EmployeeProfileBook({
 }: Props) {
   const tab = tabs.some((t) => t.key === activeTab) ? activeTab : "basic";
 
-  const today = getToday();
-  const alertDate = getAlertDate();
-
-  const expiredQualifications = qualifications.filter(
-    (q: any) => q.expires_on && q.expires_on < today
-  );
-
-  const expiringSoonQualifications = qualifications.filter(
-    (q: any) =>
-      q.expires_on && q.expires_on >= today && q.expires_on <= alertDate
-  );
-
-  const qualificationAlertCount =
-    expiredQualifications.length + expiringSoonQualifications.length;
-
-  const pendingEvents = events.filter((e: any) => e.status === "pending");
-
-  const overdueEvents = events.filter(
-    (e: any) => e.status === "pending" && e.scheduled_date < today
-  );
-
-  const doneEvents = events.filter((e: any) => e.status === "done");
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="rounded-2xl border bg-white p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="text-xs font-semibold tracking-[0.12em] text-slate-400">
               EMPLOYEE
@@ -213,7 +119,6 @@ export function EmployeeProfileBook({
             <span className="rounded-xl border bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
               role: {employee.app_role}
             </span>
-
             <span className="rounded-xl border bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
               status: {employee.status}
             </span>
@@ -226,22 +131,15 @@ export function EmployeeProfileBook({
             </Link>
 
             <Link
-              href={`/annual-events/new?employeeCode=${employee.employee_code}`}
-              className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              年間イベント作成
-            </Link>
-
-            <Link
               href={`/employees/code/${employee.employee_code}/qualifications`}
-              className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="inline-flex h-10 items-center rounded-xl border bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               資格管理
             </Link>
 
             <Link
               href={`/employees/code/${employee.employee_code}/interviews`}
-              className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="inline-flex h-10 items-center rounded-xl border bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               面談管理
             </Link>
@@ -254,29 +152,6 @@ export function EmployeeProfileBook({
             </Link>
           </div>
         </div>
-
-        {qualificationAlertCount > 0 && (
-          <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="text-sm font-black text-amber-800">
-                  資格更新アラートがあります
-                </div>
-                <div className="mt-1 text-sm font-semibold text-amber-700">
-                  期限切れ {expiredQualifications.length}件 / 30日以内{" "}
-                  {expiringSoonQualifications.length}件
-                </div>
-              </div>
-
-              <Link
-                href={`/employees/code/${employee.employee_code}?tab=qualifications`}
-                className="inline-flex h-9 items-center justify-center rounded-xl bg-amber-600 px-4 text-sm font-black text-white hover:bg-amber-700"
-              >
-                資格タブを見る
-              </Link>
-            </div>
-          </div>
-        )}
 
         {/* Tabs */}
         <div className="mt-5 flex flex-wrap gap-2">
@@ -304,10 +179,10 @@ export function EmployeeProfileBook({
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <InfoCard title="要約（任意）" text={profile?.career_summary ?? "-"} />
-            <InfoCard title="強み（任意）" text={profile?.strengths ?? "-"} />
-            <InfoCard title="課題（任意）" text={profile?.current_issues ?? "-"} />
-            <InfoCard title="HRメモ（任意）" text={profile?.notes_hr ?? "-"} />
+            <Card title="要約（任意）" text={profile?.career_summary ?? "-"} />
+            <Card title="強み（任意）" text={profile?.strengths ?? "-"} />
+            <Card title="課題（任意）" text={profile?.current_issues ?? "-"} />
+            <Card title="HRメモ（任意）" text={profile?.notes_hr ?? "-"} />
           </div>
         </div>
       )}
@@ -318,22 +193,19 @@ export function EmployeeProfileBook({
           <div className="text-lg font-bold">キャリア希望</div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <InfoCard title="1年後の目標" text={goals?.goal_1y ?? "-"} />
-            <InfoCard title="3年後の目標" text={goals?.goal_3y ?? "-"} />
-            <InfoCard title="希望役割" text={goals?.desired_role ?? "-"} />
-            <InfoCard
+            <Card title="1年後の目標" text={goals?.goal_1y ?? "-"} />
+            <Card title="3年後の目標" text={goals?.goal_3y ?? "-"} />
+            <Card title="希望役割" text={goals?.desired_role ?? "-"} />
+            <Card
               title="希望キャリアパス"
               text={goals?.desired_career_path ?? "-"}
             />
-            <InfoCard
+            <Card
               title="リスキリング関心"
               text={goals?.reskilling_interest ?? "-"}
             />
-            <InfoCard
-              title="異動希望"
-              text={goals?.mobility_preference ?? "-"}
-            />
-            <InfoCard
+            <Card title="異動希望" text={goals?.mobility_preference ?? "-"} />
+            <Card
               title="本人コメント"
               text={goals?.self_comment ?? "-"}
               className="lg:col-span-2"
@@ -349,7 +221,7 @@ export function EmployeeProfileBook({
             <div>
               <div className="text-lg font-bold">資格</div>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                保有資格、取得日、有効期限、更新状況を確認できます。
+                保有資格の確認と削除ができます。
               </p>
             </div>
 
@@ -361,44 +233,15 @@ export function EmployeeProfileBook({
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border bg-slate-50 p-4">
-              <div className="text-xs font-black tracking-[0.12em] text-slate-500">
-                登録資格数
-              </div>
-              <div className="mt-2 text-2xl font-black text-slate-900">
-                {qualifications.length}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-              <div className="text-xs font-black tracking-[0.12em] text-amber-700">
-                30日以内
-              </div>
-              <div className="mt-2 text-2xl font-black text-amber-700">
-                {expiringSoonQualifications.length}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-              <div className="text-xs font-black tracking-[0.12em] text-rose-700">
-                期限切れ
-              </div>
-              <div className="mt-2 text-2xl font-black text-rose-700">
-                {expiredQualifications.length}
-              </div>
-            </div>
-          </div>
-
           <div className="overflow-auto rounded-2xl border bg-slate-50 p-4">
-            <table className="min-w-[900px] w-full text-sm">
+            <table className="min-w-[1000px] w-full text-sm">
               <thead className="text-slate-500">
                 <tr className="border-b">
                   <th className="py-2 text-left">資格名</th>
                   <th className="py-2 text-left">取得日</th>
                   <th className="py-2 text-left">期限</th>
                   <th className="py-2 text-left">状態</th>
-                  <th className="py-2 text-left">メモ</th>
+                  <th className="py-2 text-left">操作</th>
                 </tr>
               </thead>
 
@@ -410,58 +253,23 @@ export function EmployeeProfileBook({
                     </td>
                   </tr>
                 ) : (
-                  qualifications.map((q: any) => {
-                    const isExpired = q.expires_on && q.expires_on < today;
-                    const isSoon =
-                      q.expires_on &&
-                      q.expires_on >= today &&
-                      q.expires_on <= alertDate;
-
-                    return (
-                      <tr key={q.id} className="border-b last:border-b-0">
-                        <td className="py-3 font-semibold text-slate-900">
-                          {getQualificationName(q)}
-                        </td>
-
-                        <td className="py-3 text-slate-600">
-                          {q.acquired_on ?? "-"}
-                        </td>
-
-                        <td className="py-3">
-                          {q.expires_on ? (
-                            <span
-                              className={[
-                                "font-semibold",
-                                isExpired
-                                  ? "text-rose-600"
-                                  : isSoon
-                                  ? "text-amber-600"
-                                  : "text-slate-600",
-                              ].join(" ")}
-                            >
-                              {q.expires_on}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400">-</span>
-                          )}
-                        </td>
-
-                        <td className="py-3">
-                          {isExpired ? (
-                            <AlertBadge type="expired" />
-                          ) : isSoon ? (
-                            <AlertBadge type="soon" />
-                          ) : (
-                            <AlertBadge type="ok" />
-                          )}
-                        </td>
-
-                        <td className="py-3 text-slate-600">
-                          {q.memo ?? "-"}
-                        </td>
-                      </tr>
-                    );
-                  })
+                  qualifications.map((q: any) => (
+                    <tr key={q.id} className="border-b last:border-b-0">
+                      <td className="py-3 font-semibold">
+                        {getQualificationName(q)}
+                      </td>
+                      <td className="py-3">{q.acquired_on ?? "-"}</td>
+                      <td className="py-3">{q.expires_on ?? "-"}</td>
+                      <td className="py-3">{q.status ?? "-"}</td>
+                      <td className="py-3">
+                        <DeleteQualificationButton
+                          employeeCode={employee.employee_code}
+                          qualificationId={q.id}
+                          returnTo={`/employees/code/${employee.employee_code}?tab=qualifications`}
+                        />
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -474,190 +282,72 @@ export function EmployeeProfileBook({
         <div className="space-y-4 rounded-2xl border bg-white p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="text-lg font-bold">年間イベント</div>
+              <div className="text-lg font-bold">年間スケジュール</div>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                この社員に紐づく面談、評価、研修、資格更新などの予定を確認できます。
+                年間イベントの確認、編集、削除ができます。
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={`/annual-events/new?employeeCode=${employee.employee_code}`}
-                className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
-              >
-                年間イベント作成
-              </Link>
-
-              <Link
-                href={`/annual-events?employeeCode=${employee.employee_code}`}
-                className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                一覧で見る
-              </Link>
-            </div>
+            <Link
+              href={`/annual-events/new?employeeCode=${employee.employee_code}`}
+              className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+            >
+              年間イベント作成
+            </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-            <div className="rounded-2xl border bg-slate-50 p-4">
-              <div className="text-xs font-black tracking-[0.12em] text-slate-500">
-                登録数
-              </div>
-              <div className="mt-2 text-2xl font-black text-slate-900">
-                {events.length}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
-              <div className="text-xs font-black tracking-[0.12em] text-indigo-700">
-                未完了
-              </div>
-              <div className="mt-2 text-2xl font-black text-indigo-700">
-                {pendingEvents.length}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-              <div className="text-xs font-black tracking-[0.12em] text-rose-700">
-                期限超過
-              </div>
-              <div className="mt-2 text-2xl font-black text-rose-700">
-                {overdueEvents.length}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-              <div className="text-xs font-black tracking-[0.12em] text-emerald-700">
-                完了
-              </div>
-              <div className="mt-2 text-2xl font-black text-emerald-700">
-                {doneEvents.length}
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-auto rounded-2xl border bg-slate-50">
-            <table className="min-w-[1000px] w-full text-sm">
+          <div className="overflow-auto rounded-2xl border bg-slate-50 p-4">
+            <table className="min-w-[1100px] w-full text-sm">
               <thead className="text-slate-500">
-                <tr className="border-b bg-white">
-                  <th className="px-4 py-3 text-left font-black">予定日</th>
-                  <th className="px-4 py-3 text-left font-black">タイトル</th>
-                  <th className="px-4 py-3 text-left font-black">種別</th>
-                  <th className="px-4 py-3 text-left font-black">状態</th>
-                  <th className="px-4 py-3 text-left font-black">優先度</th>
-                  <th className="px-4 py-3 text-left font-black">連動</th>
-                  <th className="px-4 py-3 text-left font-black">操作</th>
+                <tr className="border-b">
+                  <th className="py-2 text-left">予定日</th>
+                  <th className="py-2 text-left">タイトル</th>
+                  <th className="py-2 text-left">種別</th>
+                  <th className="py-2 text-left">状態</th>
+                  <th className="py-2 text-left">優先度</th>
+                  <th className="py-2 text-left">操作</th>
                 </tr>
               </thead>
 
               <tbody>
                 {events.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={7}
-                      className="px-4 py-10 text-center text-slate-500"
-                    >
-                      登録されている年間イベントはありません
+                    <td colSpan={6} className="py-6 text-center text-slate-500">
+                      イベントがありません
                     </td>
                   </tr>
                 ) : (
-                  events.map((e: any) => {
-                    const isOverdue =
-                      e.status === "pending" && e.scheduled_date < today;
-
-                    return (
-                      <tr
-                        key={e.id}
-                        className="border-b bg-white last:border-b-0 hover:bg-slate-50"
-                      >
-                        <td className="px-4 py-3 font-semibold text-slate-700">
-                          {e.scheduled_date}
-                        </td>
-
-                        <td className="px-4 py-3">
+                  events.map((e: any) => (
+                    <tr key={e.id} className="border-b last:border-b-0">
+                      <td className="py-3">{e.scheduled_date}</td>
+                      <td className="py-3 font-semibold">
+                        <Link
+                          className="text-indigo-600 hover:underline"
+                          href={`/annual-events/${e.id}`}
+                        >
+                          {e.title}
+                        </Link>
+                      </td>
+                      <td className="py-3">{getEventTypeLabel(e.event_type)}</td>
+                      <td className="py-3">{e.status}</td>
+                      <td className="py-3">{e.priority}</td>
+                      <td className="py-3">
+                        <div className="flex flex-wrap gap-2">
                           <Link
-                            href={`/annual-events/${e.id}`}
-                            className="font-black text-slate-900 hover:underline"
+                            href={`/annual-events/${e.id}/edit`}
+                            className="inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
                           >
-                            {e.title}
+                            編集
                           </Link>
 
-                          {e.description && (
-                            <div className="mt-1 line-clamp-2 text-xs font-semibold text-slate-500">
-                              {e.description}
-                            </div>
-                          )}
-                        </td>
-
-                        <td className="px-4 py-3 text-slate-600">
-                          {getEventTypeLabel(e.event_type)}
-                        </td>
-
-                        <td className="px-4 py-3">
-                          <EventBadge
-                            status={e.status}
-                            isOverdue={isOverdue}
+                          <DeleteAnnualEventButton
+                            eventId={e.id}
+                            returnTo={`/employees/code/${employee.employee_code}?tab=schedule`}
                           />
-                        </td>
-
-                        <td className="px-4 py-3 text-slate-600">
-                          {e.priority}
-                        </td>
-
-                        <td className="px-4 py-3">
-                          {e.source_type === "employee_interview" ? (
-                            <span className="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-                              面談連動
-                            </span>
-                          ) : (
-                            <span className="text-slate-400">-</span>
-                          )}
-                        </td>
-
-<td className="px-4 py-3">
-  <div className="flex flex-wrap gap-2">
-    <Link
-      href={`/annual-events/${e.id}`}
-      className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50"
-    >
-      詳細
-    </Link>
-
-    <Link
-      href={`/annual-events/${e.id}/edit`}
-      className="inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
-    >
-      編集
-    </Link>
-
-    {e.status !== "done" ? (
-      <form action={`/api/annual-events/${e.id}/complete`} method="post">
-        <input
-          type="hidden"
-          name="returnTo"
-          value={`/employees/code/${employee.employee_code}?tab=schedule`}
-        />
-        <button
-          type="submit"
-          className="inline-flex h-8 items-center rounded-lg bg-emerald-600 px-3 text-xs font-black text-white hover:bg-emerald-700"
-        >
-          完了化
-        </button>
-      </form>
-    ) : (
-      <span className="inline-flex h-8 items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-black text-emerald-700">
-        完了済み
-      </span>
-    )}
-
-<DeleteAnnualEventButton
-  eventId={e.id}
-  returnTo={`/employees/code/${employee.employee_code}?tab=schedule`}
-/>
-  </div>
-</td>
-                      </tr>
-                    );
-                  })
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -672,7 +362,7 @@ export function EmployeeProfileBook({
             <div>
               <div className="text-lg font-bold">面談履歴</div>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                面談履歴、次回アクション、次回面談予定を確認できます。
+                面談履歴の確認と削除ができます。関連する年間イベントも削除されます。
               </p>
             </div>
 
@@ -684,88 +374,62 @@ export function EmployeeProfileBook({
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border bg-slate-50 p-4">
-              <div className="text-xs font-black tracking-[0.12em] text-slate-500">
-                面談件数
-              </div>
-              <div className="mt-2 text-2xl font-black text-slate-900">
-                {interviews.length}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
-              <div className="text-xs font-black tracking-[0.12em] text-indigo-700">
-                アクションあり
-              </div>
-              <div className="mt-2 text-2xl font-black text-indigo-700">
-                {interviews.filter((i: any) => i.action_items).length}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-              <div className="text-xs font-black tracking-[0.12em] text-emerald-700">
-                次回面談予定あり
-              </div>
-              <div className="mt-2 text-2xl font-black text-emerald-700">
-                {
-                  interviews.filter(
-                    (i: any) =>
-                      i.next_interview_date &&
-                      !i.next_interview_completed_at
-                  ).length
-                }
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
+          <div className="grid gap-3">
             {interviews.length === 0 ? (
-              <div className="rounded-2xl border bg-slate-50 p-6 text-center text-sm font-bold text-slate-500">
-                面談履歴がありません
+              <div className="rounded-2xl border border-dashed bg-white p-6 text-center text-sm text-slate-500">
+                面談がありません
               </div>
             ) : (
               interviews.map((i: any) => (
-                <div key={i.id} className="rounded-2xl border bg-slate-50 p-4">
-                  <div className="flex flex-wrap gap-2">
-                    <span className="rounded-xl border bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                      {i.interview_date}
-                    </span>
+                <div key={i.id} className="rounded-2xl border bg-white p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-slate-900">
+                        {getInterviewTypeLabel(i.interview_type)} /{" "}
+                        {i.interview_date
+                          ? new Date(i.interview_date).toLocaleDateString("ja-JP")
+                          : "-"}
+                      </div>
 
-                    <span className="rounded-xl border bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                      {getInterviewTypeLabel(i.interview_type)}
-                    </span>
+                      <div className="mt-1 text-xs text-slate-500">
+                        id: {i.id}
+                      </div>
+                    </div>
 
-                    {i.next_interview_date && !i.next_interview_completed_at && (
-                      <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                        次回: {i.next_interview_date}
-                      </span>
-                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`/employees/code/${employee.employee_code}/interviews/${i.id}/edit`}
+                        className="inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
+                      >
+                        編集
+                      </Link>
 
-                    {i.next_interview_completed_at && (
-                      <span className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-                        次回面談完了:{" "}
-                        {String(i.next_interview_completed_at).slice(0, 10)}
-                      </span>
-                    )}
+                      <DeleteInterviewButton
+                        employeeCode={employee.employee_code}
+                        interviewId={i.id}
+                        returnTo={`/employees/code/${employee.employee_code}?tab=interviews`}
+                      />
+                    </div>
                   </div>
 
-                  <div className="mt-3 text-sm font-black text-slate-900">
-                    面談者：{i.interviewer_name || "-"}
+                  <div className="mt-3 whitespace-pre-wrap text-sm text-slate-700">
+                    {i.summary ?? i.notes ?? "-"}
                   </div>
 
-                  <div className="mt-3 whitespace-pre-wrap text-sm font-semibold text-slate-700">
-                    {i.summary || "-"}
-                  </div>
-
-                  {i.action_items && (
+                  {(i.action_items || i.next_actions) && (
                     <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50 p-3">
                       <div className="text-xs font-black text-indigo-700">
-                        次回アクション
+                        次アクション
                       </div>
                       <div className="mt-1 whitespace-pre-wrap text-sm font-semibold text-indigo-700">
-                        {i.action_items}
+                        {i.action_items ?? i.next_actions}
                       </div>
+                    </div>
+                  )}
+
+                  {i.next_interview_date && (
+                    <div className="mt-3 text-xs font-semibold text-emerald-700">
+                      次回面談予定：{i.next_interview_date}
                     </div>
                   )}
                 </div>
@@ -778,7 +442,7 @@ export function EmployeeProfileBook({
   );
 }
 
-function InfoCard({
+function Card({
   title,
   text,
   className,

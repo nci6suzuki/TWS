@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { PageShell } from "@/components/ui/page-shell";
 import { Card, Chip } from "@/components/ui/ux";
+import { DeleteInterviewButton } from "@/components/employees/delete-interview-button";
 
 export const runtime = "nodejs";
 
@@ -436,20 +437,11 @@ async function deleteInterview(formData: FormData) {
       編集
     </Link>
 
-    <form action={deleteInterview}>
-      <input type="hidden" name="interview_id" value={i.id} />
-      <input
-        type="hidden"
-        name="employee_code"
-        value={employee.employee_code}
-      />
-      <button
-        type="submit"
-        className="inline-flex h-8 items-center rounded-lg bg-rose-600 px-3 text-xs font-black text-white hover:bg-rose-700"
-      >
-        削除
-      </button>
-    </form>
+<DeleteInterviewButton
+  employeeCode={employee.employee_code}
+  interviewId={i.id}
+  returnTo={`/employees/code/${employee.employee_code}/interviews`}
+/>
   </div>
 )}
                 </div>
