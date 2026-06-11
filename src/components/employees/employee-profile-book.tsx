@@ -1,6 +1,7 @@
 // src/components/employees/employee-profile-book.tsx
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { DeleteAnnualEventButton } from "@/components/annual-events/delete-annual-event-button";
 
 type Props = {
   employee: {
@@ -648,19 +649,10 @@ export function EmployeeProfileBook({
       </span>
     )}
 
-    <form action={`/api/annual-events/${e.id}/delete`} method="post">
-      <input
-        type="hidden"
-        name="returnTo"
-        value={`/employees/code/${employee.employee_code}?tab=schedule`}
-      />
-      <button
-        type="submit"
-        className="inline-flex h-8 items-center rounded-lg bg-rose-600 px-3 text-xs font-black text-white hover:bg-rose-700"
-      >
-        削除
-      </button>
-    </form>
+<DeleteAnnualEventButton
+  eventId={e.id}
+  returnTo={`/employees/code/${employee.employee_code}?tab=schedule`}
+/>
   </div>
 </td>
                       </tr>

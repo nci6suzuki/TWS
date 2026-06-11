@@ -4,6 +4,7 @@ import { createSupabaseServerDbClient } from "@/lib/supabase/server-db";
 import { AnnualEventFilters } from "@/components/annual-events/annual-event-filters";
 import { Hero, KPI, Chip, PrimaryButton, GhostButton, Card } from "@/components/ui/ux";
 import { PageShell } from "@/components/ui/page-shell";
+import { DeleteAnnualEventButton } from "@/components/annual-events/delete-annual-event-button";
 
 export default async function AnnualEventsPage({
   searchParams,
@@ -181,15 +182,10 @@ export default async function AnnualEventsPage({
                       完了化
                     </button>
                   </form>
-<form action={`/api/annual-events/${e.id}/delete`} method="post">
-  <input type="hidden" name="returnTo" value="/annual-events?view=list" />
-  <button
-    type="submit"
-    className="inline-flex h-8 items-center rounded-lg bg-rose-600 px-3 text-xs font-semibold text-white hover:bg-rose-700"
-  >
-    削除
-  </button>
-</form>
+<DeleteAnnualEventButton
+  eventId={e.id}
+  returnTo="/annual-events?view=list"
+/>
                 </div>
               </div>
             );
@@ -252,15 +248,10 @@ export default async function AnnualEventsPage({
                             完了化
                           </button>
                         </form>
-<form action={`/api/annual-events/${e.id}/delete`} method="post">
-  <input type="hidden" name="returnTo" value="/annual-events" />
-  <button
-    type="submit"
-    className="inline-flex h-9 items-center rounded-xl bg-rose-600 px-3 text-sm font-semibold text-white hover:bg-rose-700"
-  >
-    削除
-  </button>
-</form>
+<DeleteAnnualEventButton
+  eventId={e.id}
+  returnTo="/annual-events"
+/>
                       </div>
                     </td>
                   </tr>

@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { PageShell } from "@/components/ui/page-shell";
 import { Card, Chip } from "@/components/ui/ux";
+import { DeleteAnnualEventButton } from "@/components/annual-events/delete-annual-event-button";
 
 export const runtime = "nodejs";
 
@@ -68,15 +69,11 @@ export default async function AnnualEventDetailPage({
     編集
   </Link>
 
-  <form action={`/api/annual-events/${event.id}/delete`} method="post">
-    <input type="hidden" name="returnTo" value="/annual-events" />
-    <button
-      type="submit"
-      className="inline-flex h-9 items-center rounded-xl bg-rose-600 px-4 text-sm font-black text-white hover:bg-rose-700"
-    >
-      削除
-    </button>
-  </form>
+<DeleteAnnualEventButton
+  eventId={event.id}
+  returnTo="/annual-events"
+  size="md"
+/>
 
   <Link
     href="/annual-events"
