@@ -102,12 +102,13 @@ const { data: qualifications } = await supabase
   .eq("employee_id", employeeId)
   .order("expires_on", { ascending: true, nullsFirst: false });
 
-  const { data: events } = await supabase
-    .from("employee_annual_events")
-    .select("id, scheduled_date, title, event_type, status, priority, owner_employee_id")
-    .eq("employee_id", employeeId)
-    .order("scheduled_date", { ascending: true })
-    .limit(50);
+const { data: events } = await supabase
+  .from("employee_annual_events")
+  .select(
+    "id, title, event_type, scheduled_date, status, priority, description, source_type, source_id"
+  )
+  .eq("employee_id", employeeId)
+  .order("scheduled_date", { ascending: true });
 
 const { data: interviews } = await supabase
   .from("employee_interviews")
