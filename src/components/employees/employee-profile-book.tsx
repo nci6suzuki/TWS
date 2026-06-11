@@ -612,23 +612,43 @@ export function EmployeeProfileBook({
                           )}
                         </td>
 
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-2">
-                            <Link
-                              href={`/annual-events/${e.id}`}
-                              className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50"
-                            >
-                              詳細
-                            </Link>
+<td className="px-4 py-3">
+  <div className="flex flex-wrap gap-2">
+    <Link
+      href={`/annual-events/${e.id}`}
+      className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50"
+    >
+      詳細
+    </Link>
 
-                            <Link
-                              href={`/annual-events/${e.id}/edit`}
-                              className="inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
-                            >
-                              編集
-                            </Link>
-                          </div>
-                        </td>
+    <Link
+      href={`/annual-events/${e.id}/edit`}
+      className="inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
+    >
+      編集
+    </Link>
+
+    {e.status !== "done" ? (
+      <form action={`/api/annual-events/${e.id}/complete`} method="post">
+        <input
+          type="hidden"
+          name="returnTo"
+          value={`/employees/code/${employee.employee_code}?tab=schedule`}
+        />
+        <button
+          type="submit"
+          className="inline-flex h-8 items-center rounded-lg bg-emerald-600 px-3 text-xs font-black text-white hover:bg-emerald-700"
+        >
+          完了化
+        </button>
+      </form>
+    ) : (
+      <span className="inline-flex h-8 items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-black text-emerald-700">
+        完了済み
+      </span>
+    )}
+  </div>
+</td>
                       </tr>
                     );
                   })

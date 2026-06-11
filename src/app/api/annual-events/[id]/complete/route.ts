@@ -96,7 +96,10 @@ export async function POST(
       }
     }
 
-    return NextResponse.redirect(new URL("/annual-events", _req.url));
+    const formData = await _req.formData().catch(() => null);
+    const returnTo = String(formData?.get("returnTo") ?? "/annual-events");
+    
+    return NextResponse.redirect(new URL(returnTo, _req.url));
   } catch (e: any) {
     return NextResponse.json(
       {
