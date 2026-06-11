@@ -58,6 +58,7 @@ export default async function AnnualEventDetailPage({
   <Chip tone={event.status === "done" ? "ok" : "info"}>
     {event.status}
   </Chip>
+
   <Chip>{event.event_type}</Chip>
 
   <Link
@@ -66,6 +67,16 @@ export default async function AnnualEventDetailPage({
   >
     編集
   </Link>
+
+  <form action={`/api/annual-events/${event.id}/delete`} method="post">
+    <input type="hidden" name="returnTo" value="/annual-events" />
+    <button
+      type="submit"
+      className="inline-flex h-9 items-center rounded-xl bg-rose-600 px-4 text-sm font-black text-white hover:bg-rose-700"
+    >
+      削除
+    </button>
+  </form>
 
   <Link
     href="/annual-events"
