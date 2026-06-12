@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseServerDbClient } from "@/lib/supabase/server-db";
 import { AnnualEventFilters } from "@/components/annual-events/annual-event-filters";
 import { DeleteAnnualEventButton } from "@/components/annual-events/delete-annual-event-button";
+import { AnnualEventCalendar } from "@/components/annual-events/annual-event-calendar";
 import {
   Hero,
   KPI,
@@ -17,7 +18,7 @@ import { PageShell } from "@/components/ui/page-shell";
 
 export const runtime = "nodejs";
 
-type ViewMode = "cards" | "list";
+type ViewMode = "cards" | "list" | "calendar";
 
 export default async function AnnualEventsPage({
   searchParams,
@@ -41,18 +42,23 @@ export default async function AnnualEventsPage({
   const q = getParam("q");
   const overdue = getParam("overdue");
   const employeeCode = getParam("employeeCode");
+  const calendarYearParam = getParam("calendarYear");
+  const calendarMonthParam = getParam("calendarMonth");
   const view = ((getParam("view") || "cards") as ViewMode) || "cards";
 
-  const today = new Date().toISOString().slice(0, 10);
-
-  const formatDate = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-  };
-
   const now = new Date();
+  const today = formatDate(now);
+
+  const targetYear = /^\d{4}$/.test(calendarYearParam)
+    ? Number(calendarYearParam)
+    : now.getFullYear();
+
+  const targetMonth =
+    /^\d{1,2}$/.test(calendarMonthParam) &&
+    Number(calendarMonthParam) >= 1 &&
+    Number(calendarMonthParam) <= 12
+      ? Number(calendarMonthParam)
+      : now.getMonth() + 1;
 
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -81,7 +87,7 @@ export default async function AnnualEventsPage({
       "id, employee_id, scheduled_date, title, event_type, status, priority, description, source_type, source_id"
     )
     .order("scheduled_date", { ascending: true })
-    .limit(200);
+    .limit(500);
 
   if (employeeCode) query = query.eq("employee_id", employeeIdFilter);
 
@@ -110,6 +116,15 @@ export default async function AnnualEventsPage({
     query = query
       .gte("scheduled_date", formatDate(nextMonthStart))
       .lte("scheduled_date", formatDate(nextMonthEnd));
+  }
+
+  if (view === "calendar" && !month && !year && overdue !== "1") {
+    const calendarStart = formatDate(new Date(targetYear, targetMonth - 1, 1));
+    const calendarEnd = formatDate(new Date(targetYear, targetMonth, 0));
+
+    query = query
+      .gte("scheduled_date", calendarStart)
+      .lte("scheduled_date", calendarEnd);
   }
 
   const { data, error } = await query;
@@ -152,10 +167,18 @@ export default async function AnnualEventsPage({
   if (q) baseParams.set("q", q);
   if (overdue) baseParams.set("overdue", overdue);
   if (employeeCode) baseParams.set("employeeCode", employeeCode);
+  if (calendarYearParam) baseParams.set("calendarYear", calendarYearParam);
+  if (calendarMonthParam) baseParams.set("calendarMonth", calendarMonthParam);
 
   const toView = (v: ViewMode) => {
     const p = new URLSearchParams(baseParams);
     p.set("view", v);
+
+    if (v === "calendar" && !p.get("calendarYear")) {
+      p.set("calendarYear", String(targetYear));
+      p.set("calendarMonth", String(targetMonth));
+    }
+
     return `/annual-events?${p.toString()}`;
   };
 
@@ -164,6 +187,11 @@ export default async function AnnualEventsPage({
 
     if (employeeCode) p.set("employeeCode", employeeCode);
     if (view) p.set("view", view);
+
+    if (view === "calendar") {
+      p.set("calendarYear", String(targetYear));
+      p.set("calendarMonth", String(targetMonth));
+    }
 
     Object.entries(params).forEach(([key, value]) => {
       if (value) p.set(key, value);
@@ -175,6 +203,8 @@ export default async function AnnualEventsPage({
   const currentReturnToParams = new URLSearchParams(baseParams);
   currentReturnToParams.set("view", view);
   const currentReturnTo = `/annual-events?${currentReturnToParams.toString()}`;
+
+  const currentBasePath = `/annual-events?${currentReturnToParams.toString()}`;
 
   return (
     <PageShell>
@@ -194,6 +224,11 @@ export default async function AnnualEventsPage({
               {/^\d{4}$/.test(year) && <Chip>年度: {year}</Chip>}
               {month === "this" && <Chip tone="info">今月のみ表示中</Chip>}
               {month === "next" && <Chip tone="info">来月のみ表示中</Chip>}
+              {view === "calendar" && (
+                <Chip tone="info">
+                  カレンダー: {targetYear}年{targetMonth}月
+                </Chip>
+              )}
               {q && <Chip>検索: {q}</Chip>}
 
               {employeeCode && (
@@ -234,6 +269,7 @@ export default async function AnnualEventsPage({
 
               <GhostButton href={toView("cards")}>Cards</GhostButton>
               <GhostButton href={toView("list")}>List</GhostButton>
+              <GhostButton href={toView("calendar")}>Calendar</GhostButton>
 
               {(me.role === "admin" || me.role === "hr") && (
                 <PrimaryButton href="/annual-events/new">
@@ -298,8 +334,12 @@ export default async function AnnualEventsPage({
                   : status || "状態指定なし"}
               </Chip>
 
-              <Chip tone={view === "cards" ? "info" : "gray"}>
-                {view === "cards" ? "カード表示" : "リスト表示"}
+              <Chip tone={view === "calendar" ? "info" : "gray"}>
+                {view === "calendar"
+                  ? "カレンダー表示"
+                  : view === "cards"
+                  ? "カード表示"
+                  : "リスト表示"}
               </Chip>
             </div>
           </div>
@@ -309,7 +349,16 @@ export default async function AnnualEventsPage({
           </div>
         </Card>
 
-        {view === "cards" ? (
+        {view === "calendar" ? (
+          <AnnualEventCalendar
+            events={events}
+            employeeById={employeeById}
+            today={today}
+            targetYear={targetYear}
+            targetMonth={targetMonth}
+            basePath={currentBasePath}
+          />
+        ) : view === "cards" ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {events.length === 0 ? (
               <Card className="p-8 md:col-span-2 xl:col-span-3">
@@ -586,12 +635,20 @@ export default async function AnnualEventsPage({
   );
 }
 
+function formatDate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function getEventTypeLabel(type: string) {
   if (type === "interview") return "面談";
   if (type === "training") return "研修";
   if (type === "evaluation") return "評価";
   if (type === "qualification") return "資格";
   if (type === "contract") return "契約・更新";
+  if (type === "onboarding") return "入社";
   if (type === "other") return "その他";
   return type || "その他";
 }
