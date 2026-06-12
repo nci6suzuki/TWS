@@ -37,12 +37,28 @@ export default async function AnnualEventsPage({
   const status = getParam("status");
   const type = getParam("type");
   const year = getParam("year");
+  const month = getParam("month");
   const q = getParam("q");
   const overdue = getParam("overdue");
   const employeeCode = getParam("employeeCode");
   const view = ((getParam("view") || "cards") as ViewMode) || "cards";
 
   const today = new Date().toISOString().slice(0, 10);
+
+  const formatDate = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const now = new Date();
+
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
 
   let employeeIdFilter = "";
   let employeeFilterName = "";
@@ -84,10 +100,23 @@ export default async function AnnualEventsPage({
       .lte("scheduled_date", `${year}-12-31`);
   }
 
+  if (month === "this") {
+    query = query
+      .gte("scheduled_date", formatDate(thisMonthStart))
+      .lte("scheduled_date", formatDate(thisMonthEnd));
+  }
+
+  if (month === "next") {
+    query = query
+      .gte("scheduled_date", formatDate(nextMonthStart))
+      .lte("scheduled_date", formatDate(nextMonthEnd));
+  }
+
   const { data, error } = await query;
   if (error) throw error;
 
   const events = data ?? [];
+
   const eventEmployeeIds = Array.from(
     new Set(events.map((e) => e.employee_id).filter(Boolean))
   );
@@ -119,6 +148,7 @@ export default async function AnnualEventsPage({
   if (status) baseParams.set("status", status);
   if (type) baseParams.set("type", type);
   if (year) baseParams.set("year", year);
+  if (month) baseParams.set("month", month);
   if (q) baseParams.set("q", q);
   if (overdue) baseParams.set("overdue", overdue);
   if (employeeCode) baseParams.set("employeeCode", employeeCode);
@@ -126,6 +156,19 @@ export default async function AnnualEventsPage({
   const toView = (v: ViewMode) => {
     const p = new URLSearchParams(baseParams);
     p.set("view", v);
+    return `/annual-events?${p.toString()}`;
+  };
+
+  const filterHref = (params: Record<string, string>) => {
+    const p = new URLSearchParams();
+
+    if (employeeCode) p.set("employeeCode", employeeCode);
+    if (view) p.set("view", view);
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value) p.set(key, value);
+    });
+
     return `/annual-events?${p.toString()}`;
   };
 
@@ -149,6 +192,8 @@ export default async function AnnualEventsPage({
               {status && overdue !== "1" && <Chip>状態: {status}</Chip>}
               {type && <Chip>種別: {type}</Chip>}
               {/^\d{4}$/.test(year) && <Chip>年度: {year}</Chip>}
+              {month === "this" && <Chip tone="info">今月のみ表示中</Chip>}
+              {month === "next" && <Chip tone="info">来月のみ表示中</Chip>}
               {q && <Chip>検索: {q}</Chip>}
 
               {employeeCode && (
@@ -166,11 +211,30 @@ export default async function AnnualEventsPage({
           right={
             <>
               <PrimaryButton href="/annual-events">全イベント</PrimaryButton>
-              <PrimaryButton href="/annual-events?overdue=1">
-                期限超過のみ
+
+              <GhostButton href={filterHref({ month: "this" })}>
+                今月
+              </GhostButton>
+
+              <GhostButton href={filterHref({ month: "next" })}>
+                来月
+              </GhostButton>
+
+              <GhostButton href={filterHref({ status: "pending" })}>
+                未完了
+              </GhostButton>
+
+              <GhostButton href={filterHref({ status: "done" })}>
+                完了済み
+              </GhostButton>
+
+              <PrimaryButton href={filterHref({ overdue: "1" })}>
+                期限超過
               </PrimaryButton>
+
               <GhostButton href={toView("cards")}>Cards</GhostButton>
               <GhostButton href={toView("list")}>List</GhostButton>
+
               {(me.role === "admin" || me.role === "hr") && (
                 <PrimaryButton href="/annual-events/new">
                   + イベント登録
@@ -186,14 +250,20 @@ export default async function AnnualEventsPage({
             label="未完了"
             value={visiblePendingCount}
             tone={visiblePendingCount > 0 ? "danger" : "ok"}
+            href={filterHref({ status: "pending" })}
           />
           <KPI
             label="期限超過"
             value={visibleOverdueCount}
             tone={visibleOverdueCount > 0 ? "danger" : "ok"}
-            href="/annual-events?overdue=1"
+            href={filterHref({ overdue: "1" })}
           />
-          <KPI label="完了済み" value={visibleDoneCount} tone="ok" />
+          <KPI
+            label="完了済み"
+            value={visibleDoneCount}
+            tone="ok"
+            href={filterHref({ status: "done" })}
+          />
         </div>
 
         <Card className="p-5">
@@ -203,7 +273,7 @@ export default async function AnnualEventsPage({
                 検索・絞り込み
               </div>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                状態、種別、年度、キーワードで年間イベントを絞り込めます。
+                状態、種別、年度、月、キーワードで年間イベントを絞り込めます。
               </p>
             </div>
 
@@ -211,6 +281,23 @@ export default async function AnnualEventsPage({
               <Chip tone={overdue === "1" ? "danger" : "gray"}>
                 {overdue === "1" ? "期限超過のみ" : "全イベント"}
               </Chip>
+
+              <Chip tone={month ? "info" : "gray"}>
+                {month === "this"
+                  ? "今月"
+                  : month === "next"
+                  ? "来月"
+                  : "月指定なし"}
+              </Chip>
+
+              <Chip tone={status ? "info" : "gray"}>
+                {status === "pending"
+                  ? "未完了"
+                  : status === "done"
+                  ? "完了済み"
+                  : status || "状態指定なし"}
+              </Chip>
+
               <Chip tone={view === "cards" ? "info" : "gray"}>
                 {view === "cards" ? "カード表示" : "リスト表示"}
               </Chip>
