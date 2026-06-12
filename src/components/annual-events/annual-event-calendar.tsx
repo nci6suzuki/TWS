@@ -28,6 +28,7 @@ export function AnnualEventCalendar({
   targetYear,
   targetMonth,
   basePath,
+  employeeCode,
 }: {
   events: AnnualEvent[];
   employeeById: Map<string, EmployeeMapValue>;
@@ -35,6 +36,7 @@ export function AnnualEventCalendar({
   targetYear: number;
   targetMonth: number;
   basePath: string;
+  employeeCode?: string;
 }) {
   const firstDay = new Date(targetYear, targetMonth - 1, 1);
   const lastDay = new Date(targetYear, targetMonth, 0);
@@ -80,6 +82,13 @@ export function AnnualEventCalendar({
 
   const prevHref = withCalendarMonth(basePath, prev);
   const nextHref = withCalendarMonth(basePath, next);
+
+  const currentMonthParams = new URLSearchParams();
+  currentMonthParams.set("view", "calendar");
+  if (employeeCode) currentMonthParams.set("employeeCode", employeeCode);
+
+  const currentMonthHref = `/annual-events?${currentMonthParams.toString()}`;
+
   const currentMonthLabel = `${targetYear}年${targetMonth}月`;
 
   return (
@@ -107,7 +116,7 @@ export function AnnualEventCalendar({
             </Link>
 
             <Link
-              href="/annual-events?view=calendar"
+              href={currentMonthHref}
               className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
             >
               今月
@@ -147,18 +156,22 @@ export function AnnualEventCalendar({
             const isToday = cell.date === today;
             const isEmpty = !cell.day;
 
+            const createHref = cell.date
+              ? buildCreateHref(cell.date, employeeCode)
+              : "#";
+
             return (
               <div
                 key={`${cell.date}-${index}`}
                 className={[
-                  "min-h-[150px] border-b border-r border-slate-100 p-3",
+                  "min-h-[165px] border-b border-r border-slate-100 p-3",
                   isEmpty ? "bg-slate-50" : "bg-white",
                   isToday ? "bg-indigo-50" : "",
                 ].join(" ")}
               >
                 {cell.day && (
                   <>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <div
                         className={[
                           "flex h-8 w-8 items-center justify-center rounded-full text-sm font-black",
@@ -170,16 +183,25 @@ export function AnnualEventCalendar({
                         {cell.day}
                       </div>
 
-                      {cell.events.length > 0 && (
-                        <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-black text-white">
-                          {cell.events.length}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {cell.events.length > 0 && (
+                          <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-black text-white">
+                            {cell.events.length}
+                          </span>
+                        )}
+
+                        <Link
+                          href={createHref}
+                          className="inline-flex h-7 items-center rounded-lg border border-indigo-200 bg-white px-2 text-[11px] font-black text-indigo-700 hover:bg-indigo-50"
+                        >
+                          ＋登録
+                        </Link>
+                      </div>
                     </div>
 
                     <div className="mt-3 space-y-2">
                       {cell.events.length === 0 ? (
-                        <div className="text-xs font-semibold text-slate-300">
+                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-center text-xs font-semibold text-slate-400">
                           予定なし
                         </div>
                       ) : (
@@ -252,6 +274,17 @@ export function AnnualEventCalendar({
       </div>
     </div>
   );
+}
+
+function buildCreateHref(date: string, employeeCode?: string) {
+  const p = new URLSearchParams();
+  p.set("scheduledDate", date);
+
+  if (employeeCode) {
+    p.set("employeeCode", employeeCode);
+  }
+
+  return `/annual-events/new?${p.toString()}`;
 }
 
 function formatDate(d: Date) {

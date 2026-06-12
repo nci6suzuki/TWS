@@ -22,16 +22,28 @@ export default async function AnnualEventNewPage({
     redirect("/unauthorized");
   }
 
-  const errorParam = sp.error;
-  const errorMessage = Array.isArray(errorParam)
-    ? errorParam[0] ?? ""
-    : errorParam ?? "";
+  const getParam = (key: string) => {
+    const v = sp[key];
+    return Array.isArray(v) ? v[0] ?? "" : v ?? "";
+  };
 
-  // 社員カルテから /annual-events/new?employeeCode=000101 で来た場合に使う
-  const employeeCodeParam = sp.employeeCode;
-  const defaultEmployeeCode = Array.isArray(employeeCodeParam)
-    ? employeeCodeParam[0] ?? ""
-    : employeeCodeParam ?? "";
+  const errorMessage = getParam("error");
+
+  // 社員カルテ・社員別カレンダーから
+  // /annual-events/new?employeeCode=000101
+  // で来た場合に使う
+  const defaultEmployeeCode = getParam("employeeCode");
+
+  // カレンダーの日付セルから
+  // /annual-events/new?scheduledDate=2026-06-20
+  // で来た場合に使う
+  const scheduledDateParam = getParam("scheduledDate");
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const defaultScheduledDate = isValidDateString(scheduledDateParam)
+    ? scheduledDateParam
+    : today;
 
   const admin = createSupabaseAdminClient();
 
@@ -69,9 +81,19 @@ export default async function AnnualEventNewPage({
 
     const priority = Number(priorityRaw || 2);
 
+    const returnTo = buildReturnTo({
+      scheduledDate,
+      defaultEmployeeCode,
+    });
+
+    const baseErrorUrl = buildErrorUrl({
+      defaultEmployeeCode,
+      scheduledDate,
+    });
+
     if (!employeeId) {
       redirect(
-        `/annual-events/new?error=${encodeURIComponent(
+        `${baseErrorUrl}&error=${encodeURIComponent(
           "対象社員を選択してください"
         )}`
       );
@@ -79,8 +101,16 @@ export default async function AnnualEventNewPage({
 
     if (!title || !scheduledDate) {
       redirect(
-        `/annual-events/new?error=${encodeURIComponent(
+        `${baseErrorUrl}&error=${encodeURIComponent(
           "タイトルと予定日は必須です"
+        )}`
+      );
+    }
+
+    if (!isValidDateString(scheduledDate)) {
+      redirect(
+        `${baseErrorUrl}&error=${encodeURIComponent(
+          "予定日の形式が正しくありません"
         )}`
       );
     }
@@ -93,7 +123,7 @@ export default async function AnnualEventNewPage({
 
     if (employeeError || !employee) {
       redirect(
-        `/annual-events/new?error=${encodeURIComponent(
+        `${baseErrorUrl}&error=${encodeURIComponent(
           employeeError?.message ?? "対象社員が見つかりません"
         )}`
       );
@@ -110,13 +140,22 @@ export default async function AnnualEventNewPage({
     });
 
     if (error) {
-      redirect(`/annual-events/new?error=${encodeURIComponent(error.message)}`);
+      redirect(`${baseErrorUrl}&error=${encodeURIComponent(error.message)}`);
     }
 
-    redirect("/annual-events");
+    redirect(returnTo);
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const backToCalendarHref = buildCalendarHref({
+    scheduledDate: defaultScheduledDate,
+    employeeCode: defaultEmployeeCode,
+  });
+
+  const cancelHref = defaultEmployeeCode
+    ? `/annual-events?employeeCode=${encodeURIComponent(
+        defaultEmployeeCode
+      )}&view=calendar`
+    : "/annual-events?view=calendar";
 
   return (
     <PageShell>
@@ -133,16 +172,28 @@ export default async function AnnualEventNewPage({
               <p className="mt-2 text-sm font-semibold text-slate-500">
                 面談、評価、研修、資格更新など、社員ごとの予定を登録します。
               </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Chip tone="info">初期日付: {defaultScheduledDate}</Chip>
+
+                {defaultEmployee && (
+                  <Chip tone="info">
+                    対象: {defaultEmployee.employee_code} /{" "}
+                    {defaultEmployee.name}
+                  </Chip>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <Chip tone="info">admin/hr only</Chip>
 
-              {defaultEmployee && (
-                <Chip tone="info">
-                  対象: {defaultEmployee.employee_code} / {defaultEmployee.name}
-                </Chip>
-              )}
+              <Link
+                href={backToCalendarHref}
+                className="inline-flex h-9 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-700 hover:bg-indigo-100"
+              >
+                カレンダーへ戻る
+              </Link>
 
               <Link
                 href="/annual-events"
@@ -176,11 +227,12 @@ export default async function AnnualEventNewPage({
             }))}
             today={today}
             defaultEmployeeId={defaultEmployeeId}
+            defaultScheduledDate={defaultScheduledDate}
           />
 
           <div className="flex flex-col gap-3 md:flex-row md:justify-end">
             <Link
-              href="/annual-events"
+              href={cancelHref}
               className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 hover:bg-slate-50"
             >
               キャンセル
@@ -197,4 +249,71 @@ export default async function AnnualEventNewPage({
       </div>
     </PageShell>
   );
+}
+
+function isValidDateString(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return false;
+
+  return d.toISOString().slice(0, 10) === value;
+}
+
+function buildCalendarHref({
+  scheduledDate,
+  employeeCode,
+}: {
+  scheduledDate: string;
+  employeeCode?: string;
+}) {
+  const d = isValidDateString(scheduledDate)
+    ? new Date(scheduledDate)
+    : new Date();
+
+  const p = new URLSearchParams();
+  p.set("view", "calendar");
+  p.set("calendarYear", String(d.getFullYear()));
+  p.set("calendarMonth", String(d.getMonth() + 1));
+
+  if (employeeCode) {
+    p.set("employeeCode", employeeCode);
+  }
+
+  return `/annual-events?${p.toString()}`;
+}
+
+function buildReturnTo({
+  scheduledDate,
+  defaultEmployeeCode,
+}: {
+  scheduledDate: string;
+  defaultEmployeeCode?: string;
+}) {
+  return buildCalendarHref({
+    scheduledDate,
+    employeeCode: defaultEmployeeCode,
+  });
+}
+
+function buildErrorUrl({
+  defaultEmployeeCode,
+  scheduledDate,
+}: {
+  defaultEmployeeCode?: string;
+  scheduledDate: string;
+}) {
+  const p = new URLSearchParams();
+
+  if (defaultEmployeeCode) {
+    p.set("employeeCode", defaultEmployeeCode);
+  }
+
+  if (scheduledDate) {
+    p.set("scheduledDate", scheduledDate);
+  }
+
+  const qs = p.toString();
+
+  return qs ? `/annual-events/new?${qs}` : "/annual-events/new?";
 }

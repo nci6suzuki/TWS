@@ -54,6 +54,7 @@ export function AnnualEventTemplateForm({
   employees,
   today,
   defaultEmployeeId = "",
+  defaultScheduledDate,
 }: {
   employees: {
     id: string;
@@ -64,6 +65,7 @@ export function AnnualEventTemplateForm({
   }[];
   today: string;
   defaultEmployeeId?: string;
+  defaultScheduledDate?: string;
 }) {
   const [templateKey, setTemplateKey] = useState("");
   const [title, setTitle] = useState("");
@@ -178,7 +180,7 @@ export function AnnualEventTemplateForm({
               name="scheduled_date"
               type="date"
               required
-              defaultValue={today}
+              defaultValue={defaultScheduledDate ?? today}
               className="input"
             />
           </Field>

@@ -357,6 +357,7 @@ export default async function AnnualEventsPage({
             targetYear={targetYear}
             targetMonth={targetMonth}
             basePath={currentBasePath}
+            employeeCode={employeeCode}
           />
         ) : view === "cards" ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
