@@ -248,6 +248,18 @@ export function EmployeeProfileBook({
 
   const doneEvents = events.filter((e: any) => e.status === "done");
 
+  const pendingInterviewCount = interviews.filter(
+    (i: any) => i.next_interview_date && !i.next_interview_completed_at
+  ).length;
+  
+  const actionItemCount = interviews.filter((i: any) => i.action_items).length;
+  
+  const hasImportantAlerts =
+  expiredQualifications.length > 0 ||
+  expiringSoonQualifications.length > 0 ||
+  overdueEvents.length > 0 ||
+  pendingInterviewCount > 0;
+
   const timelineItems = [
     ...qualifications.map((q: any) => ({
       id: `qualification-${q.id}`,
@@ -394,6 +406,180 @@ export function EmployeeProfileBook({
             />
           ))}
         </div>
+                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-5">
+          <Link
+            href={`/employees/code/${employee.employee_code}?tab=qualifications`}
+            className={[
+              "rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:shadow-sm",
+              expiredQualifications.length > 0
+                ? "border-rose-200 bg-rose-50"
+                : "border-slate-200 bg-slate-50",
+            ].join(" ")}
+          >
+            <div
+              className={[
+                "text-xs font-black tracking-[0.12em]",
+                expiredQualifications.length > 0
+                  ? "text-rose-700"
+                  : "text-slate-500",
+              ].join(" ")}
+            >
+              資格期限切れ
+            </div>
+            <div
+              className={[
+                "mt-2 text-2xl font-black",
+                expiredQualifications.length > 0
+                  ? "text-rose-700"
+                  : "text-slate-900",
+              ].join(" ")}
+            >
+              {expiredQualifications.length}
+            </div>
+          </Link>
+
+          <Link
+            href={`/employees/code/${employee.employee_code}?tab=qualifications`}
+            className={[
+              "rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:shadow-sm",
+              expiringSoonQualifications.length > 0
+                ? "border-amber-200 bg-amber-50"
+                : "border-slate-200 bg-slate-50",
+            ].join(" ")}
+          >
+            <div
+              className={[
+                "text-xs font-black tracking-[0.12em]",
+                expiringSoonQualifications.length > 0
+                  ? "text-amber-700"
+                  : "text-slate-500",
+              ].join(" ")}
+            >
+              資格30日以内
+            </div>
+            <div
+              className={[
+                "mt-2 text-2xl font-black",
+                expiringSoonQualifications.length > 0
+                  ? "text-amber-700"
+                  : "text-slate-900",
+              ].join(" ")}
+            >
+              {expiringSoonQualifications.length}
+            </div>
+          </Link>
+
+          <Link
+            href={`/employees/code/${employee.employee_code}?tab=schedule`}
+            className={[
+              "rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:shadow-sm",
+              overdueEvents.length > 0
+                ? "border-rose-200 bg-rose-50"
+                : "border-slate-200 bg-slate-50",
+            ].join(" ")}
+          >
+            <div
+              className={[
+                "text-xs font-black tracking-[0.12em]",
+                overdueEvents.length > 0 ? "text-rose-700" : "text-slate-500",
+              ].join(" ")}
+            >
+              イベント期限超過
+            </div>
+            <div
+              className={[
+                "mt-2 text-2xl font-black",
+                overdueEvents.length > 0 ? "text-rose-700" : "text-slate-900",
+              ].join(" ")}
+            >
+              {overdueEvents.length}
+            </div>
+          </Link>
+
+          <Link
+            href={`/employees/code/${employee.employee_code}?tab=schedule`}
+            className={[
+              "rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:shadow-sm",
+              pendingEvents.length > 0
+                ? "border-indigo-200 bg-indigo-50"
+                : "border-slate-200 bg-slate-50",
+            ].join(" ")}
+          >
+            <div
+              className={[
+                "text-xs font-black tracking-[0.12em]",
+                pendingEvents.length > 0
+                  ? "text-indigo-700"
+                  : "text-slate-500",
+              ].join(" ")}
+            >
+              未完了イベント
+            </div>
+            <div
+              className={[
+                "mt-2 text-2xl font-black",
+                pendingEvents.length > 0
+                  ? "text-indigo-700"
+                  : "text-slate-900",
+              ].join(" ")}
+            >
+              {pendingEvents.length}
+            </div>
+          </Link>
+
+          <Link
+            href={`/employees/code/${employee.employee_code}?tab=interviews`}
+            className={[
+              "rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:shadow-sm",
+              pendingInterviewCount > 0
+                ? "border-emerald-200 bg-emerald-50"
+                : "border-slate-200 bg-slate-50",
+            ].join(" ")}
+          >
+            <div
+              className={[
+                "text-xs font-black tracking-[0.12em]",
+                pendingInterviewCount > 0
+                  ? "text-emerald-700"
+                  : "text-slate-500",
+              ].join(" ")}
+            >
+              次回面談予定
+            </div>
+            <div
+              className={[
+                "mt-2 text-2xl font-black",
+                pendingInterviewCount > 0
+                  ? "text-emerald-700"
+                  : "text-slate-900",
+              ].join(" ")}
+            >
+              {pendingInterviewCount}
+            </div>
+          </Link>
+        </div>
+
+        {hasImportantAlerts && (
+          <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="text-sm font-black text-amber-800">
+                  要対応の項目があります
+                </div>
+                <div className="mt-1 text-sm font-semibold text-amber-700">
+                  資格・年間イベント・面談予定を確認してください。
+                </div>
+              </div>
+
+              <Link
+                href={`/employees/code/${employee.employee_code}?tab=timeline`}
+                className="inline-flex h-9 items-center justify-center rounded-xl bg-amber-600 px-4 text-sm font-black text-white hover:bg-amber-700"
+              >
+                タイムラインで確認
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
 
       {tab === "basic" && (
