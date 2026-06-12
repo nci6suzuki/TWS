@@ -82,7 +82,9 @@ function TabLink({
       href={href}
       className={[
         "rounded-xl px-3 py-2 text-sm font-semibold",
-        active ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100",
+        active
+          ? "bg-slate-900 text-white"
+          : "text-slate-700 hover:bg-slate-100",
       ].join(" ")}
     >
       {label}
@@ -251,14 +253,12 @@ export function EmployeeProfileBook({
   const pendingInterviewCount = interviews.filter(
     (i: any) => i.next_interview_date && !i.next_interview_completed_at
   ).length;
-  
-  const actionItemCount = interviews.filter((i: any) => i.action_items).length;
-  
+
   const hasImportantAlerts =
-  expiredQualifications.length > 0 ||
-  expiringSoonQualifications.length > 0 ||
-  overdueEvents.length > 0 ||
-  pendingInterviewCount > 0;
+    expiredQualifications.length > 0 ||
+    expiringSoonQualifications.length > 0 ||
+    overdueEvents.length > 0 ||
+    pendingInterviewCount > 0;
 
   const timelineItems = [
     ...qualifications.map((q: any) => ({
@@ -406,7 +406,8 @@ export function EmployeeProfileBook({
             />
           ))}
         </div>
-                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-5">
+
+        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-5">
           <Link
             href={`/employees/code/${employee.employee_code}?tab=qualifications`}
             className={[
@@ -518,9 +519,7 @@ export function EmployeeProfileBook({
             <div
               className={[
                 "mt-2 text-2xl font-black",
-                pendingEvents.length > 0
-                  ? "text-indigo-700"
-                  : "text-slate-900",
+                pendingEvents.length > 0 ? "text-indigo-700" : "text-slate-900",
               ].join(" ")}
             >
               {pendingEvents.length}
