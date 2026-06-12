@@ -68,10 +68,31 @@ export default async function DashboardPage() {
           .in("employee_id", employeeIds)
       : { data: [] as any[], error: null };
 
+  const { data: notifications, error: notificationsError } = await supabase
+    .from("notifications")
+    .select(
+      "id, employee_id, title, message, notification_type, severity, status, due_date, related_type, related_id, created_at"
+    )
+    .eq("status", "unread")
+    .order("due_date", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const unreadNotifications = notifications ?? [];
+
+  const unreadNotificationCount = unreadNotifications.length;
+  const dangerNotificationCount = unreadNotifications.filter(
+    (n: any) => n.severity === "danger"
+  ).length;
+  const warningNotificationCount = unreadNotifications.filter(
+    (n: any) => n.severity === "warning"
+  ).length;
+
   const loadError =
     qualificationsError?.message ??
     annualEventsError?.message ??
     interviewsError?.message ??
+    notificationsError?.message ??
     "";
 
   const expiredQualifications = (qualifications ?? []).filter(
@@ -146,12 +167,16 @@ export default async function DashboardPage() {
     <PageShell>
       <Hero
         title="ダッシュボード"
-        subtitle="社員カルテ、資格、年間イベント、面談予定の要対応状況を確認できます。"
+        subtitle="社員カルテ、資格、年間イベント、面談予定、通知の要対応状況を確認できます。"
         meta={
           <div className="flex flex-wrap gap-2">
             <Chip tone="info">Talent Management</Chip>
             <Chip>ログイン権限: {me.role}</Chip>
             <Chip>社員数: {allEmployees.length}</Chip>
+
+            {unreadNotificationCount > 0 && (
+              <Chip tone="danger">未読通知: {unreadNotificationCount}</Chip>
+            )}
           </div>
         }
         right={
@@ -161,6 +186,7 @@ export default async function DashboardPage() {
               要対応社員を見る
             </PrimaryButton>
             <PrimaryButton href="/annual-events">年間イベント</PrimaryButton>
+            <PrimaryButton href="/notifications">通知</PrimaryButton>
           </>
         }
       />
@@ -176,32 +202,44 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+        <KPI
+          label="未読通知"
+          value={unreadNotificationCount}
+          tone={unreadNotificationCount > 0 ? "danger" : "ok"}
+          href="/notifications"
+        />
+
         <KPI
           label="要対応社員"
           value={attentionEmployees.length}
           tone={attentionEmployees.length > 0 ? "danger" : "ok"}
           href="/employees?attention=required"
         />
+
         <KPI
           label="資格期限切れ"
           value={expiredQualifications.length}
           tone={expiredQualifications.length > 0 ? "danger" : "ok"}
         />
+
         <KPI
           label="資格30日以内"
           value={expiringSoonQualifications.length}
           tone={expiringSoonQualifications.length > 0 ? "danger" : "ok"}
         />
+
         <KPI
           label="イベント期限超過"
           value={overdueEvents.length}
           tone={overdueEvents.length > 0 ? "danger" : "ok"}
+          href="/annual-events?overdue=1"
         />
+
         <KPI
           label="次回面談予定"
           value={pendingInterviews.length}
-          tone={pendingInterviews.length > 0 ? "ok" : "ok"}
+          tone="ok"
         />
       </div>
 
@@ -214,6 +252,100 @@ export default async function DashboardPage() {
           tone={inactiveEmployees.length > 0 ? "danger" : "ok"}
         />
       </div>
+
+      <Card className="p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="text-sm font-black text-slate-900">
+              通知・リマインド
+            </div>
+            <p className="mt-1 text-sm font-semibold text-slate-500">
+              資格期限、年間イベント、期限超過などの未読通知を確認できます。
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Chip tone={unreadNotificationCount > 0 ? "danger" : "ok"}>
+              未読 {unreadNotificationCount}
+            </Chip>
+
+            <Chip tone={dangerNotificationCount > 0 ? "danger" : "gray"}>
+              重要 {dangerNotificationCount}
+            </Chip>
+
+            <Chip tone={warningNotificationCount > 0 ? "danger" : "gray"}>
+              注意 {warningNotificationCount}
+            </Chip>
+
+            <Link
+              href="/notifications"
+              className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800"
+            >
+              通知一覧へ
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          {unreadNotifications.length === 0 ? (
+            <div className="rounded-2xl bg-slate-50 p-5 text-center text-sm font-bold text-slate-500">
+              未読通知はありません
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-100">
+              {unreadNotifications.map((n: any) => (
+                <Link
+                  key={n.id}
+                  href={getNotificationHref(n)}
+                  className="block bg-white p-4 hover:bg-slate-50"
+                >
+                  <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="flex flex-wrap gap-2">
+                        <Chip tone={getNotificationTone(n.severity)}>
+                          {getNotificationSeverityLabel(n.severity)}
+                        </Chip>
+
+                        {n.due_date && <Chip>期限: {n.due_date}</Chip>}
+                      </div>
+
+                      <div className="mt-2 text-sm font-black text-slate-900">
+                        {n.title}
+                      </div>
+
+                      <div className="mt-1 line-clamp-2 text-sm font-semibold text-slate-600">
+                        {n.message || "-"}
+                      </div>
+                    </div>
+
+                    <div className="text-xs font-bold text-slate-400">
+                      {formatDateTime(n.created_at)}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <form action="/api/notifications/generate" method="post">
+            <button
+              type="submit"
+              className="inline-flex h-10 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-700 hover:bg-indigo-100"
+            >
+              通知を生成・更新
+            </button>
+          </form>
+
+          <Link
+            href="/notifications"
+            className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+          >
+            すべて見る
+          </Link>
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Card className="overflow-hidden">
@@ -258,6 +390,7 @@ export default async function DashboardPage() {
                       >
                         {employee.employee_code} / {employee.name}
                       </Link>
+
                       <div className="mt-1 text-sm font-semibold text-slate-500">
                         {employee.email ?? "-"}
                       </div>
@@ -310,6 +443,13 @@ export default async function DashboardPage() {
           </div>
 
           <div className="space-y-3 p-5">
+            <ActionCard
+              title="通知・リマインドを確認"
+              description={`未読通知 ${unreadNotificationCount}件 / 重要 ${dangerNotificationCount}件`}
+              href="/notifications"
+              danger={unreadNotificationCount > 0}
+            />
+
             <ActionCard
               title="資格期限を確認"
               description={`期限切れ ${expiredQualifications.length}件 / 30日以内 ${expiringSoonQualifications.length}件`}
@@ -376,6 +516,7 @@ function ActionCard({
       >
         {title}
       </div>
+
       <div
         className={[
           "mt-1 text-sm font-semibold",
@@ -386,4 +527,40 @@ function ActionCard({
       </div>
     </Link>
   );
+}
+
+function getNotificationHref(n: any) {
+  if (n.related_type === "employee_annual_event" && n.related_id) {
+    return `/annual-events/${n.related_id}`;
+  }
+
+  if (n.related_type === "employee_qualification") {
+    return "/employees?attention=required";
+  }
+
+  return "/notifications";
+}
+
+function getNotificationTone(severity: string) {
+  if (severity === "danger") return "danger";
+  if (severity === "warning") return "danger";
+  if (severity === "info") return "info";
+  return "gray";
+}
+
+function getNotificationSeverityLabel(severity: string) {
+  if (severity === "danger") return "重要";
+  if (severity === "warning") return "注意";
+  if (severity === "info") return "情報";
+  return severity || "通常";
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return "-";
+
+  const d = new Date(value);
+
+  if (Number.isNaN(d.getTime())) return value;
+
+  return d.toLocaleString("ja-JP");
 }
