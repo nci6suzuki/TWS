@@ -27,6 +27,10 @@ export default async function EmployeesPage({
     ? attentionParam[0] ?? ""
     : attentionParam ?? "";
 
+  const qParam = sp.q;
+  const q = Array.isArray(qParam) ? qParam[0] ?? "" : qParam ?? "";
+  const keyword = q.trim().toLowerCase();
+
   const { data, error } = await supabase
     .from("employees")
     .select(
@@ -52,6 +56,7 @@ export default async function EmployeesPage({
   const employeeIds = allEmployees.map((e) => e.id);
 
   const today = new Date().toISOString().slice(0, 10);
+
   const alertDateObj = new Date();
   alertDateObj.setDate(alertDateObj.getDate() + 30);
   const alertDate = alertDateObj.toISOString().slice(0, 10);
@@ -75,9 +80,7 @@ export default async function EmployeesPage({
   const { data: interviews } =
     employeeIds.length > 0
       ? await supabase
-          .from(
-            "employee_interviews"
-          )
+          .from("employee_interviews")
           .select(
             "id, employee_id, next_interview_date, next_interview_completed_at"
           )
@@ -158,6 +161,15 @@ export default async function EmployeesPage({
       if ((attention?.total ?? 0) <= 0) return false;
     }
 
+    if (keyword) {
+      const text = [e.employee_code, e.name, e.email, e.app_role, e.status]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      if (!text.includes(keyword)) return false;
+    }
+
     return true;
   });
 
@@ -171,6 +183,8 @@ export default async function EmployeesPage({
             <Chip tone="info">Employee Management</Chip>
             <Chip>ログイン権限: {me.role}</Chip>
             <Chip>表示件数: {employees.length}</Chip>
+
+            {q && <Chip tone="info">検索: {q}</Chip>}
 
             {inviteFilter === "uninvited" && (
               <Chip tone="danger">未招待のみ表示中</Chip>
@@ -221,7 +235,7 @@ export default async function EmployeesPage({
           <div>
             <h2 className="text-lg font-black text-slate-900">社員検索</h2>
             <p className="mt-1 text-sm font-medium text-slate-500">
-              現在は社員番号順で最大200件を表示しています。未招待・要対応ありで絞り込めます。
+              社員番号・氏名・メールで検索できます。未招待・要対応ありでの絞り込みも可能です。
             </p>
           </div>
 
@@ -236,6 +250,41 @@ export default async function EmployeesPage({
             </Chip>
           </div>
         </div>
+
+        <form
+          action="/employees"
+          className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto]"
+        >
+          <input
+            type="text"
+            name="q"
+            defaultValue={q}
+            placeholder="社員番号・氏名・メールで検索"
+            className="input"
+          />
+
+          {inviteFilter && (
+            <input type="hidden" name="invite" value={inviteFilter} />
+          )}
+
+          {attentionFilter && (
+            <input type="hidden" name="attention" value={attentionFilter} />
+          )}
+
+          <button
+            type="submit"
+            className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800"
+          >
+            検索
+          </button>
+
+          <Link
+            href="/employees"
+            className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+          >
+            クリア
+          </Link>
+        </form>
       </Card>
 
       <Card className="overflow-hidden">
