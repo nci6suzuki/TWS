@@ -1,6 +1,6 @@
 // src/app/api/notifications/generate/route.ts
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -19,15 +19,14 @@ type NotificationInsert = {
   unique_key: string;
 };
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
     const me = await requireAuth();
 
     if (me.role !== "admin" && me.role !== "hr") {
-      return NextResponse.json(
-        { success: false, message: "権限がありません" },
-        { status: 403 }
-      );
+      return NextResponse.redirect(new URL("/unauthorized", req.url), {
+        status: 303,
+      });
     }
 
     const admin = createSupabaseAdminClient();
@@ -111,9 +110,7 @@ export async function POST() {
 
       const { data: events, error: eventsError } = await admin
         .from("employee_annual_events")
-        .select(
-          "id, employee_id, title, event_type, scheduled_date, status"
-        )
+        .select("id, employee_id, title, event_type, scheduled_date, status")
         .in("employee_id", employeeIds)
         .eq("status", "pending");
 
@@ -167,17 +164,19 @@ export async function POST() {
       if (upsertError) throw upsertError;
     }
 
-    return NextResponse.json({
-      success: true,
-      generated: notifications.length,
-    });
+    return NextResponse.redirect(
+      new URL(`/notifications?generated=${notifications.length}`, req.url),
+      { status: 303 }
+    );
   } catch (e: any) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: e?.message ?? "通知生成に失敗しました",
-      },
-      { status: 500 }
+    return NextResponse.redirect(
+      new URL(
+        `/notifications?error=${encodeURIComponent(
+          e?.message ?? "通知生成に失敗しました"
+        )}`,
+        req.url
+      ),
+      { status: 303 }
     );
   }
 }

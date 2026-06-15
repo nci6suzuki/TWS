@@ -30,6 +30,7 @@ export default async function NotificationsPage({
   const status = getParam("status") || "unread";
   const severity = getParam("severity");
   const errorMessage = getParam("error");
+  const generated = getParam("generated");
 
   const admin = createSupabaseAdminClient();
 
@@ -172,6 +173,17 @@ export default async function NotificationsPage({
             </div>
             <div className="mt-1 text-sm font-semibold text-rose-600">
               {errorMessage}
+            </div>
+          </Card>
+        )}
+
+        {generated && (
+          <Card className="border-emerald-200 bg-emerald-50 p-5">
+            <div className="text-sm font-black text-emerald-700">
+              通知を生成・更新しました
+            </div>
+            <div className="mt-1 text-sm font-semibold text-emerald-600">
+              今回の生成対象は {generated} 件です。
             </div>
           </Card>
         )}
