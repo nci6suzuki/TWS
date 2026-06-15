@@ -29,6 +29,7 @@ export default async function NotificationsPage({
 
   const status = getParam("status") || "unread";
   const severity = getParam("severity");
+  const errorMessage = getParam("error");
 
   const admin = createSupabaseAdminClient();
 
@@ -65,9 +66,7 @@ export default async function NotificationsPage({
           .in("id", employeeIds)
       : { data: [] as any[] };
 
-  const employeeById = new Map(
-    (employees ?? []).map((e: any) => [e.id, e])
-  );
+  const employeeById = new Map((employees ?? []).map((e: any) => [e.id, e]));
 
   const all = notifications ?? [];
   const unreadCount = all.filter((n) => n.status === "unread").length;
@@ -166,10 +165,33 @@ export default async function NotificationsPage({
           }
         />
 
+        {errorMessage && (
+          <Card className="border-rose-200 bg-rose-50 p-5">
+            <div className="text-sm font-black text-rose-700">
+              エラーが発生しました
+            </div>
+            <div className="mt-1 text-sm font-semibold text-rose-600">
+              {errorMessage}
+            </div>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <KPI label="未読" value={unreadCount} tone="danger" />
-          <KPI label="重要" value={dangerCount} tone="danger" />
-          <KPI label="注意" value={warningCount} tone="danger" />
+          <KPI
+            label="未読"
+            value={unreadCount}
+            tone={unreadCount > 0 ? "danger" : "ok"}
+          />
+          <KPI
+            label="重要"
+            value={dangerCount}
+            tone={dangerCount > 0 ? "danger" : "ok"}
+          />
+          <KPI
+            label="注意"
+            value={warningCount}
+            tone={warningCount > 0 ? "danger" : "ok"}
+          />
           <KPI label="情報" value={infoCount} tone="ok" />
         </div>
 
@@ -199,7 +221,7 @@ export default async function NotificationsPage({
           <div className="border-b border-slate-100 px-5 py-4">
             <h2 className="text-lg font-black text-slate-900">通知一覧</h2>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              通知をクリックして関連ページを確認できます。
+              「開いて既読」を押すと、通知を既読にしてから関連ページへ移動します。
             </p>
           </div>
 
@@ -212,6 +234,9 @@ export default async function NotificationsPage({
               all.map((n) => {
                 const employee = employeeById.get(n.employee_id);
                 const href = getNotificationHref(n, employee);
+                const readAndOpenHref = `/api/notifications/${
+                  n.id
+                }/read-and-redirect?to=${encodeURIComponent(href)}`;
 
                 return (
                   <div
@@ -254,6 +279,7 @@ export default async function NotificationsPage({
 
                         <div className="mt-3 text-xs font-semibold text-slate-400">
                           作成日時: {formatDateTime(n.created_at)}
+                          {n.read_at && ` / 既読日時: ${formatDateTime(n.read_at)}`}
                         </div>
                       </div>
 
@@ -264,6 +290,15 @@ export default async function NotificationsPage({
                         >
                           関連ページへ
                         </Link>
+
+                        {n.status === "unread" && (
+                          <Link
+                            href={readAndOpenHref}
+                            className="inline-flex h-9 items-center rounded-xl bg-indigo-600 px-4 text-sm font-black text-white hover:bg-indigo-700"
+                          >
+                            開いて既読
+                          </Link>
+                        )}
 
                         {n.status === "unread" && (
                           <form action={markAsRead}>
