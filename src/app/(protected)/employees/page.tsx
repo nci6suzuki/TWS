@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseServerDbClient } from "@/lib/supabase/server-db";
-import { InviteButton } from "@/components/employees/invite-button";
+import { PageShell } from "@/components/ui/page-shell";
 import {
   Hero,
   KPI,
@@ -12,7 +12,7 @@ import {
   GhostButton,
   Card,
 } from "@/components/ui/ux";
-import { PageShell } from "@/components/ui/page-shell";
+import { InviteButton } from "@/components/employees/invite-button";
 
 export const runtime = "nodejs";
 
@@ -31,7 +31,7 @@ export default async function EmployeesPage({
     return Array.isArray(v) ? v[0] ?? "" : v ?? "";
   };
 
-  const q = getParam("q");
+  const q = getParam("q").trim();
   const invite = getParam("invite");
   const attention = getParam("attention");
 
@@ -60,7 +60,19 @@ export default async function EmployeesPage({
   }
 
   const { data, error } = await query;
-  if (error) throw error;
+
+  if (error) {
+    return (
+      <PageShell>
+        <Card className="p-6">
+          <div className="text-xl font-black text-slate-900">社員一覧</div>
+          <div className="mt-2 text-sm font-semibold text-rose-600">
+            読み込みに失敗：{error.message}
+          </div>
+        </Card>
+      </PageShell>
+    );
+  }
 
   const employees = data ?? [];
   const employeeIds = employees.map((e) => e.id);
@@ -112,22 +124,26 @@ export default async function EmployeesPage({
     });
   }
 
-  for (const item of qualifications ?? []) {
-    if (!item.expires_on) continue;
+  for (const qualification of qualifications ?? []) {
+    if (!qualification.expires_on) continue;
 
-    const attentionItem = attentionByEmployeeId.get(item.employee_id);
+    const attentionItem = attentionByEmployeeId.get(
+      qualification.employee_id
+    );
     if (!attentionItem) continue;
 
-    if (item.expires_on < today) {
+    if (qualification.expires_on < today) {
       attentionItem.expiredQualifications += 1;
       attentionItem.total += 1;
-    } else if (item.expires_on <= alertDate) {
+    } else if (qualification.expires_on <= alertDate) {
       attentionItem.soonQualifications += 1;
       attentionItem.total += 1;
     }
   }
 
   for (const event of annualEvents ?? []) {
+    if (!event.scheduled_date) continue;
+
     const attentionItem = attentionByEmployeeId.get(event.employee_id);
     if (!attentionItem) continue;
 
@@ -163,6 +179,7 @@ export default async function EmployeesPage({
   const inactiveCount = employees.filter((e) => e.status !== "active").length;
   const invitedCount = employees.filter((e) => e.user_id).length;
   const uninvitedCount = employees.filter((e) => !e.user_id).length;
+
   const attentionCount = employees.filter((employee) => {
     const item = attentionByEmployeeId.get(employee.id);
     return (item?.total ?? 0) > 0;
@@ -202,7 +219,7 @@ export default async function EmployeesPage({
               <Chip>表示件数: {visibleEmployees.length}</Chip>
               <Chip>ログイン権限: {me.role}</Chip>
 
-              {q && <Chip>検索: {q}</Chip>}
+              {q && <Chip tone="info">検索: {q}</Chip>}
 
               {invite === "uninvited" && (
                 <Chip tone="danger">未招待のみ表示中</Chip>
@@ -228,7 +245,9 @@ export default async function EmployeesPage({
               {(me.role === "admin" || me.role === "hr") && (
                 <>
                   <PrimaryButton href={exportHref}>CSV出力</PrimaryButton>
-                  <PrimaryButton href="/employees/new">+ 社員登録</PrimaryButton>
+                  <PrimaryButton href="/employees/new">
+                    + 社員登録
+                  </PrimaryButton>
                 </>
               )}
             </>
@@ -237,19 +256,24 @@ export default async function EmployeesPage({
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <KPI label="社員数" value={totalCount} />
+
           <KPI label="在籍中" value={activeCount} tone="ok" />
+
           <KPI
             label="休職・退職等"
             value={inactiveCount}
             tone={inactiveCount > 0 ? "danger" : "ok"}
           />
+
           <KPI label="招待済" value={invitedCount} tone="ok" />
+
           <KPI
             label="未招待"
             value={uninvitedCount}
             tone={uninvitedCount > 0 ? "danger" : "ok"}
             href={filterHref({ invite: "uninvited" })}
           />
+
           <KPI
             label="要対応あり"
             value={attentionCount}
@@ -269,6 +293,7 @@ export default async function EmployeesPage({
             />
 
             {invite && <input type="hidden" name="invite" value={invite} />}
+
             {attention && (
               <input type="hidden" name="attention" value={attention} />
             )}
@@ -439,8 +464,8 @@ export default async function EmployeesPage({
                             {(me.role === "admin" || me.role === "hr") && (
                               <InviteButton
                                 employeeId={employee.id}
-                                userId={employee.user_id}
-                                email={employee.email}
+                                force={!employee.user_id}
+                                label={employee.user_id ? "再招待" : "招待"}
                               />
                             )}
                           </div>
