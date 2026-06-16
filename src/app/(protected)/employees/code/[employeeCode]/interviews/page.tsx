@@ -1,9 +1,18 @@
+// src/app/(protected)/employees/code/[employeeCode]/interviews/page.tsx
+
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createActivityLog } from "@/lib/activity-logs/create-activity-log";
 import { PageShell } from "@/components/ui/page-shell";
-import { Card, Chip } from "@/components/ui/ux";
+import {
+  Hero,
+  Card,
+  Chip,
+  PrimaryButton,
+  GhostButton,
+} from "@/components/ui/ux";
 import { DeleteInterviewButton } from "@/components/employees/delete-interview-button";
 
 export const runtime = "nodejs";
@@ -19,17 +28,22 @@ export default async function EmployeeInterviewsPage({
   const { employeeCode } = await params;
   const sp = await searchParams;
 
-  const errorParam = sp.error;
-  const errorMessage = Array.isArray(errorParam)
-    ? errorParam[0] ?? ""
-    : errorParam ?? "";
+  const code = decodeURIComponent(employeeCode).trim();
+
+  const getParam = (key: string) => {
+    const v = sp[key];
+    return Array.isArray(v) ? v[0] ?? "" : v ?? "";
+  };
+
+  const errorMessage = getParam("error");
+  const created = getParam("created");
 
   const admin = createSupabaseAdminClient();
 
   const { data: employee, error: employeeError } = await admin
     .from("employees")
     .select("id, employee_code, name, email, app_role, status")
-    .eq("employee_code", employeeCode)
+    .eq("employee_code", code)
     .maybeSingle();
 
   if (employeeError) throw employeeError;
@@ -43,9 +57,9 @@ export default async function EmployeeInterviewsPage({
 
   const { data: interviews, error: interviewsError } = await admin
     .from("employee_interviews")
-.select(
-  "id, interview_date, interview_type, interviewer_name, summary, action_items, next_interview_date, next_interview_completed_at, created_at"
-)
+    .select(
+      "id, employee_id, interview_date, interview_type, interviewer_name, summary, action_items, next_interview_date, next_interview_completed_at, created_at"
+    )
     .eq("employee_id", employee.id)
     .order("interview_date", { ascending: false })
     .order("created_at", { ascending: false });
@@ -56,7 +70,10 @@ export default async function EmployeeInterviewsPage({
     "use server";
 
     const me = await requireAuth();
-    if (me.role !== "admin" && me.role !== "hr") redirect("/unauthorized");
+
+    if (me.role !== "admin" && me.role !== "hr") {
+      redirect("/unauthorized");
+    }
 
     const admin = createSupabaseAdminClient();
 
@@ -79,6 +96,7 @@ export default async function EmployeeInterviewsPage({
 
     const summary = String(formData.get("summary") ?? "").trim();
     const actionItems = String(formData.get("action_items") ?? "").trim();
+
     const nextInterviewDateRaw = String(
       formData.get("next_interview_date") ?? ""
     ).trim();
@@ -86,9 +104,13 @@ export default async function EmployeeInterviewsPage({
     const nextInterviewDate =
       nextInterviewDateRaw === "" ? null : nextInterviewDateRaw;
 
+    const baseUrl = `/employees/code/${encodeURIComponent(
+      targetEmployeeCode || code
+    )}/interviews`;
+
     if (!targetEmployeeId || !targetEmployeeCode) {
       redirect(
-        `/employees/code/${targetEmployeeCode || employeeCode}/interviews?error=${encodeURIComponent(
+        `${baseUrl}?error=${encodeURIComponent(
           "社員情報を取得できませんでした"
         )}`
       );
@@ -96,184 +118,141 @@ export default async function EmployeeInterviewsPage({
 
     if (!summary) {
       redirect(
-        `/employees/code/${targetEmployeeCode}/interviews?error=${encodeURIComponent(
-          "面談内容を入力してください"
-        )}`
+        `${baseUrl}?error=${encodeURIComponent("面談内容を入力してください")}`
       );
     }
 
-const { data: insertedInterview, error } = await admin
-  .from("employee_interviews")
-  .insert({
-    employee_id: targetEmployeeId,
-    interview_date: interviewDate,
-    interview_type: interviewType,
-    interviewer_name: interviewerName,
-    summary,
-    action_items: actionItems,
-    next_interview_date: nextInterviewDate,
-    updated_at: new Date().toISOString(),
-  })
-  .select("id")
-  .single();
+    const now = new Date().toISOString();
 
-if (error) {
-  redirect(
-    `/employees/code/${targetEmployeeCode}/interviews?error=${encodeURIComponent(
-      error.message
-    )}`
-  );
-}
+    const { data: insertedInterview, error } = await admin
+      .from("employee_interviews")
+      .insert({
+        employee_id: targetEmployeeId,
+        interview_date: interviewDate,
+        interview_type: interviewType || "regular",
+        interviewer_name: interviewerName || null,
+        summary,
+        action_items: actionItems || null,
+        next_interview_date: nextInterviewDate,
+        updated_at: now,
+      })
+      .select(
+        "id, employee_id, interview_date, interview_type, interviewer_name, summary, action_items, next_interview_date"
+      )
+      .single();
 
-/**
- * 次回面談予定日がある場合、年間イベントを自動作成
- */
-if (nextInterviewDate && insertedInterview?.id) {
-  const eventTitle = "次回面談";
+    if (error) {
+      redirect(`${baseUrl}?error=${encodeURIComponent(error.message)}`);
+    }
 
-  const { error: eventError } = await admin
-    .from("employee_annual_events")
-    .insert({
-      employee_id: targetEmployeeId,
-      title: eventTitle,
-      event_type: "interview",
-      scheduled_date: nextInterviewDate,
-      status: "pending",
-      priority: 2,
-      description: actionItems
-        ? `面談履歴から自動作成\n\n次回アクション:\n${actionItems}`
-        : "面談履歴から自動作成",
-      source_type: "employee_interview",
-      source_id: insertedInterview.id,
+    let createdAnnualEventId: string | null = null;
+
+    if (nextInterviewDate && insertedInterview?.id) {
+      const { data: annualEvent, error: eventError } = await admin
+        .from("employee_annual_events")
+        .insert({
+          employee_id: targetEmployeeId,
+          title: "次回面談",
+          event_type: "interview",
+          scheduled_date: nextInterviewDate,
+          status: "pending",
+          priority: 2,
+          description: actionItems
+            ? `面談履歴から自動作成\n\n次回アクション:\n${actionItems}`
+            : `面談履歴から自動作成\n\n元面談日：${interviewDate}`,
+          source_type: "employee_interview",
+          source_id: insertedInterview.id,
+        })
+        .select("id")
+        .single();
+
+      if (eventError) {
+        redirect(
+          `${baseUrl}?error=${encodeURIComponent(
+            `面談履歴は登録されましたが、年間イベント作成に失敗しました: ${eventError.message}`
+          )}`
+        );
+      }
+
+      createdAnnualEventId = annualEvent?.id ?? null;
+    }
+
+    await createActivityLog({
+      employeeId: targetEmployeeId,
+      actorEmployeeId: me.employeeId,
+      activityType: "interview_created",
+      title: "面談記録を追加しました",
+      description: `「${getInterviewTypeLabel(
+        interviewType
+      )}」を登録しました。面談日：${interviewDate}`,
+      relatedType: "employee_interview",
+      relatedId: insertedInterview.id,
+      metadata: {
+        interview_date: interviewDate,
+        interview_type: interviewType,
+        interviewer_name: interviewerName || null,
+        summary,
+        action_items: actionItems || null,
+        next_interview_date: nextInterviewDate,
+        created_annual_event_id: createdAnnualEventId,
+      },
     });
 
-  if (eventError) {
-    redirect(
-      `/employees/code/${targetEmployeeCode}/interviews?error=${encodeURIComponent(
-        `面談履歴は登録されましたが、年間イベント作成に失敗しました: ${eventError.message}`
-      )}`
-    );
+    redirect(`${baseUrl}?created=${encodeURIComponent(interviewDate)}`);
   }
-}
-
-redirect(`/employees/code/${targetEmployeeCode}/interviews`);
-  }
-
-async function deleteInterview(formData: FormData) {
-  "use server";
-
-  const me = await requireAuth();
-  if (me.role !== "admin" && me.role !== "hr") redirect("/unauthorized");
-
-  const admin = createSupabaseAdminClient();
-
-  const interviewId = String(formData.get("interview_id") ?? "").trim();
-  const targetEmployeeCode = String(
-    formData.get("employee_code") ?? ""
-  ).trim();
-
-  if (!interviewId) {
-    redirect(`/employees/code/${targetEmployeeCode}/interviews`);
-  }
-
-  // 先に連動している年間イベントを削除
-  const { error: eventDeleteError } = await admin
-    .from("employee_annual_events")
-    .delete()
-    .eq("source_type", "employee_interview")
-    .eq("source_id", interviewId);
-
-  if (eventDeleteError) {
-    redirect(
-      `/employees/code/${targetEmployeeCode}/interviews?error=${encodeURIComponent(
-        eventDeleteError.message
-      )}`
-    );
-  }
-
-  // その後、面談履歴を削除
-  const { error } = await admin
-    .from("employee_interviews")
-    .delete()
-    .eq("id", interviewId);
-
-  if (error) {
-    redirect(
-      `/employees/code/${targetEmployeeCode}/interviews?error=${encodeURIComponent(
-        error.message
-      )}`
-    );
-  }
-
-  redirect(`/employees/code/${targetEmployeeCode}/interviews`);
-}
 
   const nextActionCount = (interviews ?? []).filter(
-    (i) => i.action_items && i.action_items.trim() !== ""
+    (i: any) => i.action_items && i.action_items.trim() !== ""
   ).length;
 
   const nextInterviewCount = (interviews ?? []).filter(
-    (i) => i.next_interview_date
+    (i: any) => i.next_interview_date
+  ).length;
+
+  const pendingNextInterviewCount = (interviews ?? []).filter(
+    (i: any) => i.next_interview_date && !i.next_interview_completed_at
   ).length;
 
   return (
     <PageShell>
-      <div className="mx-auto max-w-6xl space-y-6">
-        <Card className="p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <div className="text-xs font-black tracking-[0.18em] text-indigo-600">
-                INTERVIEWS
-              </div>
-              <h1 className="mt-2 text-3xl font-black text-slate-900">
-                面談履歴
-              </h1>
-              <p className="mt-2 text-sm font-semibold text-slate-500">
-                面談内容、次回アクション、次回面談予定を記録します。
-              </p>
-            </div>
-
+      <div className="space-y-6">
+        <Hero
+          title="面談管理"
+          subtitle="社員との面談記録、次回アクション、次回面談予定を管理します。登録内容はタイムラインにも履歴として残ります。"
+          meta={
             <div className="flex flex-wrap gap-2">
-              <Chip tone="info">{employee.employee_code}</Chip>
-              <Chip>{employee.name}</Chip>
-              <Link
-                href={`/employees/code/${employee.employee_code}`}
-                className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
-              >
+              <Chip tone="info">Interviews</Chip>
+              <Chip>
+                {employee.employee_code} / {employee.name}
+              </Chip>
+              <Chip>登録数: {(interviews ?? []).length}</Chip>
+              <Chip>次回アクション: {nextActionCount}</Chip>
+              <Chip>次回面談予定: {nextInterviewCount}</Chip>
+              {pendingNextInterviewCount > 0 && (
+                <Chip tone="danger">
+                  未完了の次回面談: {pendingNextInterviewCount}
+                </Chip>
+              )}
+            </div>
+          }
+          right={
+            <>
+              <GhostButton href={`/employees/code/${employee.employee_code}`}>
                 カルテへ戻る
-              </Link>
-            </div>
-          </div>
-        </Card>
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <Card className="p-5">
-            <div className="text-xs font-black tracking-[0.12em] text-slate-500">
-              面談件数
-            </div>
-            <div className="mt-2 text-3xl font-black text-slate-900">
-              {interviews?.length ?? 0}
-            </div>
-          </Card>
-
-          <Card className="p-5">
-            <div className="text-xs font-black tracking-[0.12em] text-slate-500">
-              アクションあり
-            </div>
-            <div className="mt-2 text-3xl font-black text-indigo-600">
-              {nextActionCount}
-            </div>
-          </Card>
-
-          <Card className="p-5">
-            <div className="text-xs font-black tracking-[0.12em] text-slate-500">
-              次回面談予定あり
-            </div>
-            <div className="mt-2 text-3xl font-black text-emerald-600">
-              {nextInterviewCount}
-            </div>
-          </Card>
-        </div>
+              </GhostButton>
+              <PrimaryButton
+                href={`/employees/code/${employee.employee_code}?tab=interviews`}
+              >
+                面談タブへ
+              </PrimaryButton>
+              <PrimaryButton
+                href={`/employees/code/${employee.employee_code}?tab=timeline`}
+              >
+                タイムライン
+              </PrimaryButton>
+            </>
+          }
+        />
 
         {errorMessage && (
           <Card className="border-rose-200 bg-rose-50 p-5">
@@ -286,16 +265,29 @@ async function deleteInterview(formData: FormData) {
           </Card>
         )}
 
-        {canManage && (
-          <Card className="p-6">
-            <h2 className="text-xl font-black text-slate-900">
-              面談履歴を追加
-            </h2>
-            <p className="mt-1 text-sm font-semibold text-slate-500">
-              面談日、面談種別、内容、次回アクションを登録します。
-            </p>
+        {created && (
+          <Card className="border-emerald-200 bg-emerald-50 p-5">
+            <div className="text-sm font-black text-emerald-700">
+              面談記録を追加しました
+            </div>
+            <div className="mt-1 text-sm font-semibold text-emerald-600">
+              面談日「{created}」の記録を追加し、タイムラインに履歴を保存しました。
+            </div>
+          </Card>
+        )}
 
-            <form action={addInterview} className="mt-5 space-y-4">
+        {canManage && (
+          <Card className="p-5">
+            <div className="mb-5">
+              <h2 className="text-lg font-black text-slate-900">
+                面談記録を追加
+              </h2>
+              <p className="mt-1 text-sm font-semibold text-slate-500">
+                次回面談予定を入力すると、年間イベントにも次回面談予定を作成します。
+              </p>
+            </div>
+
+            <form action={addInterview} className="space-y-5">
               <input type="hidden" name="employee_id" value={employee.id} />
               <input
                 type="hidden"
@@ -303,73 +295,97 @@ async function deleteInterview(formData: FormData) {
                 value={employee.employee_code}
               />
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <Field label="面談日">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label className="block">
+                  <div className="mb-1 text-sm font-black text-slate-700">
+                    面談日 <span className="text-rose-500">*</span>
+                  </div>
                   <input
-                    name="interview_date"
-                    type="date"
-                    defaultValue={new Date().toISOString().slice(0, 10)}
                     className="input"
+                    type="date"
+                    name="interview_date"
+                    defaultValue={new Date().toISOString().slice(0, 10)}
+                    required
                   />
-                </Field>
+                </label>
 
-                <Field label="面談種別">
+                <label className="block">
+                  <div className="mb-1 text-sm font-black text-slate-700">
+                    面談種別
+                  </div>
                   <select
+                    className="input"
                     name="interview_type"
                     defaultValue="regular"
-                    className="input"
                   >
                     <option value="regular">定期面談</option>
-                    <option value="follow">フォロー面談</option>
-                    <option value="evaluation">評価面談</option>
                     <option value="career">キャリア面談</option>
+                    <option value="followup">フォロー面談</option>
+                    <option value="evaluation">評価面談</option>
                     <option value="other">その他</option>
                   </select>
-                </Field>
+                </label>
 
-                <Field label="面談者">
+                <label className="block">
+                  <div className="mb-1 text-sm font-black text-slate-700">
+                    面談者
+                  </div>
                   <input
-                    name="interviewer_name"
                     className="input"
-                    placeholder="例：山田 太郎"
+                    name="interviewer_name"
+                    placeholder="例：鈴木"
                   />
-                </Field>
+                </label>
+
+                <label className="block">
+                  <div className="mb-1 text-sm font-black text-slate-700">
+                    次回面談予定日
+                  </div>
+                  <input
+                    className="input"
+                    type="date"
+                    name="next_interview_date"
+                  />
+                </label>
               </div>
 
-              <Field label="面談内容">
+              <label className="block">
+                <div className="mb-1 text-sm font-black text-slate-700">
+                  面談内容・要約 <span className="text-rose-500">*</span>
+                </div>
                 <textarea
+                  className="input min-h-32"
                   name="summary"
+                  placeholder="面談で話した内容、本人の状況、課題など"
                   required
-                  rows={5}
-                  className="input"
-                  placeholder="面談で話した内容、本人の状況、課題、希望など"
                 />
-              </Field>
+              </label>
 
-              <Field label="次回アクション">
+              <label className="block">
+                <div className="mb-1 text-sm font-black text-slate-700">
+                  次回アクション
+                </div>
                 <textarea
+                  className="input min-h-28"
                   name="action_items"
-                  rows={3}
-                  className="input"
-                  placeholder="次回までに対応すること、確認すること"
+                  placeholder="次回までに実施すること、フォロー事項など"
                 />
-              </Field>
+              </label>
 
-              <Field label="次回面談予定日">
-                <input
-                  name="next_interview_date"
-                  type="date"
-                  className="input"
-                />
-              </Field>
-
-              <div className="flex justify-end">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="submit"
-                  className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800"
+                  className="inline-flex h-11 items-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800"
                 >
-                  面談履歴を追加
+                  面談記録を追加
                 </button>
+
+                <Link
+                  href={`/employees/code/${employee.employee_code}?tab=interviews`}
+                  className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+                >
+                  戻る
+                </Link>
               </div>
             </form>
           </Card>
@@ -377,82 +393,105 @@ async function deleteInterview(formData: FormData) {
 
         <Card className="overflow-hidden">
           <div className="border-b border-slate-100 px-5 py-4">
-            <h2 className="text-lg font-black text-slate-900">面談一覧</h2>
+            <h2 className="text-lg font-black text-slate-900">
+              登録済み面談
+            </h2>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              新しい面談履歴から順に表示します。
+              面談記録の編集・削除もタイムラインへ履歴として残せるようにします。
             </p>
           </div>
 
-          <div className="divide-y divide-slate-100">
-            {(interviews ?? []).map((i) => (
-              <div key={i.id} className="p-5 hover:bg-slate-50">
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <div className="flex flex-wrap gap-2">
-                      <Chip tone="info">{i.interview_date}</Chip>
-                      <Chip>{getInterviewTypeLabel(i.interview_type)}</Chip>
-{i.next_interview_date && !i.next_interview_completed_at && (
-  <Chip tone="ok">次回: {i.next_interview_date}</Chip>
-)}
+          <div className="overflow-auto">
+            <table className="min-w-[1100px] w-full text-sm">
+              <thead className="bg-slate-50">
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="px-4 py-3 text-left font-black">面談日</th>
+                  <th className="px-4 py-3 text-left font-black">種別</th>
+                  <th className="px-4 py-3 text-left font-black">面談者</th>
+                  <th className="px-4 py-3 text-left font-black">内容</th>
+                  <th className="px-4 py-3 text-left font-black">次回予定</th>
+                  <th className="px-4 py-3 text-left font-black">操作</th>
+                </tr>
+              </thead>
 
-{i.next_interview_completed_at && (
-  <Chip tone="info">
-    次回面談完了:{" "}
-    {String(i.next_interview_completed_at).slice(0, 10)}
-  </Chip>
-)}
-                    </div>
+              <tbody>
+                {(interviews ?? []).length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-4 py-10 text-center text-sm font-bold text-slate-500"
+                    >
+                      登録済み面談はありません
+                    </td>
+                  </tr>
+                ) : (
+                  (interviews ?? []).map((i: any) => (
+                    <tr
+                      key={i.id}
+                      className="border-b border-slate-100 bg-white hover:bg-slate-50"
+                    >
+                      <td className="px-4 py-3 font-black text-slate-900">
+                        {i.interview_date || "-"}
+                      </td>
 
-                    <div className="mt-3 text-sm font-black text-slate-900">
-                      面談者：{i.interviewer_name || "-"}
-                    </div>
+                      <td className="px-4 py-3">
+                        <Chip tone="info">
+                          {getInterviewTypeLabel(i.interview_type)}
+                        </Chip>
+                      </td>
 
-                    <div className="mt-3 rounded-2xl bg-slate-50 p-4">
-                      <div className="text-xs font-black text-slate-500">
-                        面談内容
-                      </div>
-                      <div className="mt-2 whitespace-pre-wrap text-sm font-semibold text-slate-700">
-                        {i.summary || "-"}
-                      </div>
-                    </div>
+                      <td className="px-4 py-3 text-slate-600">
+                        {i.interviewer_name || "-"}
+                      </td>
 
-                    {i.action_items && (
-                      <div className="mt-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
-                        <div className="text-xs font-black text-indigo-700">
-                          次回アクション
+                      <td className="px-4 py-3 text-slate-600">
+                        <div className="line-clamp-2 max-w-[320px] whitespace-pre-wrap">
+                          {i.summary || "-"}
                         </div>
-                        <div className="mt-2 whitespace-pre-wrap text-sm font-semibold text-indigo-700">
-                          {i.action_items}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                      </td>
 
-{canManage && (
-  <div className="flex flex-wrap gap-2">
-    <Link
-      href={`/employees/code/${employee.employee_code}/interviews/${i.id}/edit`}
-      className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50"
-    >
-      編集
-    </Link>
+                      <td className="px-4 py-3">
+                        {i.next_interview_date ? (
+                          <Chip
+                            tone={
+                              i.next_interview_completed_at ? "ok" : "danger"
+                            }
+                          >
+                            {i.next_interview_completed_at
+                              ? "完了済"
+                              : i.next_interview_date}
+                          </Chip>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
 
-<DeleteInterviewButton
-  employeeCode={employee.employee_code}
-  interviewId={i.id}
-  returnTo={`/employees/code/${employee.employee_code}/interviews`}
-/>
-  </div>
-)}
-                </div>
-              </div>
-            ))}
+                      <td className="px-4 py-3">
+                        {canManage ? (
+                          <div className="flex flex-wrap gap-2">
+                            <Link
+                              href={`/employees/code/${employee.employee_code}/interviews/${i.id}/edit`}
+                              className="inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
+                            >
+                              編集
+                            </Link>
 
-            {(interviews ?? []).length === 0 && (
-              <div className="px-5 py-12 text-center text-sm font-bold text-slate-500">
-                面談履歴はありません
-              </div>
-            )}
+                            <DeleteInterviewButton
+                              interviewId={i.id}
+                              employeeCode={employee.employee_code}
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-400">
+                            閲覧のみ
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </Card>
       </div>
@@ -460,25 +499,11 @@ async function deleteInterview(formData: FormData) {
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <div className="text-sm font-black text-slate-700">{label}</div>
-      <div className="mt-2">{children}</div>
-    </label>
-  );
-}
-
 function getInterviewTypeLabel(type: string) {
   if (type === "regular") return "定期面談";
-  if (type === "follow") return "フォロー面談";
-  if (type === "evaluation") return "評価面談";
   if (type === "career") return "キャリア面談";
-  return "その他";
+  if (type === "followup") return "フォロー面談";
+  if (type === "evaluation") return "評価面談";
+  if (type === "other") return "その他";
+  return type || "面談";
 }
