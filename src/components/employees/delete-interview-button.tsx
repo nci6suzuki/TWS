@@ -1,3 +1,5 @@
+// src/components/employees/delete-interview-button.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -25,33 +27,30 @@ export function DeleteInterviewButton({
     setLoading(true);
 
     try {
+      const safeReturnTo =
+        returnTo ?? `/employees/code/${employeeCode}/interviews`;
+
       const formData = new FormData();
+      formData.append("employeeCode", employeeCode);
+      formData.append("returnTo", safeReturnTo);
 
-      if (returnTo) {
-        formData.append("returnTo", returnTo);
-      }
-
-      const res = await fetch(
-        `/employees/code/${employeeCode}/interviews/${interviewId}/delete`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      if (!res.ok && !res.redirected) {
-        const text = await res.text();
-        alert(text || "面談履歴の削除に失敗しました");
-        return;
-      }
+      const res = await fetch(`/api/employee-interviews/${interviewId}/delete`, {
+        method: "POST",
+        body: formData,
+      });
 
       if (res.redirected) {
         window.location.href = res.url;
         return;
       }
 
-      window.location.href =
-        returnTo ?? `/employees/code/${employeeCode}/interviews`;
+      if (!res.ok) {
+        const text = await res.text();
+        alert(text || "面談履歴の削除に失敗しました");
+        return;
+      }
+
+      window.location.href = safeReturnTo;
     } catch (e: any) {
       alert(e?.message ?? "面談履歴の削除に失敗しました");
     } finally {
