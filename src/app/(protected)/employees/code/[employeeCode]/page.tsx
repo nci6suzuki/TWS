@@ -62,15 +62,16 @@ export default async function EmployeeByCodePage({
       />
 
       <Card className="overflow-hidden">
-        <EmployeeProfileBook
-          employee={book.employee}
-          profile={book.profile}
-          goals={book.goals}
-          qualifications={book.qualifications}
-          events={book.events}
-          interviews={book.interviews}
-          activeTab={tab}
-        />
+<EmployeeProfileBook
+  employee={book.employee}
+  profile={book.profile}
+  goals={book.goals}
+  qualifications={book.qualifications}
+  events={book.events}
+  interviews={book.interviews}
+  activityLogs={book.activityLogs ?? []}
+  activeTab={tab}
+/>
       </Card>
     </PageShell>
   );
