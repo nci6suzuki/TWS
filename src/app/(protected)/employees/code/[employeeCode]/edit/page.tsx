@@ -1,39 +1,55 @@
+// src/app/(protected)/employees/code/[employeeCode]/edit/page.tsx
+
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createActivityLog } from "@/lib/activity-logs/create-activity-log";
 import { PageShell } from "@/components/ui/page-shell";
-import { Card, Chip } from "@/components/ui/ux";
+import { Card, Chip, PrimaryButton, GhostButton } from "@/components/ui/ux";
 
 export const runtime = "nodejs";
 
 export default async function EmployeeEditPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ employeeCode: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const me = await requireAuth();
   const { employeeCode } = await params;
+  const sp = await searchParams;
+
+  const code = decodeURIComponent(employeeCode).trim();
+
+  const getParam = (key: string) => {
+    const v = sp[key];
+    return Array.isArray(v) ? v[0] ?? "" : v ?? "";
+  };
+
+  const errorMessage = getParam("error");
+  const updated = getParam("updated");
 
   const admin = createSupabaseAdminClient();
 
   const { data: employee, error: employeeError } = await admin
     .from("employees")
     .select(
-      "id, employee_code, name, email, app_role, status, employment_type"
+      "id, employee_code, name, email, app_role, status, employment_type, hire_date"
     )
-    .eq("employee_code", employeeCode)
+    .eq("employee_code", code)
     .maybeSingle();
 
   if (employeeError) throw employeeError;
   if (!employee) notFound();
 
   const canEdit =
-    me.role === "admin" ||
-    me.role === "hr" ||
-    me.employeeId === employee.id;
+    me.role === "admin" || me.role === "hr" || me.employeeId === employee.id;
 
   if (!canEdit) redirect("/unauthorized");
+
+  const canEditRole = me.role === "admin" || me.role === "hr";
 
   const { data: profile } = await admin
     .from("employee_profiles")
@@ -60,62 +76,111 @@ export default async function EmployeeEditPage({
       formData.get("original_employee_code") ?? ""
     ).trim();
 
-    const { data: target, error: targetError } = await admin
+    const baseUrl = `/employees/code/${encodeURIComponent(
+      originalEmployeeCode
+    )}/edit`;
+
+    const { data: beforeEmployee, error: beforeEmployeeError } = await admin
       .from("employees")
-      .select("id, employee_code")
+      .select(
+        "id, employee_code, name, email, app_role, status, employment_type, hire_date"
+      )
       .eq("id", targetEmployeeId)
       .maybeSingle();
 
-    if (targetError) throw targetError;
-    if (!target) redirect("/employees");
+    if (beforeEmployeeError) {
+      redirect(`${baseUrl}?error=${encodeURIComponent(beforeEmployeeError.message)}`);
+    }
+
+    if (!beforeEmployee) {
+      redirect(`/employees?error=${encodeURIComponent("社員情報が見つかりません")}`);
+    }
 
     const canEdit =
       me.role === "admin" ||
       me.role === "hr" ||
-      me.employeeId === target.id;
+      me.employeeId === beforeEmployee.id;
 
     if (!canEdit) redirect("/unauthorized");
 
+    const canEditRole = me.role === "admin" || me.role === "hr";
+
+    const { data: beforeProfile } = await admin
+      .from("employee_profiles")
+      .select(
+        "phone_number, current_address, emergency_contact_name, emergency_contact_phone, profile_memo"
+      )
+      .eq("employee_id", beforeEmployee.id)
+      .maybeSingle();
+
+    const { data: beforeCareer } = await admin
+      .from("employee_career_goals")
+      .select("desired_role, career_goal, skill_notes")
+      .eq("employee_id", beforeEmployee.id)
+      .maybeSingle();
+
+    const nextEmployeeCode = String(
+      formData.get("employee_code") ?? beforeEmployee.employee_code
+    ).trim();
+
+    const nextName = String(formData.get("name") ?? "").trim();
+    const nextEmail = String(formData.get("email") ?? "").trim();
+
+    if (!nextEmployeeCode) {
+      redirect(`${baseUrl}?error=${encodeURIComponent("社員番号を入力してください")}`);
+    }
+
+    if (!nextName) {
+      redirect(`${baseUrl}?error=${encodeURIComponent("氏名を入力してください")}`);
+    }
+
     const employeePayload = {
-      employee_code: String(formData.get("employee_code") ?? "").trim(),
-      name: String(formData.get("name") ?? "").trim(),
-      email: String(formData.get("email") ?? "").trim(),
-      app_role: String(formData.get("app_role") ?? "employee"),
-      status: String(formData.get("status") ?? "active"),
-      employment_type: String(formData.get("employment_type") ?? "full_time"),
+      employee_code: nextEmployeeCode,
+      name: nextName,
+      email: nextEmail || null,
+
+      // admin/hr 以外は権限・状態・雇用区分を変更させない
+      app_role: canEditRole
+        ? String(formData.get("app_role") ?? beforeEmployee.app_role)
+        : beforeEmployee.app_role,
+      status: canEditRole
+        ? String(formData.get("status") ?? beforeEmployee.status)
+        : beforeEmployee.status,
+      employment_type: canEditRole
+        ? String(formData.get("employment_type") ?? beforeEmployee.employment_type)
+        : beforeEmployee.employment_type,
+      hire_date: canEditRole
+        ? normalizeDate(String(formData.get("hire_date") ?? ""))
+        : beforeEmployee.hire_date,
     };
 
     const profilePayload = {
-      employee_id: target.id,
-      phone_number: String(formData.get("phone_number") ?? "").trim(),
-      current_address: String(formData.get("current_address") ?? "").trim(),
-      emergency_contact_name: String(
-        formData.get("emergency_contact_name") ?? ""
-      ).trim(),
-      emergency_contact_phone: String(
-        formData.get("emergency_contact_phone") ?? ""
-      ).trim(),
-      profile_memo: String(formData.get("profile_memo") ?? "").trim(),
+      employee_id: beforeEmployee.id,
+      phone_number: normalizeText(formData.get("phone_number")),
+      current_address: normalizeText(formData.get("current_address")),
+      emergency_contact_name: normalizeText(
+        formData.get("emergency_contact_name")
+      ),
+      emergency_contact_phone: normalizeText(
+        formData.get("emergency_contact_phone")
+      ),
+      profile_memo: normalizeText(formData.get("profile_memo")),
     };
 
     const careerPayload = {
-      employee_id: target.id,
-      desired_role: String(formData.get("desired_role") ?? "").trim(),
-      career_goal: String(formData.get("career_goal") ?? "").trim(),
-      skill_notes: String(formData.get("skill_notes") ?? "").trim(),
+      employee_id: beforeEmployee.id,
+      desired_role: normalizeText(formData.get("desired_role")),
+      career_goal: normalizeText(formData.get("career_goal")),
+      skill_notes: normalizeText(formData.get("skill_notes")),
     };
 
     const { error: empUpdateError } = await admin
       .from("employees")
       .update(employeePayload)
-      .eq("id", target.id);
+      .eq("id", beforeEmployee.id);
 
     if (empUpdateError) {
-      redirect(
-        `/employees/code/${originalEmployeeCode}/edit?error=${encodeURIComponent(
-          empUpdateError.message
-        )}`
-      );
+      redirect(`${baseUrl}?error=${encodeURIComponent(empUpdateError.message)}`);
     }
 
     const { error: profileError } = await admin
@@ -123,11 +188,7 @@ export default async function EmployeeEditPage({
       .upsert(profilePayload, { onConflict: "employee_id" });
 
     if (profileError) {
-      redirect(
-        `/employees/code/${originalEmployeeCode}/edit?error=${encodeURIComponent(
-          profileError.message
-        )}`
-      );
+      redirect(`${baseUrl}?error=${encodeURIComponent(profileError.message)}`);
     }
 
     const { error: careerError } = await admin
@@ -135,17 +196,46 @@ export default async function EmployeeEditPage({
       .upsert(careerPayload, { onConflict: "employee_id" });
 
     if (careerError) {
-      redirect(
-        `/employees/code/${originalEmployeeCode}/edit?error=${encodeURIComponent(
-          careerError.message
-        )}`
-      );
+      redirect(`${baseUrl}?error=${encodeURIComponent(careerError.message)}`);
     }
 
-    redirect(`/employees/code/${employeePayload.employee_code}`);
-  }
+    await createActivityLog({
+      employeeId: beforeEmployee.id,
+      actorEmployeeId: me.employeeId,
+      activityType: "employee_updated",
+      title: "社員基本情報を編集しました",
+      description: "社員番号、氏名、メール、プロフィール、キャリア情報などを更新しました。",
+      relatedType: "employee",
+      relatedId: beforeEmployee.id,
+      metadata: {
+        before: {
+          employee: {
+            employee_code: beforeEmployee.employee_code,
+            name: beforeEmployee.name,
+            email: beforeEmployee.email,
+            app_role: beforeEmployee.app_role,
+            status: beforeEmployee.status,
+            employment_type: beforeEmployee.employment_type,
+            hire_date: beforeEmployee.hire_date,
+          },
+          profile: beforeProfile ?? null,
+          career: beforeCareer ?? null,
+        },
+        after: {
+          employee: employeePayload,
+          profile: profilePayload,
+          career: careerPayload,
+        },
+        updated_at: new Date().toISOString(),
+      },
+    });
 
-  const canEditRole = me.role === "admin" || me.role === "hr";
+    redirect(
+      `/employees/code/${encodeURIComponent(
+        employeePayload.employee_code
+      )}?tab=timeline&updated=1`
+    );
+  }
 
   return (
     <PageShell>
@@ -160,22 +250,47 @@ export default async function EmployeeEditPage({
                 社員情報の編集
               </h1>
               <p className="mt-2 text-sm font-semibold text-slate-500">
-                基本情報、プロフィール、キャリア希望を編集できます。
+                基本情報、プロフィール、キャリア希望を編集できます。保存するとタイムラインに履歴が残ります。
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <Chip tone="info">{employee.employee_code}</Chip>
               <Chip>{employee.app_role}</Chip>
-              <Link
-                href={`/employees/code/${employee.employee_code}`}
-                className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
-              >
+              <Chip>{employee.status}</Chip>
+              <GhostButton href={`/employees/code/${employee.employee_code}`}>
                 カルテへ戻る
-              </Link>
+              </GhostButton>
+              <PrimaryButton
+                href={`/employees/code/${employee.employee_code}?tab=timeline`}
+              >
+                タイムライン
+              </PrimaryButton>
             </div>
           </div>
         </Card>
+
+        {errorMessage && (
+          <Card className="border-rose-200 bg-rose-50 p-5">
+            <div className="text-sm font-black text-rose-700">
+              エラーが発生しました
+            </div>
+            <div className="mt-1 text-sm font-semibold text-rose-600">
+              {errorMessage}
+            </div>
+          </Card>
+        )}
+
+        {updated && (
+          <Card className="border-emerald-200 bg-emerald-50 p-5">
+            <div className="text-sm font-black text-emerald-700">
+              社員情報を更新しました
+            </div>
+            <div className="mt-1 text-sm font-semibold text-emerald-600">
+              更新内容をタイムラインに履歴として保存しました。
+            </div>
+          </Card>
+        )}
 
         <form action={updateEmployee} className="space-y-6">
           <input type="hidden" name="employee_id" value={employee.id} />
@@ -219,6 +334,16 @@ export default async function EmployeeEditPage({
                 />
               </Field>
 
+              <Field label="入社日">
+                <input
+                  name="hire_date"
+                  type="date"
+                  defaultValue={employee.hire_date ?? ""}
+                  disabled={!canEditRole}
+                  className="input disabled:bg-slate-100 disabled:text-slate-500"
+                />
+              </Field>
+
               <Field label="ロール">
                 <select
                   name="app_role"
@@ -242,9 +367,8 @@ export default async function EmployeeEditPage({
                   className="input disabled:bg-slate-100 disabled:text-slate-500"
                 >
                   <option value="active">active</option>
+                  <option value="leave">leave</option>
                   <option value="inactive">inactive</option>
-                  <option value="on_leave">on_leave</option>
-                  <option value="retired">retired</option>
                 </select>
               </Field>
 
@@ -258,19 +382,24 @@ export default async function EmployeeEditPage({
                   <option value="full_time">full_time</option>
                   <option value="part_time">part_time</option>
                   <option value="contract">contract</option>
-                  <option value="temporary">temporary</option>
-                  <option value="outsourced">outsourced</option>
+                  <option value="other">other</option>
                 </select>
               </Field>
             </div>
+
+            {!canEditRole && (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-700">
+                権限・状態・雇用区分・入社日は、管理者または人事のみ変更できます。
+              </div>
+            )}
           </Card>
 
           <Card className="p-6">
             <h2 className="text-xl font-black text-slate-900">
-              プロフィール
+              プロフィール情報
             </h2>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              連絡先や緊急連絡先を編集します。
+              連絡先、住所、緊急連絡先などを管理します。
             </p>
 
             <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -279,16 +408,14 @@ export default async function EmployeeEditPage({
                   name="phone_number"
                   defaultValue={profile?.phone_number ?? ""}
                   className="input"
-                  placeholder="例：090-0000-0000"
                 />
               </Field>
 
-              <Field label="現住所">
+              <Field label="住所">
                 <input
                   name="current_address"
                   defaultValue={profile?.current_address ?? ""}
                   className="input"
-                  placeholder="例：新潟県〇〇市..."
                 />
               </Field>
 
@@ -307,52 +434,52 @@ export default async function EmployeeEditPage({
                   className="input"
                 />
               </Field>
+            </div>
 
-              <div className="md:col-span-2">
-                <Field label="補足メモ">
-                  <textarea
-                    name="profile_memo"
-                    defaultValue={profile?.profile_memo ?? ""}
-                    rows={3}
-                    className="input"
-                  />
-                </Field>
-              </div>
+            <div className="mt-4">
+              <Field label="プロフィールメモ">
+                <textarea
+                  name="profile_memo"
+                  defaultValue={profile?.profile_memo ?? ""}
+                  rows={5}
+                  className="input"
+                />
+              </Field>
             </div>
           </Card>
 
           <Card className="p-6">
             <h2 className="text-xl font-black text-slate-900">
-              キャリア希望
+              キャリア情報
             </h2>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              今後の希望や身につけたいスキルを編集します。
+              希望職種、キャリア目標、スキル・育成メモを管理します。
             </p>
 
-            <div className="mt-5 space-y-4">
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
               <Field label="希望する役割・職種">
                 <input
                   name="desired_role"
                   defaultValue={career?.desired_role ?? ""}
                   className="input"
-                  placeholder="例：営業、管理、システム、採用など"
                 />
               </Field>
 
               <Field label="キャリア目標">
-                <textarea
+                <input
                   name="career_goal"
                   defaultValue={career?.career_goal ?? ""}
-                  rows={4}
                   className="input"
                 />
               </Field>
+            </div>
 
-              <Field label="スキル・資格・学びたいこと">
+            <div className="mt-4">
+              <Field label="スキル・育成メモ">
                 <textarea
                   name="skill_notes"
                   defaultValue={career?.skill_notes ?? ""}
-                  rows={4}
+                  rows={5}
                   className="input"
                 />
               </Field>
@@ -366,6 +493,7 @@ export default async function EmployeeEditPage({
             >
               キャンセル
             </Link>
+
             <button
               type="submit"
               className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white hover:bg-slate-800"
@@ -392,4 +520,14 @@ function Field({
       <div className="mt-2">{children}</div>
     </label>
   );
+}
+
+function normalizeText(value: FormDataEntryValue | null) {
+  const text = String(value ?? "").trim();
+  return text || null;
+}
+
+function normalizeDate(value: string) {
+  const text = String(value ?? "").trim();
+  return text || null;
 }
