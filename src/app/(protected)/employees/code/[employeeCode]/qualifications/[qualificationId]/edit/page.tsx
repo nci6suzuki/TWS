@@ -1,9 +1,12 @@
+// src/app/(protected)/employees/code/[employeeCode]/qualifications/[qualificationId]/edit/page.tsx
+
 import Link from "next/link";
-import { redirect, notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createActivityLog } from "@/lib/activity-logs/create-activity-log";
 import { PageShell } from "@/components/ui/page-shell";
-import { Card, Chip } from "@/components/ui/ux";
+import { Hero, Card, Chip, PrimaryButton, GhostButton } from "@/components/ui/ux";
 
 export const runtime = "nodejs";
 
@@ -15,28 +18,34 @@ export default async function QualificationEditPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const me = await requireAuth();
-  const { employeeCode, qualificationId } = await params;
-  const sp = await searchParams;
-
-  const errorParam = sp.error;
-  const errorMessage = Array.isArray(errorParam)
-    ? errorParam[0] ?? ""
-    : errorParam ?? "";
 
   if (me.role !== "admin" && me.role !== "hr") {
     redirect("/unauthorized");
   }
 
+  const { employeeCode, qualificationId } = await params;
+  const sp = await searchParams;
+
+  const code = decodeURIComponent(employeeCode).trim();
+
+  const getParam = (key: string) => {
+    const v = sp[key];
+    return Array.isArray(v) ? v[0] ?? "" : v ?? "";
+  };
+
+  const errorMessage = getParam("error");
+  const updated = getParam("updated");
+
   const admin = createSupabaseAdminClient();
 
   const { data: employee, error: employeeError } = await admin
     .from("employees")
-    .select("id, employee_code, name, email")
-    .eq("employee_code", employeeCode)
+    .select("id, employee_code, name, email, app_role, status")
+    .eq("employee_code", code)
     .maybeSingle();
 
   if (employeeError) throw employeeError;
-  if (!employee) notFound();
+  if (!employee) redirect("/employees");
 
   const { data: qualification, error: qualificationError } = await admin
     .from("employee_qualifications")
@@ -46,98 +55,155 @@ export default async function QualificationEditPage({
     .maybeSingle();
 
   if (qualificationError) throw qualificationError;
-  if (!qualification) notFound();
+  if (!qualification) {
+    redirect(
+      `/employees/code/${encodeURIComponent(
+        employee.employee_code
+      )}/qualifications?error=${encodeURIComponent("資格情報が見つかりません")}`
+    );
+  }
 
   async function updateQualification(formData: FormData) {
     "use server";
 
     const me = await requireAuth();
+
     if (me.role !== "admin" && me.role !== "hr") {
       redirect("/unauthorized");
     }
 
     const admin = createSupabaseAdminClient();
 
-    const targetEmployeeCode = String(
-      formData.get("employee_code") ?? ""
-    ).trim();
-
-    const targetQualificationId = String(
-      formData.get("qualification_id") ?? ""
-    ).trim();
+    const employeeId = String(formData.get("employee_id") ?? "");
+    const employeeCode = String(formData.get("employee_code") ?? "");
+    const qualificationId = String(formData.get("qualification_id") ?? "");
 
     const qualificationName = String(
       formData.get("qualification_name") ?? ""
     ).trim();
-
-    const acquiredOnRaw = String(formData.get("acquired_on") ?? "").trim();
-    const expiresOnRaw = String(formData.get("expires_on") ?? "").trim();
+    const acquiredOn = String(formData.get("acquired_on") ?? "").trim();
+    const expiresOn = String(formData.get("expires_on") ?? "").trim();
     const status = String(formData.get("status") ?? "active").trim();
     const memo = String(formData.get("memo") ?? "").trim();
 
-    const acquiredOn = acquiredOnRaw === "" ? null : acquiredOnRaw;
-    const expiresOn = expiresOnRaw === "" ? null : expiresOnRaw;
+    const baseUrl = `/employees/code/${encodeURIComponent(
+      employeeCode
+    )}/qualifications/${qualificationId}/edit`;
 
-    if (!targetQualificationId || !qualificationName) {
+    const listUrl = `/employees/code/${encodeURIComponent(
+      employeeCode
+    )}/qualifications`;
+
+    if (!employeeId || !employeeCode || !qualificationId) {
       redirect(
-        `/employees/code/${targetEmployeeCode}/qualifications/${targetQualificationId}/edit?error=${encodeURIComponent(
-          "資格名を入力してください"
-        )}`
+        `${listUrl}?error=${encodeURIComponent("更新対象が確認できません")}`
       );
     }
 
-    const { error } = await admin
+    if (!qualificationName) {
+      redirect(
+        `${baseUrl}?error=${encodeURIComponent("資格名を入力してください")}`
+      );
+    }
+
+    const { data: beforeQualification, error: beforeError } = await admin
+      .from("employee_qualifications")
+      .select("id, employee_id, qualification_name, acquired_on, expires_on, status, memo")
+      .eq("id", qualificationId)
+      .eq("employee_id", employeeId)
+      .maybeSingle();
+
+    if (beforeError) {
+      redirect(`${baseUrl}?error=${encodeURIComponent(beforeError.message)}`);
+    }
+
+    if (!beforeQualification) {
+      redirect(
+        `${listUrl}?error=${encodeURIComponent("資格情報が見つかりません")}`
+      );
+    }
+
+    const { data: updatedQualification, error } = await admin
       .from("employee_qualifications")
       .update({
         qualification_name: qualificationName,
-        acquired_on: acquiredOn,
-        expires_on: expiresOn,
-        status,
-        memo,
-        updated_at: new Date().toISOString(),
+        acquired_on: acquiredOn || null,
+        expires_on: expiresOn || null,
+        status: status || "active",
+        memo: memo || null,
       })
-      .eq("id", targetQualificationId);
+      .eq("id", qualificationId)
+      .eq("employee_id", employeeId)
+      .select("id, employee_id, qualification_name, acquired_on, expires_on, status, memo")
+      .single();
 
     if (error) {
-      redirect(
-        `/employees/code/${targetEmployeeCode}/qualifications/${targetQualificationId}/edit?error=${encodeURIComponent(
-          error.message
-        )}`
-      );
+      redirect(`${baseUrl}?error=${encodeURIComponent(error.message)}`);
     }
 
-    redirect(`/employees/code/${targetEmployeeCode}/qualifications`);
+    await createActivityLog({
+      employeeId,
+      actorEmployeeId: me.employeeId,
+      activityType: "qualification_updated",
+      title: "資格を編集しました",
+      description: `「${qualificationName}」を編集しました。${
+        expiresOn ? `有効期限：${expiresOn}` : "有効期限：未設定"
+      }`,
+      relatedType: "employee_qualification",
+      relatedId: updatedQualification.id,
+      metadata: {
+        before: {
+          qualification_name: beforeQualification.qualification_name,
+          acquired_on: beforeQualification.acquired_on,
+          expires_on: beforeQualification.expires_on,
+          status: beforeQualification.status,
+          memo: beforeQualification.memo,
+        },
+        after: {
+          qualification_name: updatedQualification.qualification_name,
+          acquired_on: updatedQualification.acquired_on,
+          expires_on: updatedQualification.expires_on,
+          status: updatedQualification.status,
+          memo: updatedQualification.memo,
+        },
+      },
+    });
+
+    redirect(
+      `${baseUrl}?updated=${encodeURIComponent(updatedQualification.qualification_name)}`
+    );
   }
 
   return (
     <PageShell>
-      <div className="mx-auto max-w-4xl space-y-6">
-        <Card className="p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <div className="text-xs font-black tracking-[0.18em] text-indigo-600">
-                QUALIFICATION EDIT
-              </div>
-              <h1 className="mt-2 text-3xl font-black text-slate-900">
-                資格情報の編集
-              </h1>
-              <p className="mt-2 text-sm font-semibold text-slate-500">
-                資格名、取得日、有効期限、状態、メモを編集します。
-              </p>
-            </div>
-
+      <div className="space-y-6">
+        <Hero
+          title="資格編集"
+          subtitle="資格名、取得日、有効期限、状態、メモを編集します。編集内容はタイムラインにも履歴として残ります。"
+          meta={
             <div className="flex flex-wrap gap-2">
-              <Chip tone="info">{employee.employee_code}</Chip>
-              <Chip>{employee.name}</Chip>
-              <Link
+              <Chip tone="info">Qualification Edit</Chip>
+              <Chip>
+                {employee.employee_code} / {employee.name}
+              </Chip>
+              <Chip>{qualification.qualification_name}</Chip>
+            </div>
+          }
+          right={
+            <>
+              <GhostButton
                 href={`/employees/code/${employee.employee_code}/qualifications`}
-                className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
               >
                 資格管理へ戻る
-              </Link>
-            </div>
-          </div>
-        </Card>
+              </GhostButton>
+              <PrimaryButton
+                href={`/employees/code/${employee.employee_code}?tab=timeline`}
+              >
+                タイムライン
+              </PrimaryButton>
+            </>
+          }
+        />
 
         {errorMessage && (
           <Card className="border-rose-200 bg-rose-50 p-5">
@@ -150,112 +216,130 @@ export default async function QualificationEditPage({
           </Card>
         )}
 
-        <form action={updateQualification} className="space-y-6">
-          <input
-            type="hidden"
-            name="employee_code"
-            value={employee.employee_code}
-          />
-          <input
-            type="hidden"
-            name="qualification_id"
-            value={qualification.id}
-          />
-
-          <Card className="p-6">
-            <h2 className="text-xl font-black text-slate-900">資格情報</h2>
-            <p className="mt-1 text-sm font-semibold text-slate-500">
-              登録済みの資格情報を変更できます。
-            </p>
-
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Field label="資格名">
-                <input
-                  name="qualification_name"
-                  defaultValue={qualification.qualification_name ?? ""}
-                  required
-                  className="input"
-                  placeholder="例：第一種衛生管理者"
-                />
-              </Field>
-
-              <Field label="状態">
-                <select
-                  name="status"
-                  defaultValue={qualification.status ?? "active"}
-                  className="input"
-                >
-                  <option value="active">active</option>
-                  <option value="expired">expired</option>
-                  <option value="planned">planned</option>
-                  <option value="suspended">suspended</option>
-                </select>
-              </Field>
-
-              <Field label="取得日">
-                <input
-                  name="acquired_on"
-                  type="date"
-                  defaultValue={qualification.acquired_on ?? ""}
-                  className="input"
-                />
-              </Field>
-
-              <Field label="有効期限">
-                <input
-                  name="expires_on"
-                  type="date"
-                  defaultValue={qualification.expires_on ?? ""}
-                  className="input"
-                />
-              </Field>
-
-              <div className="md:col-span-2">
-                <Field label="メモ">
-                  <textarea
-                    name="memo"
-                    rows={4}
-                    defaultValue={qualification.memo ?? ""}
-                    className="input"
-                    placeholder="更新予定、証明書の保管場所など"
-                  />
-                </Field>
-              </div>
+        {updated && (
+          <Card className="border-emerald-200 bg-emerald-50 p-5">
+            <div className="text-sm font-black text-emerald-700">
+              資格を編集しました
+            </div>
+            <div className="mt-1 text-sm font-semibold text-emerald-600">
+              「{updated}」を更新し、タイムラインに履歴を保存しました。
             </div>
           </Card>
+        )}
 
-          <div className="flex flex-col gap-3 md:flex-row md:justify-end">
-            <Link
-              href={`/employees/code/${employee.employee_code}/qualifications`}
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 hover:bg-slate-50"
-            >
-              キャンセル
-            </Link>
-
-            <button
-              type="submit"
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white hover:bg-slate-800"
-            >
-              保存する
-            </button>
+        <Card className="p-5">
+          <div className="mb-5">
+            <h2 className="text-lg font-black text-slate-900">編集内容</h2>
+            <p className="mt-1 text-sm font-semibold text-slate-500">
+              有効期限を更新すると、社員一覧や通知生成時の要対応判定にも反映されます。
+            </p>
           </div>
-        </form>
+
+          <form action={updateQualification} className="space-y-5">
+            <input type="hidden" name="employee_id" value={employee.id} />
+            <input
+              type="hidden"
+              name="employee_code"
+              value={employee.employee_code}
+            />
+            <input
+              type="hidden"
+              name="qualification_id"
+              value={qualification.id}
+            />
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <label className="block">
+                <div className="mb-1 text-sm font-black text-slate-700">
+                  資格名 <span className="text-rose-500">*</span>
+                </div>
+                <input
+                  className="input"
+                  name="qualification_name"
+                  defaultValue={qualification.qualification_name ?? ""}
+                  placeholder="例：第一種衛生管理者"
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <div className="mb-1 text-sm font-black text-slate-700">
+                  状態
+                </div>
+                <select
+                  className="input"
+                  name="status"
+                  defaultValue={qualification.status ?? "active"}
+                >
+                  <option value="active">有効</option>
+                  <option value="expired">期限切れ</option>
+                  <option value="planned">取得予定</option>
+                  <option value="inactive">無効</option>
+                </select>
+              </label>
+
+              <label className="block">
+                <div className="mb-1 text-sm font-black text-slate-700">
+                  取得日
+                </div>
+                <input
+                  className="input"
+                  type="date"
+                  name="acquired_on"
+                  defaultValue={qualification.acquired_on ?? ""}
+                />
+              </label>
+
+              <label className="block">
+                <div className="mb-1 text-sm font-black text-slate-700">
+                  有効期限
+                </div>
+                <input
+                  className="input"
+                  type="date"
+                  name="expires_on"
+                  defaultValue={qualification.expires_on ?? ""}
+                />
+              </label>
+            </div>
+
+            <label className="block">
+              <div className="mb-1 text-sm font-black text-slate-700">
+                メモ
+              </div>
+              <textarea
+                className="input min-h-28"
+                name="memo"
+                defaultValue={qualification.memo ?? ""}
+                placeholder="更新予定、証明書の保管場所、補足など"
+              />
+            </label>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="submit"
+                className="inline-flex h-11 items-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800"
+              >
+                更新する
+              </button>
+
+              <Link
+                href={`/employees/code/${employee.employee_code}/qualifications`}
+                className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+              >
+                資格管理へ戻る
+              </Link>
+
+              <Link
+                href={`/employees/code/${employee.employee_code}?tab=qualifications`}
+                className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+              >
+                資格タブへ戻る
+              </Link>
+            </div>
+          </form>
+        </Card>
       </div>
     </PageShell>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <div className="text-sm font-black text-slate-700">{label}</div>
-      <div className="mt-2">{children}</div>
-    </label>
   );
 }
