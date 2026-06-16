@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createActivityLog } from "@/lib/activity-logs/create-activity-log";
 import { PageShell } from "@/components/ui/page-shell";
 import { Hero, Card, Chip, KPI, PrimaryButton } from "@/components/ui/ux";
 
@@ -87,17 +88,59 @@ export default async function NotificationsPage({
     const id = String(formData.get("id") ?? "");
     const admin = createSupabaseAdminClient();
 
+    const { data: notification, error: fetchError } = await admin
+      .from("notifications")
+      .select(
+        "id, employee_id, title, message, notification_type, severity, status, due_date, related_type, related_id"
+      )
+      .eq("id", id)
+      .maybeSingle();
+
+    if (fetchError) {
+      redirect(`/notifications?error=${encodeURIComponent(fetchError.message)}`);
+    }
+
+    if (!notification) {
+      redirect(
+        `/notifications?error=${encodeURIComponent("通知が見つかりません")}`
+      );
+    }
+
+    const readAt = new Date().toISOString();
+
     const { error } = await admin
       .from("notifications")
       .update({
         status: "read",
-        read_at: new Date().toISOString(),
+        read_at: readAt,
         read_by_employee_id: me.employeeId,
       })
       .eq("id", id);
 
     if (error) {
       redirect(`/notifications?error=${encodeURIComponent(error.message)}`);
+    }
+
+    if (notification.employee_id) {
+      await createActivityLog({
+        employeeId: notification.employee_id,
+        actorEmployeeId: me.employeeId,
+        activityType: "notification_read",
+        title: "通知を既読にしました",
+        description: `通知「${notification.title}」を既読にしました。`,
+        relatedType: "notification",
+        relatedId: notification.id,
+        metadata: {
+          notification_type: notification.notification_type,
+          severity: notification.severity,
+          due_date: notification.due_date,
+          related_type: notification.related_type,
+          related_id: notification.related_id,
+          previous_status: notification.status,
+          new_status: "read",
+          read_at: readAt,
+        },
+      });
     }
 
     redirect("/notifications");
@@ -114,17 +157,56 @@ export default async function NotificationsPage({
 
     const admin = createSupabaseAdminClient();
 
+    const { data: unreadNotifications, error: fetchError } = await admin
+      .from("notifications")
+      .select(
+        "id, employee_id, title, message, notification_type, severity, status, due_date, related_type, related_id"
+      )
+      .eq("status", "unread")
+      .limit(1000);
+
+    if (fetchError) {
+      redirect(`/notifications?error=${encodeURIComponent(fetchError.message)}`);
+    }
+
+    const readAt = new Date().toISOString();
+
     const { error } = await admin
       .from("notifications")
       .update({
         status: "read",
-        read_at: new Date().toISOString(),
+        read_at: readAt,
         read_by_employee_id: me.employeeId,
       })
       .eq("status", "unread");
 
     if (error) {
       redirect(`/notifications?error=${encodeURIComponent(error.message)}`);
+    }
+
+    for (const notification of unreadNotifications ?? []) {
+      if (!notification.employee_id) continue;
+
+      await createActivityLog({
+        employeeId: notification.employee_id,
+        actorEmployeeId: me.employeeId,
+        activityType: "notification_read",
+        title: "通知を一括既読にしました",
+        description: `通知「${notification.title}」を一括既読にしました。`,
+        relatedType: "notification",
+        relatedId: notification.id,
+        metadata: {
+          notification_type: notification.notification_type,
+          severity: notification.severity,
+          due_date: notification.due_date,
+          related_type: notification.related_type,
+          related_id: notification.related_id,
+          previous_status: notification.status,
+          new_status: "read",
+          read_at: readAt,
+          bulk: true,
+        },
+      });
     }
 
     redirect("/notifications");
@@ -291,7 +373,8 @@ export default async function NotificationsPage({
 
                         <div className="mt-3 text-xs font-semibold text-slate-400">
                           作成日時: {formatDateTime(n.created_at)}
-                          {n.read_at && ` / 既読日時: ${formatDateTime(n.read_at)}`}
+                          {n.read_at &&
+                            ` / 既読日時: ${formatDateTime(n.read_at)}`}
                         </div>
                       </div>
 
