@@ -3,9 +3,18 @@
 import Link from "next/link";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseServerDbClient } from "@/lib/supabase/server-db";
-import { PageShell } from "@/components/ui/page-shell";
-import { Hero, KPI, Chip, PrimaryButton, Card } from "@/components/ui/ux";
 import { InviteButton } from "@/components/employees/invite-button";
+import {
+  Hero,
+  KPI,
+  Chip,
+  PrimaryButton,
+  GhostButton,
+  Card,
+} from "@/components/ui/ux";
+import { PageShell } from "@/components/ui/page-shell";
+
+export const runtime = "nodejs";
 
 export default async function EmployeesPage({
   searchParams,
@@ -17,49 +26,44 @@ export default async function EmployeesPage({
   const me = await requireAuth();
   const supabase = await createSupabaseServerDbClient();
 
-  const inviteParam = sp.invite;
-  const inviteFilter = Array.isArray(inviteParam)
-    ? inviteParam[0] ?? ""
-    : inviteParam ?? "";
+  const getParam = (key: string) => {
+    const v = sp[key];
+    return Array.isArray(v) ? v[0] ?? "" : v ?? "";
+  };
 
-  const attentionParam = sp.attention;
-  const attentionFilter = Array.isArray(attentionParam)
-    ? attentionParam[0] ?? ""
-    : attentionParam ?? "";
+  const q = getParam("q");
+  const invite = getParam("invite");
+  const attention = getParam("attention");
 
-  const qParam = sp.q;
-  const q = Array.isArray(qParam) ? qParam[0] ?? "" : qParam ?? "";
-  const keyword = q.trim().toLowerCase();
+  const today = formatDate(new Date());
 
-  const { data, error } = await supabase
+  const alertDateObj = new Date();
+  alertDateObj.setDate(alertDateObj.getDate() + 30);
+  const alertDate = formatDate(alertDateObj);
+
+  let query = supabase
     .from("employees")
     .select(
       "id, employee_code, name, email, app_role, status, user_id, last_invited_at"
     )
     .order("employee_code", { ascending: true })
-    .limit(200);
+    .limit(1000);
 
-  if (error) {
-    return (
-      <PageShell>
-        <Card className="p-6">
-          <div className="text-xl font-black text-slate-900">社員一覧</div>
-          <div className="mt-2 text-sm font-semibold text-rose-600">
-            読み込みに失敗：{error.message}
-          </div>
-        </Card>
-      </PageShell>
+  if (q) {
+    query = query.or(
+      `employee_code.ilike.%${q}%,name.ilike.%${q}%,email.ilike.%${q}%`
     );
   }
 
-  const allEmployees = data ?? [];
-  const employeeIds = allEmployees.map((e) => e.id);
+  if (invite === "uninvited") {
+    query = query.is("user_id", null);
+  }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await query;
+  if (error) throw error;
 
-  const alertDateObj = new Date();
-  alertDateObj.setDate(alertDateObj.getDate() + 30);
-  const alertDate = alertDateObj.toISOString().slice(0, 10);
+  const employees = data ?? [];
+  const employeeIds = employees.map((e) => e.id);
 
   const { data: qualifications } =
     employeeIds.length > 0
@@ -90,364 +94,398 @@ export default async function EmployeesPage({
   const attentionByEmployeeId = new Map<
     string,
     {
+      total: number;
       expiredQualifications: number;
-      expiringSoonQualifications: number;
+      soonQualifications: number;
       overdueEvents: number;
       pendingInterviews: number;
-      total: number;
     }
   >();
 
-  for (const employee of allEmployees) {
-    const employeeQualifications = (qualifications ?? []).filter(
-      (q: any) => q.employee_id === employee.id
-    );
-
-    const employeeEvents = (annualEvents ?? []).filter(
-      (e: any) => e.employee_id === employee.id
-    );
-
-    const employeeInterviews = (interviews ?? []).filter(
-      (i: any) => i.employee_id === employee.id
-    );
-
-    const expiredQualifications = employeeQualifications.filter(
-      (q: any) => q.expires_on && q.expires_on < today
-    ).length;
-
-    const expiringSoonQualifications = employeeQualifications.filter(
-      (q: any) =>
-        q.expires_on && q.expires_on >= today && q.expires_on <= alertDate
-    ).length;
-
-    const overdueEvents = employeeEvents.filter(
-      (e: any) => e.status === "pending" && e.scheduled_date < today
-    ).length;
-
-    const pendingInterviews = employeeInterviews.filter(
-      (i: any) => i.next_interview_date && !i.next_interview_completed_at
-    ).length;
-
-    const total =
-      expiredQualifications +
-      expiringSoonQualifications +
-      overdueEvents +
-      pendingInterviews;
-
+  for (const employee of employees) {
     attentionByEmployeeId.set(employee.id, {
-      expiredQualifications,
-      expiringSoonQualifications,
-      overdueEvents,
-      pendingInterviews,
-      total,
+      total: 0,
+      expiredQualifications: 0,
+      soonQualifications: 0,
+      overdueEvents: 0,
+      pendingInterviews: 0,
     });
   }
 
-  const activeCount = allEmployees.filter((e) => e.status === "active").length;
-  const inactiveCount = allEmployees.filter((e) => e.status !== "active").length;
-  const uninvitedCount = allEmployees.filter((e) => !e.user_id).length;
-  const invitedCount = allEmployees.filter((e) => !!e.user_id).length;
+  for (const item of qualifications ?? []) {
+    if (!item.expires_on) continue;
 
-  const attentionCount = allEmployees.filter((e) => {
-    const attention = attentionByEmployeeId.get(e.id);
-    return (attention?.total ?? 0) > 0;
+    const attentionItem = attentionByEmployeeId.get(item.employee_id);
+    if (!attentionItem) continue;
+
+    if (item.expires_on < today) {
+      attentionItem.expiredQualifications += 1;
+      attentionItem.total += 1;
+    } else if (item.expires_on <= alertDate) {
+      attentionItem.soonQualifications += 1;
+      attentionItem.total += 1;
+    }
+  }
+
+  for (const event of annualEvents ?? []) {
+    const attentionItem = attentionByEmployeeId.get(event.employee_id);
+    if (!attentionItem) continue;
+
+    if (event.status === "pending" && event.scheduled_date < today) {
+      attentionItem.overdueEvents += 1;
+      attentionItem.total += 1;
+    }
+  }
+
+  for (const interview of interviews ?? []) {
+    const attentionItem = attentionByEmployeeId.get(interview.employee_id);
+    if (!attentionItem) continue;
+
+    if (
+      interview.next_interview_date &&
+      !interview.next_interview_completed_at
+    ) {
+      attentionItem.pendingInterviews += 1;
+      attentionItem.total += 1;
+    }
+  }
+
+  const visibleEmployees =
+    attention === "required"
+      ? employees.filter((employee) => {
+          const item = attentionByEmployeeId.get(employee.id);
+          return (item?.total ?? 0) > 0;
+        })
+      : employees;
+
+  const totalCount = employees.length;
+  const activeCount = employees.filter((e) => e.status === "active").length;
+  const inactiveCount = employees.filter((e) => e.status !== "active").length;
+  const invitedCount = employees.filter((e) => e.user_id).length;
+  const uninvitedCount = employees.filter((e) => !e.user_id).length;
+  const attentionCount = employees.filter((employee) => {
+    const item = attentionByEmployeeId.get(employee.id);
+    return (item?.total ?? 0) > 0;
   }).length;
 
-  const employees = allEmployees.filter((e) => {
-    if (inviteFilter === "uninvited" && e.user_id) return false;
+  const baseParams = new URLSearchParams();
 
-    if (attentionFilter === "required") {
-      const attention = attentionByEmployeeId.get(e.id);
-      if ((attention?.total ?? 0) <= 0) return false;
-    }
+  if (q) baseParams.set("q", q);
+  if (invite) baseParams.set("invite", invite);
+  if (attention) baseParams.set("attention", attention);
 
-    if (keyword) {
-      const text = [e.employee_code, e.name, e.email, e.app_role, e.status]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+  const exportHref = `/api/employees/export${
+    baseParams.toString() ? `?${baseParams.toString()}` : ""
+  }`;
 
-      if (!text.includes(keyword)) return false;
-    }
+  const filterHref = (params: Record<string, string>) => {
+    const p = new URLSearchParams();
 
-    return true;
-  });
+    if (q) p.set("q", q);
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value) p.set(key, value);
+    });
+
+    return `/employees?${p.toString()}`;
+  };
 
   return (
     <PageShell>
-      <Hero
-        title="社員一覧"
-        subtitle="社員情報、ロール、在籍状態、招待状況、要対応の有無を確認し、社員カルテへ素早くアクセスできます。"
-        meta={
-          <div className="flex flex-wrap gap-2">
-            <Chip tone="info">Employee Management</Chip>
-            <Chip>ログイン権限: {me.role}</Chip>
-            <Chip>表示件数: {employees.length}</Chip>
+      <div className="space-y-6">
+        <Hero
+          title="社員一覧"
+          subtitle="社員カルテ、招待状況、資格期限、年間イベント、面談予定をまとめて確認できます。"
+          meta={
+            <div className="flex flex-wrap gap-2">
+              <Chip tone="info">Employees</Chip>
+              <Chip>表示件数: {visibleEmployees.length}</Chip>
+              <Chip>ログイン権限: {me.role}</Chip>
 
-            {q && <Chip tone="info">検索: {q}</Chip>}
+              {q && <Chip>検索: {q}</Chip>}
 
-            {inviteFilter === "uninvited" && (
-              <Chip tone="danger">未招待のみ表示中</Chip>
-            )}
+              {invite === "uninvited" && (
+                <Chip tone="danger">未招待のみ表示中</Chip>
+              )}
 
-            {attentionFilter === "required" && (
-              <Chip tone="danger">要対応ありのみ表示中</Chip>
-            )}
-          </div>
-        }
-        right={
-          <>
-            <PrimaryButton href="/employees">全社員</PrimaryButton>
-            <PrimaryButton href="/employees?invite=uninvited">
-              未招待だけ
-            </PrimaryButton>
-            <PrimaryButton href="/employees?attention=required">
-              要対応あり
-            </PrimaryButton>
-            {(me.role === "admin" || me.role === "hr") && (
-              <PrimaryButton href="/employees/new">+ 社員登録</PrimaryButton>
-            )}
-          </>
-        }
-      />
+              {attention === "required" && (
+                <Chip tone="danger">要対応のみ表示中</Chip>
+              )}
+            </div>
+          }
+          right={
+            <>
+              <PrimaryButton href="/employees">全社員</PrimaryButton>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
-        <KPI label="社員数" value={allEmployees.length} />
-        <KPI label="在籍中" value={activeCount} tone="ok" />
-        <KPI label="休職・退職等" value={inactiveCount} tone="danger" />
-        <KPI label="招待済" value={invitedCount} tone="ok" />
-        <KPI
-          label="未招待"
-          value={uninvitedCount}
-          tone="danger"
-          href="/employees?invite=uninvited"
+              <GhostButton href={filterHref({ invite: "uninvited" })}>
+                未招待
+              </GhostButton>
+
+              <PrimaryButton href={filterHref({ attention: "required" })}>
+                要対応
+              </PrimaryButton>
+
+              {(me.role === "admin" || me.role === "hr") && (
+                <>
+                  <PrimaryButton href={exportHref}>CSV出力</PrimaryButton>
+                  <PrimaryButton href="/employees/new">+ 社員登録</PrimaryButton>
+                </>
+              )}
+            </>
+          }
         />
-        <KPI
-          label="要対応あり"
-          value={attentionCount}
-          tone={attentionCount > 0 ? "danger" : "ok"}
-          href="/employees?attention=required"
-        />
-      </div>
 
-      <Card className="p-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-lg font-black text-slate-900">社員検索</h2>
-            <p className="mt-1 text-sm font-medium text-slate-500">
-              社員番号・氏名・メールで検索できます。未招待・要対応ありでの絞り込みも可能です。
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Chip>社員番号順</Chip>
-            <Chip tone="gray">最大200件</Chip>
-            <Chip tone={inviteFilter === "uninvited" ? "danger" : "gray"}>
-              {inviteFilter === "uninvited" ? "未招待のみ" : "全社員"}
-            </Chip>
-            <Chip tone={attentionFilter === "required" ? "danger" : "gray"}>
-              {attentionFilter === "required" ? "要対応ありのみ" : "要対応含む"}
-            </Chip>
-          </div>
-        </div>
-
-        <form
-          action="/employees"
-          className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto]"
-        >
-          <input
-            type="text"
-            name="q"
-            defaultValue={q}
-            placeholder="社員番号・氏名・メールで検索"
-            className="input"
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          <KPI label="社員数" value={totalCount} />
+          <KPI label="在籍中" value={activeCount} tone="ok" />
+          <KPI
+            label="休職・退職等"
+            value={inactiveCount}
+            tone={inactiveCount > 0 ? "danger" : "ok"}
           />
-
-          {inviteFilter && (
-            <input type="hidden" name="invite" value={inviteFilter} />
-          )}
-
-          {attentionFilter && (
-            <input type="hidden" name="attention" value={attentionFilter} />
-          )}
-
-          <button
-            type="submit"
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800"
-          >
-            検索
-          </button>
-
-          <Link
-            href="/employees"
-            className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
-          >
-            クリア
-          </Link>
-        </form>
-      </Card>
-
-      <Card className="overflow-hidden">
-        <div className="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-lg font-black text-slate-900">社員一覧</h2>
-            <p className="mt-1 text-sm font-medium text-slate-500">
-              社員番号をクリックすると、社員カルテを表示します。要対応列から注意が必要な社員を確認できます。
-            </p>
-          </div>
+          <KPI label="招待済" value={invitedCount} tone="ok" />
+          <KPI
+            label="未招待"
+            value={uninvitedCount}
+            tone={uninvitedCount > 0 ? "danger" : "ok"}
+            href={filterHref({ invite: "uninvited" })}
+          />
+          <KPI
+            label="要対応あり"
+            value={attentionCount}
+            tone={attentionCount > 0 ? "danger" : "ok"}
+            href={filterHref({ attention: "required" })}
+          />
         </div>
 
-        <div className="overflow-auto">
-          <table className="min-w-[1350px] w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500">
-              <tr className="border-b border-slate-100">
-                <th className="px-5 py-3 text-left font-black">社員番号</th>
-                <th className="px-5 py-3 text-left font-black">氏名</th>
-                <th className="px-5 py-3 text-left font-black">メール</th>
-                <th className="px-5 py-3 text-left font-black">ロール</th>
-                <th className="px-5 py-3 text-left font-black">状態</th>
-                <th className="px-5 py-3 text-left font-black">要対応</th>
-                <th className="px-5 py-3 text-left font-black">招待</th>
-              </tr>
-            </thead>
+        <Card className="p-5">
+          <form className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto]">
+            <input
+              className="input"
+              type="search"
+              name="q"
+              placeholder="社員番号・氏名・メールで検索"
+              defaultValue={q}
+            />
 
-            <tbody>
-              {employees.map((e) => {
-                const attention = attentionByEmployeeId.get(e.id);
-                const attentionTotal = attention?.total ?? 0;
+            {invite && <input type="hidden" name="invite" value={invite} />}
+            {attention && (
+              <input type="hidden" name="attention" value={attention} />
+            )}
 
-                return (
-                  <tr
-                    key={e.id}
-                    className="border-b border-slate-100 last:border-b-0 transition hover:bg-slate-50"
-                  >
-                    <td className="px-5 py-4 font-black">
-                      <Link
-                        className="inline-flex items-center rounded-xl bg-slate-100 px-3 py-1.5 text-sm font-black text-slate-800 transition hover:bg-slate-200"
-                        href={`/employees/code/${e.employee_code}`}
-                      >
-                        {e.employee_code}
-                      </Link>
-                    </td>
+            <button
+              type="submit"
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800"
+            >
+              検索
+            </button>
 
-                    <td className="px-5 py-4">
-                      <div className="font-bold text-slate-900">{e.name}</div>
-                    </td>
+            <Link
+              href="/employees"
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+            >
+              条件クリア
+            </Link>
+          </form>
+        </Card>
 
-                    <td className="px-5 py-4">
-                      <div className="text-slate-600">{e.email}</div>
-                    </td>
+        <Card className="overflow-hidden">
+          <div className="overflow-auto">
+            <table className="min-w-[1100px] w-full text-sm">
+              <thead className="bg-slate-50">
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="px-4 py-3 text-left font-black">社員番号</th>
+                  <th className="px-4 py-3 text-left font-black">氏名</th>
+                  <th className="px-4 py-3 text-left font-black">メール</th>
+                  <th className="px-4 py-3 text-left font-black">ロール</th>
+                  <th className="px-4 py-3 text-left font-black">状態</th>
+                  <th className="px-4 py-3 text-left font-black">招待</th>
+                  <th className="px-4 py-3 text-left font-black">要対応</th>
+                  <th className="px-4 py-3 text-left font-black">操作</th>
+                </tr>
+              </thead>
 
-                    <td className="px-5 py-4">
-                      <Chip
-                        tone={
-                          e.app_role === "admin" || e.app_role === "hr"
-                            ? "info"
-                            : "gray"
-                        }
-                      >
-                        {e.app_role}
-                      </Chip>
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <Chip tone={e.status === "active" ? "ok" : "danger"}>
-                        {e.status}
-                      </Chip>
-                    </td>
-
-                    <td className="px-5 py-4">
-                      {attentionTotal > 0 ? (
-                        <div className="flex flex-col gap-2">
-                          <Link
-                            href={`/employees/code/${e.employee_code}?tab=timeline`}
-                            className="inline-flex w-fit items-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-black text-rose-700 hover:bg-rose-100"
-                          >
-                            要対応あり：{attentionTotal}
-                          </Link>
-
-                          <div className="flex flex-wrap gap-1">
-                            {(attention?.expiredQualifications ?? 0) > 0 && (
-                              <span className="rounded-lg bg-rose-100 px-2 py-1 text-[11px] font-black text-rose-700">
-                                資格切れ {attention?.expiredQualifications}
-                              </span>
-                            )}
-
-                            {(attention?.expiringSoonQualifications ?? 0) >
-                              0 && (
-                              <span className="rounded-lg bg-amber-100 px-2 py-1 text-[11px] font-black text-amber-700">
-                                資格30日 {attention?.expiringSoonQualifications}
-                              </span>
-                            )}
-
-                            {(attention?.overdueEvents ?? 0) > 0 && (
-                              <span className="rounded-lg bg-rose-100 px-2 py-1 text-[11px] font-black text-rose-700">
-                                イベント超過 {attention?.overdueEvents}
-                              </span>
-                            )}
-
-                            {(attention?.pendingInterviews ?? 0) > 0 && (
-                              <span className="rounded-lg bg-emerald-100 px-2 py-1 text-[11px] font-black text-emerald-700">
-                                次回面談 {attention?.pendingInterviews}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <Chip tone="ok">対応なし</Chip>
-                      )}
-                    </td>
-
-                    <td className="px-5 py-4">
-                      {me.role === "admin" || me.role === "hr" ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          {e.user_id ? (
-                            <>
-                              <Chip tone="ok">招待済</Chip>
-                              <InviteButton
-                                employeeId={e.id}
-                                force
-                                label="再招待"
-                              />
-                            </>
-                          ) : (
-                            <>
-                              <Chip tone="danger">未招待</Chip>
-                              <InviteButton employeeId={e.id} />
-                            </>
-                          )}
-
-                          {e.last_invited_at && (
-                            <span className="text-xs font-semibold text-slate-500">
-                              {new Date(e.last_invited_at).toLocaleString(
-                                "ja-JP"
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs font-semibold text-slate-400">
-                          -
-                        </span>
-                      )}
+              <tbody>
+                {visibleEmployees.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-4 py-10 text-center text-sm font-bold text-slate-500"
+                    >
+                      表示できる社員がいません
                     </td>
                   </tr>
-                );
-              })}
+                ) : (
+                  visibleEmployees.map((employee) => {
+                    const attentionItem = attentionByEmployeeId.get(
+                      employee.id
+                    );
+                    const hasAttention = (attentionItem?.total ?? 0) > 0;
 
-              {employees.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center">
-                    <div className="text-sm font-bold text-slate-500">
-                      表示できる社員がいません
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                    return (
+                      <tr
+                        key={employee.id}
+                        className="border-b border-slate-100 bg-white hover:bg-slate-50"
+                      >
+                        <td className="px-4 py-3 font-black text-slate-900">
+                          {employee.employee_code}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <Link
+                            href={`/employees/code/${employee.employee_code}`}
+                            className="font-black text-indigo-600 hover:underline"
+                          >
+                            {employee.name}
+                          </Link>
+                        </td>
+
+                        <td className="px-4 py-3 text-slate-600">
+                          {employee.email || "-"}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <Chip tone="info">
+                            {getRoleLabel(employee.app_role)}
+                          </Chip>
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <Chip
+                            tone={
+                              employee.status === "active" ? "ok" : "danger"
+                            }
+                          >
+                            {getStatusLabel(employee.status)}
+                          </Chip>
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {employee.user_id ? (
+                            <Chip tone="ok">招待済</Chip>
+                          ) : (
+                            <Chip tone="danger">未招待</Chip>
+                          )}
+
+                          {employee.last_invited_at && (
+                            <div className="mt-1 text-xs font-semibold text-slate-400">
+                              最終: {formatDateTime(employee.last_invited_at)}
+                            </div>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {hasAttention ? (
+                            <Link
+                              href={`/employees/code/${employee.employee_code}?tab=timeline`}
+                              className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-700 hover:bg-rose-100"
+                            >
+                              {attentionItem?.total ?? 0}件
+                            </Link>
+                          ) : (
+                            <Chip tone="ok">なし</Chip>
+                          )}
+
+                          {hasAttention && (
+                            <div className="mt-2 space-y-1 text-xs font-semibold text-slate-500">
+                              {(attentionItem?.expiredQualifications ?? 0) >
+                                0 && (
+                                <div>
+                                  資格期限切れ:{" "}
+                                  {attentionItem?.expiredQualifications}
+                                </div>
+                              )}
+
+                              {(attentionItem?.soonQualifications ?? 0) > 0 && (
+                                <div>
+                                  資格30日以内:{" "}
+                                  {attentionItem?.soonQualifications}
+                                </div>
+                              )}
+
+                              {(attentionItem?.overdueEvents ?? 0) > 0 && (
+                                <div>
+                                  イベント期限超過:{" "}
+                                  {attentionItem?.overdueEvents}
+                                </div>
+                              )}
+
+                              {(attentionItem?.pendingInterviews ?? 0) > 0 && (
+                                <div>
+                                  次回面談予定:{" "}
+                                  {attentionItem?.pendingInterviews}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-2">
+                            <Link
+                              href={`/employees/code/${employee.employee_code}`}
+                              className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50"
+                            >
+                              詳細
+                            </Link>
+
+                            <Link
+                              href={`/employees/code/${employee.employee_code}/edit`}
+                              className="inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
+                            >
+                              編集
+                            </Link>
+
+                            {(me.role === "admin" || me.role === "hr") && (
+                              <InviteButton
+                                employeeId={employee.id}
+                                userId={employee.user_id}
+                                email={employee.email}
+                              />
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
     </PageShell>
   );
+}
+
+function formatDate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return "-";
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+
+  return d.toLocaleString("ja-JP");
+}
+
+function getRoleLabel(role: string) {
+  if (role === "admin") return "管理者";
+  if (role === "hr") return "人事";
+  if (role === "manager") return "上長";
+  if (role === "mentor") return "メンター";
+  if (role === "employee") return "社員";
+  return role || "";
+}
+
+function getStatusLabel(status: string) {
+  if (status === "active") return "在籍中";
+  if (status === "leave") return "休職中";
+  if (status === "inactive") return "退職・無効";
+  return status || "";
 }
