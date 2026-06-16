@@ -1,3 +1,5 @@
+// src/components/employees/invite-button.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -16,13 +18,11 @@ export function InviteButton({
   const [loading, setLoading] = useState(false);
 
   async function onInvite() {
-    if (force && !confirm("再招待メールを送信します。よろしいですか？")) {
-      return;
-    }
+    const message = force
+      ? "再招待メールを送信します。よろしいですか？"
+      : "この社員に招待メールを送信します。よろしいですか？";
 
-    if (!force && !confirm("この社員に招待メールを送信します。よろしいですか？")) {
-      return;
-    }
+    if (!confirm(message)) return;
 
     setLoading(true);
 
@@ -35,15 +35,22 @@ export function InviteButton({
         body: JSON.stringify({ employeeId, force }),
       });
 
-      const json = await res.json();
+      const json = await res.json().catch(() => null);
 
       if (!res.ok || !json?.success) {
-        alert(json?.error?.message ?? "招待に失敗しました");
+        alert(json?.error?.message ?? json?.message ?? "招待に失敗しました");
         return;
       }
 
-      alert(force ? "再招待メールを送信しました" : "招待メールを送信しました");
+      alert(
+        force
+          ? "再招待メールを送信しました。タイムラインにも履歴を保存しました。"
+          : "招待メールを送信しました。タイムラインにも履歴を保存しました。"
+      );
+
       location.reload();
+    } catch (e: any) {
+      alert(e?.message ?? "招待に失敗しました");
     } finally {
       setLoading(false);
     }
