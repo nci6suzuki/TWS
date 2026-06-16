@@ -170,6 +170,11 @@ export default async function AnnualEventsPage({
   if (calendarYearParam) baseParams.set("calendarYear", calendarYearParam);
   if (calendarMonthParam) baseParams.set("calendarMonth", calendarMonthParam);
 
+  const exportParams = new URLSearchParams(baseParams);
+  const exportHref = `/api/annual-events/export${
+    exportParams.toString() ? `?${exportParams.toString()}` : ""
+  }`;
+
   const toView = (v: ViewMode) => {
     const p = new URLSearchParams(baseParams);
     p.set("view", v);
@@ -272,9 +277,12 @@ export default async function AnnualEventsPage({
               <GhostButton href={toView("calendar")}>Calendar</GhostButton>
 
               {(me.role === "admin" || me.role === "hr") && (
-                <PrimaryButton href="/annual-events/new">
-                  + イベント登録
-                </PrimaryButton>
+                <>
+                  <PrimaryButton href={exportHref}>CSV出力</PrimaryButton>
+                  <PrimaryButton href="/annual-events/new">
+                    + イベント登録
+                  </PrimaryButton>
+                </>
               )}
             </>
           }
