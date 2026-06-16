@@ -1,3 +1,5 @@
+// src/components/employees/delete-qualification-button.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -25,33 +27,33 @@ export function DeleteQualificationButton({
     setLoading(true);
 
     try {
-      const formData = new FormData();
+      const safeReturnTo =
+        returnTo ?? `/employees/code/${employeeCode}/qualifications`;
 
-      if (returnTo) {
-        formData.append("returnTo", returnTo);
-      }
+      const formData = new FormData();
+      formData.append("employeeCode", employeeCode);
+      formData.append("returnTo", safeReturnTo);
 
       const res = await fetch(
-        `/employees/code/${employeeCode}/qualifications/${qualificationId}/delete`,
+        `/api/employee-qualifications/${qualificationId}/delete`,
         {
           method: "POST",
           body: formData,
         }
       );
 
-      if (!res.ok && !res.redirected) {
-        const text = await res.text();
-        alert(text || "資格情報の削除に失敗しました");
-        return;
-      }
-
       if (res.redirected) {
         window.location.href = res.url;
         return;
       }
 
-      window.location.href =
-        returnTo ?? `/employees/code/${employeeCode}/qualifications`;
+      if (!res.ok) {
+        const text = await res.text();
+        alert(text || "資格情報の削除に失敗しました");
+        return;
+      }
+
+      window.location.href = safeReturnTo;
     } catch (e: any) {
       alert(e?.message ?? "資格情報の削除に失敗しました");
     } finally {
