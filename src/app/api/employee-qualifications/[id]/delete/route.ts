@@ -1,4 +1,4 @@
-// src/app/(protected)/employees/code/[employeeCode]/qualifications/[qualificationId]/delete/route.ts
+// src/app/api/employee-qualifications/[id]/delete/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
@@ -12,7 +12,7 @@ export async function POST(
   {
     params,
   }: {
-    params: Promise<{ employeeCode: string; qualificationId: string }>;
+    params: Promise<{ id: string }>;
   }
 ) {
   try {
@@ -24,14 +24,14 @@ export async function POST(
       });
     }
 
-    const { employeeCode, qualificationId } = await params;
-    const code = decodeURIComponent(employeeCode).trim();
-
+    const { id } = await params;
     const formData = await req.formData();
 
-    const fallbackReturnTo = `/employees/code/${encodeURIComponent(
-      code
-    )}/qualifications`;
+    const employeeCode = String(formData.get("employeeCode") ?? "").trim();
+
+    const fallbackReturnTo = employeeCode
+      ? `/employees/code/${encodeURIComponent(employeeCode)}/qualifications`
+      : "/employees";
 
     const returnTo =
       String(formData.get("returnTo") ?? "").trim() || fallbackReturnTo;
@@ -48,7 +48,7 @@ export async function POST(
       .select(
         "id, employee_id, qualification_name, acquired_on, expires_on, status, memo"
       )
-      .eq("id", qualificationId)
+      .eq("id", id)
       .maybeSingle();
 
     if (fetchError) {
@@ -78,7 +78,7 @@ export async function POST(
     const { error: deleteError } = await admin
       .from("employee_qualifications")
       .delete()
-      .eq("id", qualificationId);
+      .eq("id", id);
 
     if (deleteError) {
       return NextResponse.redirect(
