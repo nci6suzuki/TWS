@@ -19,6 +19,7 @@ type Props = {
   qualifications: any[];
   events: any[];
   interviews: any[];
+  activityLogs: any[];
   activeTab: string;
 };
 
@@ -185,6 +186,14 @@ function EventBadge({
 }
 
 function TimelineBadge({ type }: { type: string }) {
+  if (type === "activity_log") {
+    return (
+      <span className="inline-flex items-center rounded-xl border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-black text-sky-700">
+        操作履歴
+      </span>
+    );
+  }
+
   if (type === "qualification") {
     return (
       <span className="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">
@@ -223,6 +232,7 @@ export function EmployeeProfileBook({
   qualifications,
   events,
   interviews,
+  activityLogs,
   activeTab,
 }: Props) {
   const tab = tabs.some((t) => t.key === activeTab) ? activeTab : "basic";
@@ -260,57 +270,76 @@ export function EmployeeProfileBook({
     overdueEvents.length > 0 ||
     pendingInterviewCount > 0;
 
-  const timelineItems = [
-    ...qualifications.map((q: any) => ({
-      id: `qualification-${q.id}`,
-      type: "qualification",
-      date: q.acquired_on ?? q.expires_on ?? "",
-      title: getQualificationName(q),
-      description: [
-        q.acquired_on ? `取得日：${q.acquired_on}` : "",
-        q.expires_on ? `有効期限：${q.expires_on}` : "",
-        q.status ? `状態：${q.status}` : "",
-        q.memo ? `メモ：${q.memo}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n"),
-      href: `/employees/code/${employee.employee_code}?tab=qualifications`,
-    })),
+const safeActivityLogs = activityLogs ?? [];
 
-    ...events.map((e: any) => ({
-      id: `event-${e.id}`,
-      type: "event",
-      date: e.scheduled_date ?? "",
-      title: e.title ?? "年間イベント",
-      description: [
-        e.event_type ? `種別：${getEventTypeLabel(e.event_type)}` : "",
-        e.status ? `状態：${e.status}` : "",
-        e.priority ? `優先度：${e.priority}` : "",
-        e.description ? e.description : "",
-      ]
-        .filter(Boolean)
-        .join("\n"),
-      href: `/annual-events/${e.id}`,
-    })),
+const timelineItems = [
+  ...safeActivityLogs.map((log: any) => ({
+    id: `activity-log-${log.id}`,
+    type: "activity_log",
+    date: log.created_at ?? "",
+    title: log.title ?? getActivityLogTypeLabel(log.activity_type),
+    description: [
+      log.description ? log.description : "",
+      log.actor_employee
+        ? `操作者：${log.actor_employee.employee_code} / ${log.actor_employee.name}`
+        : "",
+      log.related_type ? `関連：${log.related_type}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    href: getActivityLogHref(log, employee.employee_code),
+  })),
 
-    ...interviews.map((i: any) => ({
-      id: `interview-${i.id}`,
-      type: "interview",
-      date: i.interview_date ?? "",
-      title: getInterviewTypeLabel(i.interview_type),
-      description: [
-        i.interviewer_name ? `面談者：${i.interviewer_name}` : "",
-        i.summary ? `内容：${i.summary}` : "",
-        i.action_items ? `次回アクション：${i.action_items}` : "",
-        i.next_interview_date ? `次回面談予定：${i.next_interview_date}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n"),
-      href: `/employees/code/${employee.employee_code}/interviews/${i.id}/edit`,
-    })),
-  ]
-    .filter((item) => item.date)
-    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  ...qualifications.map((q: any) => ({
+    id: `qualification-${q.id}`,
+    type: "qualification",
+    date: q.acquired_on ?? q.expires_on ?? "",
+    title: getQualificationName(q),
+    description: [
+      q.acquired_on ? `取得日：${q.acquired_on}` : "",
+      q.expires_on ? `有効期限：${q.expires_on}` : "",
+      q.status ? `状態：${q.status}` : "",
+      q.memo ? `メモ：${q.memo}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    href: `/employees/code/${employee.employee_code}?tab=qualifications`,
+  })),
+
+  ...events.map((e: any) => ({
+    id: `event-${e.id}`,
+    type: "event",
+    date: e.scheduled_date ?? "",
+    title: e.title ?? "年間イベント",
+    description: [
+      e.event_type ? `種別：${getEventTypeLabel(e.event_type)}` : "",
+      e.status ? `状態：${e.status}` : "",
+      e.priority ? `優先度：${e.priority}` : "",
+      e.description ? e.description : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    href: `/annual-events/${e.id}`,
+  })),
+
+  ...interviews.map((i: any) => ({
+    id: `interview-${i.id}`,
+    type: "interview",
+    date: i.interview_date ?? "",
+    title: getInterviewTypeLabel(i.interview_type),
+    description: [
+      i.interviewer_name ? `面談者：${i.interviewer_name}` : "",
+      i.summary ? `内容：${i.summary}` : "",
+      i.action_items ? `次回アクション：${i.action_items}` : "",
+      i.next_interview_date ? `次回面談予定：${i.next_interview_date}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    href: `/employees/code/${employee.employee_code}/interviews/${i.id}/edit`,
+  })),
+]
+  .filter((item) => item.date)
+  .sort((a, b) => String(b.date).localeCompare(String(a.date)));
 
   return (
     <div className="space-y-6">
@@ -1064,12 +1093,15 @@ export function EmployeeProfileBook({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <span className="rounded-xl border bg-slate-50 px-3 py-2 text-xs font-black text-slate-700">
-                全履歴: {timelineItems.length}
-              </span>
-              <span className="rounded-xl border bg-amber-50 px-3 py-2 text-xs font-black text-amber-700">
-                資格: {qualifications.length}
-              </span>
+<span className="rounded-xl border bg-slate-50 px-3 py-2 text-xs font-black text-slate-700">
+  全履歴: {timelineItems.length}
+</span>
+<span className="rounded-xl border bg-sky-50 px-3 py-2 text-xs font-black text-sky-700">
+  操作履歴: {safeActivityLogs.length}
+</span>
+<span className="rounded-xl border bg-amber-50 px-3 py-2 text-xs font-black text-amber-700">
+  資格: {qualifications.length}
+</span>
               <span className="rounded-xl border bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700">
                 年間イベント: {events.length}
               </span>
@@ -1101,7 +1133,7 @@ export function EmployeeProfileBook({
                         <div className="flex flex-wrap items-center gap-2">
                           <TimelineBadge type={item.type} />
                           <span className="text-sm font-black text-slate-500">
-                            {item.date}
+                            {formatTimelineDate(item.date)}
                           </span>
                         </div>
 
@@ -1132,4 +1164,43 @@ export function EmployeeProfileBook({
       )}
     </div>
   );
+}
+
+function getActivityLogTypeLabel(activityType: string) {
+  if (activityType === "annual_event_completed") return "年間イベント";
+  if (activityType === "notification_read") return "通知";
+  if (activityType === "employee_updated") return "社員情報";
+  if (activityType === "qualification_created") return "資格追加";
+  if (activityType === "qualification_updated") return "資格更新";
+  if (activityType === "qualification_deleted") return "資格削除";
+  if (activityType === "interview_created") return "面談追加";
+  if (activityType === "interview_updated") return "面談更新";
+  if (activityType === "interview_deleted") return "面談削除";
+  if (activityType === "invite_sent") return "招待";
+  return activityType || "操作履歴";
+}
+
+function getActivityLogHref(log: any, employeeCode: string) {
+  if (log.related_type === "employee_annual_event" && log.related_id) {
+    return `/annual-events/${log.related_id}`;
+  }
+
+  if (log.related_type === "employee_qualification") {
+    return `/employees/code/${employeeCode}?tab=qualifications`;
+  }
+
+  if (log.related_type === "notification") {
+    return `/employees/code/${employeeCode}?tab=timeline`;
+  }
+
+  return `/employees/code/${employeeCode}?tab=timeline`;
+}
+
+function formatTimelineDate(value: string | null | undefined) {
+  if (!value) return "-";
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+
+  return d.toLocaleString("ja-JP");
 }
