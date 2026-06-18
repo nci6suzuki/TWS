@@ -7,6 +7,7 @@ const nav = [
   { href: "/dashboard", label: "ダッシュボード" },
   { href: "/employees", label: "社員" },
   { href: "/annual-events", label: "年間イベント" },
+  { href: "/organization", label: "シナプスツリー" },
   { href: "/notifications", label: "通知", badgeKey: "notifications" },
 ];
 
