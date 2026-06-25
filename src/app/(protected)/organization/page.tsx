@@ -48,7 +48,7 @@ export default async function OrganizationPage({
 
   const { data: employees, error: employeesError } = await admin
     .from("employees")
-    .select("id, employee_code, name, email, app_role, status, organization_unit_id")
+    .select("id, employee_code, name, email, app_role, status, organization_unit_id, manager_employee_id")
     .order("employee_code", { ascending: true })
     .limit(5000);
 
@@ -177,37 +177,51 @@ export default async function OrganizationPage({
     redirect(`/organization?deleted=${encodeURIComponent(name || "組織")}`);
   }
 
-  async function assignEmployee(formData: FormData) {
-    "use server";
+async function assignEmployee(formData: FormData) {
+  "use server";
 
-    const me = await requireAuth();
+  const me = await requireAuth();
 
-    if (me.role !== "admin" && me.role !== "hr") {
-      redirect("/unauthorized");
-    }
-
-    const admin = createSupabaseAdminClient();
-
-    const employeeId = String(formData.get("employee_id") ?? "").trim();
-    const organizationUnitId = String(formData.get("organization_unit_id") ?? "").trim();
-
-    if (!employeeId) {
-      redirect(`/organization?error=${encodeURIComponent("社員を選択してください")}`);
-    }
-
-    const { error } = await admin
-      .from("employees")
-      .update({
-        organization_unit_id: organizationUnitId || null,
-      })
-      .eq("id", employeeId);
-
-    if (error) {
-      redirect(`/organization?error=${encodeURIComponent(error.message)}`);
-    }
-
-    redirect(`/organization?assigned=1`);
+  if (me.role !== "admin" && me.role !== "hr") {
+    redirect("/unauthorized");
   }
+
+  const admin = createSupabaseAdminClient();
+
+  const employeeId = String(formData.get("employee_id") ?? "").trim();
+  const organizationUnitId = String(
+    formData.get("organization_unit_id") ?? ""
+  ).trim();
+  const managerEmployeeId = String(
+    formData.get("manager_employee_id") ?? ""
+  ).trim();
+
+  if (!employeeId) {
+    redirect(`/organization?error=${encodeURIComponent("社員を選択してください")}`);
+  }
+
+  if (managerEmployeeId && managerEmployeeId === employeeId) {
+    redirect(
+      `/organization?error=${encodeURIComponent(
+        "自分自身を上司に設定することはできません"
+      )}`
+    );
+  }
+
+  const { error } = await admin
+    .from("employees")
+    .update({
+      organization_unit_id: organizationUnitId || null,
+      manager_employee_id: managerEmployeeId || null,
+    })
+    .eq("id", employeeId);
+
+  if (error) {
+    redirect(`/organization?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect(`/organization?assigned=1`);
+}
 
   return (
     <PageShell>
@@ -379,6 +393,20 @@ export default async function OrganizationPage({
                     ))}
                   </select>
                 </label>
+
+<label className="block">
+  <div className="mb-1 text-sm font-black text-slate-700">
+    直属上司
+  </div>
+  <select className="input" name="manager_employee_id" defaultValue="">
+    <option value="">上司なし</option>
+    {safeEmployees.map((employee) => (
+      <option key={employee.id} value={employee.id}>
+        {employee.employee_code} / {employee.name}
+      </option>
+    ))}
+  </select>
+</label>
 
                 <button
                   type="submit"
