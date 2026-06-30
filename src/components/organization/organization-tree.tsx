@@ -36,7 +36,7 @@ export function OrganizationTree({
   units: Unit[];
   employees: Employee[];
 }) {
-  const [showMembers, setShowMembers] = useState(true);
+  const [showMembers, setShowMembers] = useState(false);
   const [vertical, setVertical] = useState(false);
 
   const roots = useMemo(() => buildTree(units, employees), [units, employees]);

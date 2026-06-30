@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { PageShell } from "@/components/ui/page-shell";
 import { Hero, Card, Chip, KPI, PrimaryButton, GhostButton } from "@/components/ui/ux";
 import { OrganizationTree } from "@/components/organization/organization-tree";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export const runtime = "nodejs";
 
@@ -350,12 +351,9 @@ async function assignEmployee(formData: FormData) {
                   />
                 </label>
 
-                <button
-                  type="submit"
-                  className="inline-flex h-11 items-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800"
-                >
+                <SubmitButton pendingText="追加中...">
                   追加する
-                </button>
+                </SubmitButton>
               </form>
             </Card>
 
@@ -408,12 +406,12 @@ async function assignEmployee(formData: FormData) {
   </select>
 </label>
 
-                <button
-                  type="submit"
-                  className="inline-flex h-11 items-center rounded-xl bg-indigo-600 px-5 text-sm font-black text-white hover:bg-indigo-700"
-                >
+                <SubmitButton
+  pendingText="更新中..."
+  className="inline-flex h-11 items-center rounded-xl bg-indigo-600 px-5 text-sm font-black text-white transition hover:bg-indigo-700"
+>
                   所属を更新
-                </button>
+                </SubmitButton>
               </form>
             </Card>
           </div>
@@ -516,23 +514,22 @@ async function assignEmployee(formData: FormData) {
 
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">
-                              <button
-                                form={`unit-${unit.id}`}
-                                type="submit"
-                                className="inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
-                              >
+                              <SubmitButton
+  pendingText="更新中..."
+  className="inline-flex h-11 items-center rounded-xl bg-indigo-600 px-5 text-sm font-black text-white transition hover:bg-indigo-700"
+>
                                 更新
-                              </button>
+                              </SubmitButton>
 
                               <form action={deleteUnit}>
                                 <input type="hidden" name="id" value={unit.id} />
                                 <input type="hidden" name="name" value={unit.name} />
-                                <button
-                                  type="submit"
-                                  className="inline-flex h-8 items-center rounded-lg bg-rose-600 px-3 text-xs font-black text-white hover:bg-rose-700"
-                                >
+                                <SubmitButton
+  pendingText="削除中..."
+  className="inline-flex h-11 items-center rounded-xl bg-rose-600 px-5 text-sm font-black text-white transition hover:bg-rose-700"
+>
                                   削除
-                                </button>
+                                </SubmitButton>
                               </form>
                             </div>
                           </td>
