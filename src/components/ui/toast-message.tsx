@@ -2,8 +2,8 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type ToastType = "success" | "error" | "info" | "warning";
 
@@ -13,11 +13,28 @@ type ToastState = {
   message?: string;
 };
 
-export function ToastMessage() {
-  const searchParams = useSearchParams();
-  const [toast, setToast] = useState<ToastState | null>(null);
+const TOAST_PARAM_KEYS = [
+  "error",
+  "created",
+  "updated",
+  "deleted",
+  "assigned",
+  "generated",
+  "read",
+  "completed",
+  "sent",
+  "invited",
+] as const;
 
-  useEffect(() => {
+export function ToastMessage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [handledKey, setHandledKey] = useState<string>("");
+
+  const toastFromParams = useMemo(() => {
     const error = searchParams.get("error");
     const created = searchParams.get("created");
     const updated = searchParams.get("updated");
@@ -25,72 +42,155 @@ export function ToastMessage() {
     const assigned = searchParams.get("assigned");
     const generated = searchParams.get("generated");
     const read = searchParams.get("read");
+    const completed = searchParams.get("completed");
+    const sent = searchParams.get("sent");
+    const invited = searchParams.get("invited");
 
     if (error) {
-      setToast({
-        type: "error",
-        title: "エラーが発生しました",
-        message: error,
-      });
-      return;
+      return {
+        key: `error:${error}`,
+        toast: {
+          type: "error" as const,
+          title: "エラーが発生しました",
+          message: error,
+        },
+      };
     }
 
     if (created) {
-      setToast({
-        type: "success",
-        title: "追加しました",
-        message: `「${created}」を追加しました。`,
-      });
-      return;
+      return {
+        key: `created:${created}`,
+        toast: {
+          type: "success" as const,
+          title: "追加しました",
+          message: `「${created}」を追加しました。`,
+        },
+      };
     }
 
     if (updated) {
-      setToast({
-        type: "success",
-        title: "更新しました",
-        message: `「${updated}」を更新しました。`,
-      });
-      return;
+      return {
+        key: `updated:${updated}`,
+        toast: {
+          type: "success" as const,
+          title: "更新しました",
+          message: `「${updated}」を更新しました。`,
+        },
+      };
     }
 
     if (deleted) {
-      setToast({
-        type: "warning",
-        title: "削除しました",
-        message: `「${deleted}」を削除しました。`,
-      });
-      return;
+      return {
+        key: `deleted:${deleted}`,
+        toast: {
+          type: "warning" as const,
+          title: "削除しました",
+          message: `「${deleted}」を削除しました。`,
+        },
+      };
     }
 
     if (assigned) {
-      setToast({
-        type: "success",
-        title: "所属を更新しました",
-        message: "社員の所属情報を更新しました。",
-      });
-      return;
+      return {
+        key: `assigned:${assigned}`,
+        toast: {
+          type: "success" as const,
+          title: "所属を更新しました",
+          message: "社員の所属情報を更新しました。",
+        },
+      };
     }
 
     if (generated) {
-      setToast({
-        type: "success",
-        title: "通知を生成しました",
-        message: `${generated}件の通知を生成しました。`,
-      });
-      return;
+      return {
+        key: `generated:${generated}`,
+        toast: {
+          type: "success" as const,
+          title: "通知を生成しました",
+          message: `${generated}件の通知を生成しました。`,
+        },
+      };
     }
 
     if (read) {
-      setToast({
-        type: "success",
-        title: "既読にしました",
-        message: "通知を既読にしました。",
-      });
-      return;
+      return {
+        key: `read:${read}`,
+        toast: {
+          type: "success" as const,
+          title: "既読にしました",
+          message: "通知を既読にしました。",
+        },
+      };
     }
 
-    setToast(null);
+    if (completed) {
+      return {
+        key: `completed:${completed}`,
+        toast: {
+          type: "success" as const,
+          title: "完了しました",
+          message:
+            completed === "1"
+              ? "処理を完了しました。"
+              : `「${completed}」を完了しました。`,
+        },
+      };
+    }
+
+    if (sent) {
+      return {
+        key: `sent:${sent}`,
+        toast: {
+          type: "success" as const,
+          title: "送信しました",
+          message:
+            sent === "1"
+              ? "送信が完了しました。"
+              : `「${sent}」を送信しました。`,
+        },
+      };
+    }
+
+    if (invited) {
+      return {
+        key: `invited:${invited}`,
+        toast: {
+          type: "success" as const,
+          title: "招待メールを送信しました",
+          message:
+            invited === "1"
+              ? "招待メールを送信しました。"
+              : `「${invited}」へ招待メールを送信しました。`,
+        },
+      };
+    }
+
+    return null;
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!toastFromParams) return;
+    if (handledKey === toastFromParams.key) return;
+
+    setHandledKey(toastFromParams.key);
+    setToast(toastFromParams.toast);
+
+    const params = new URLSearchParams(searchParams.toString());
+
+    TOAST_PARAM_KEYS.forEach((key) => {
+      params.delete(key);
+    });
+
+    const nextUrl = params.toString()
+      ? `${pathname}?${params.toString()}`
+      : pathname;
+
+    const cleanupTimer = setTimeout(() => {
+      router.replace(nextUrl, { scroll: false });
+    }, 250);
+
+    return () => clearTimeout(cleanupTimer);
+  }, [toastFromParams, handledKey, pathname, router, searchParams]);
 
   useEffect(() => {
     if (!toast) return;
@@ -156,6 +256,7 @@ export function ToastMessage() {
             type="button"
             onClick={() => setToast(null)}
             className="pointer-events-auto rounded-lg px-2 text-lg font-black text-slate-300 hover:bg-slate-50 hover:text-slate-600"
+            aria-label="通知を閉じる"
           >
             ×
           </button>
