@@ -9,6 +9,7 @@ import { Hero, Card, Chip, KPI, PrimaryButton, GhostButton } from "@/components/
 import { OrganizationTree } from "@/components/organization/organization-tree";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { DeleteSubmitButton } from "@/components/ui/delete-submit-button";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
 
 export const runtime = "nodejs";
 
@@ -515,12 +516,9 @@ async function assignEmployee(formData: FormData) {
 
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">
-                              <SubmitButton
-  pendingText="更新中..."
-  className="inline-flex h-11 items-center rounded-xl bg-indigo-600 px-5 text-sm font-black text-white transition hover:bg-indigo-700"
->
-                                更新
-                              </SubmitButton>
+                              <FormSubmitButton form={`unit-${unit.id}`} pendingText="更新中...">
+  更新
+</FormSubmitButton>
 
                               <form action={deleteUnit}>
                                 <input type="hidden" name="id" value={unit.id} />
