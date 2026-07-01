@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseServerDbClient } from "@/lib/supabase/server-db";
 import { PageShell } from "@/components/ui/page-shell";
 import { Hero, KPI, Card, Chip, PrimaryButton } from "@/components/ui/ux";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 export const runtime = "nodejs";
 
@@ -279,7 +280,7 @@ export default async function DashboardPage() {
 
             <Link
               href="/notifications"
-              className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800"
+              className={buttonClassName("inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800")}
             >
               通知一覧へ
             </Link>
@@ -332,7 +333,7 @@ export default async function DashboardPage() {
           <form action="/api/notifications/generate" method="post">
             <button
               type="submit"
-              className="inline-flex h-10 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-700 hover:bg-indigo-100"
+              className={buttonClassName("inline-flex h-10 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-700 hover:bg-indigo-100")}
             >
               通知を生成・更新
             </button>
@@ -340,7 +341,7 @@ export default async function DashboardPage() {
 
           <Link
             href="/notifications"
-            className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+            className={buttonClassName("inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50")}
           >
             すべて見る
           </Link>
@@ -362,7 +363,7 @@ export default async function DashboardPage() {
 
               <Link
                 href="/employees?attention=required"
-                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+                className={buttonClassName("inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50")}
               >
                 一覧で見る
               </Link>
@@ -386,7 +387,7 @@ export default async function DashboardPage() {
                     <div>
                       <Link
                         href={`/employees/code/${employee.employee_code}?tab=timeline`}
-                        className="font-black text-slate-900 hover:underline"
+                        className={buttonClassName("font-black text-slate-900 hover:underline")}
                       >
                         {employee.employee_code} / {employee.name}
                       </Link>

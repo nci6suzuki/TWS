@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createActivityLog } from "@/lib/activity-logs/create-activity-log";
 import { PageShell } from "@/components/ui/page-shell";
 import { Card, Chip, PrimaryButton, GhostButton } from "@/components/ui/ux";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 export const runtime = "nodejs";
 
@@ -489,14 +490,14 @@ export default async function EmployeeEditPage({
           <div className="flex flex-col gap-3 md:flex-row md:justify-end">
             <Link
               href={`/employees/code/${employee.employee_code}`}
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 hover:bg-slate-50"
+              className={buttonClassName("inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 hover:bg-slate-50")}
             >
               キャンセル
             </Link>
 
             <button
               type="submit"
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white hover:bg-slate-800"
+              className={buttonClassName("inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white hover:bg-slate-800")}
             >
               保存する
             </button>

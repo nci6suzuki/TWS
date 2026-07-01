@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/ux";
 import { PageShell } from "@/components/ui/page-shell";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 export const runtime = "nodejs";
 
@@ -444,14 +445,14 @@ export default async function AnnualEventsPage({
 
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Link
-                        className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-700 hover:bg-slate-50"
+                        className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-700 hover:bg-slate-50")}
                         href={`/annual-events/${e.id}`}
                       >
                         詳細
                       </Link>
 
                       <Link
-                        className="inline-flex h-9 items-center rounded-xl bg-slate-900 px-3 text-sm font-black text-white hover:bg-slate-800"
+                        className={buttonClassName("inline-flex h-9 items-center rounded-xl bg-slate-900 px-3 text-sm font-black text-white hover:bg-slate-800")}
                         href={`/annual-events/${e.id}/edit`}
                       >
                         編集
@@ -469,13 +470,13 @@ export default async function AnnualEventsPage({
                           />
                           <button
                             type="submit"
-                            className="inline-flex h-9 items-center rounded-xl bg-emerald-600 px-3 text-sm font-black text-white hover:bg-emerald-700"
+                            className={buttonClassName("inline-flex h-9 items-center rounded-xl bg-emerald-600 px-3 text-sm font-black text-white hover:bg-emerald-700")}
                           >
                             完了化
                           </button>
                         </form>
                       ) : (
-                        <span className="inline-flex h-9 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-black text-emerald-700">
+                        <span className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-black text-emerald-700")}>
                           完了済み
                         </span>
                       )}
@@ -590,14 +591,14 @@ export default async function AnnualEventsPage({
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-2">
                             <Link
-                              className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50"
+                              className={buttonClassName("inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50")}
                               href={`/annual-events/${e.id}`}
                             >
                               詳細
                             </Link>
 
                             <Link
-                              className="inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
+                              className={buttonClassName("inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800")}
                               href={`/annual-events/${e.id}/edit`}
                             >
                               編集
@@ -615,13 +616,13 @@ export default async function AnnualEventsPage({
                                 />
                                 <button
                                   type="submit"
-                                  className="inline-flex h-8 items-center rounded-lg bg-emerald-600 px-3 text-xs font-black text-white hover:bg-emerald-700"
+                                  className={buttonClassName("inline-flex h-8 items-center rounded-lg bg-emerald-600 px-3 text-xs font-black text-white hover:bg-emerald-700")}
                                 >
                                   完了化
                                 </button>
                               </form>
                             ) : (
-                              <span className="inline-flex h-8 items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-black text-emerald-700">
+                              <span className={buttonClassName("inline-flex h-8 items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-black text-emerald-700")}>
                                 完了済み
                               </span>
                             )}

@@ -3,6 +3,7 @@
 "use client";
 
 import { useState } from "react";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 type FormSubmitButtonProps = {
   form?: string;
@@ -21,6 +22,10 @@ export function FormSubmitButton({
 }: FormSubmitButtonProps) {
   const [loading, setLoading] = useState(false);
 
+  const baseClassName =
+    className ??
+    "inline-flex h-8 items-center justify-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800";
+
   return (
     <button
       form={form}
@@ -32,11 +37,10 @@ export function FormSubmitButton({
           setLoading(true);
         }
       }}
-      className={[
-        className ??
-          "inline-flex h-8 items-center justify-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white transition hover:bg-slate-800",
-        loading || disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
-      ].join(" ")}
+      className={buttonClassName(baseClassName, {
+        disabled,
+        loading,
+      })}
     >
       {loading ? (
         <span className="inline-flex items-center gap-2">

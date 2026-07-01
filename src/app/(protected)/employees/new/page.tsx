@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseServerDbClient } from "@/lib/supabase/server-db";
 import { PageShell } from "@/components/ui/page-shell";
 import { Hero, Card, Chip, GhostButton } from "@/components/ui/ux";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 export default async function EmployeeNewPage() {
   const me = await requireAuth();
@@ -119,12 +120,12 @@ export default async function EmployeeNewPage() {
               <div className="flex flex-wrap gap-2">
                 <Link
                   href="/employees"
-                  className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md"
+                  className={buttonClassName("inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md")}
                 >
                   キャンセル
                 </Link>
 
-                <button className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-6 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-md">
+                <button className={buttonClassName("inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-6 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-md")}>
                   登録する
                 </button>
               </div>

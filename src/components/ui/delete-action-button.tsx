@@ -3,6 +3,7 @@
 "use client";
 
 import { useState } from "react";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 type DeleteActionButtonProps = {
   confirmMessage?: string;
@@ -38,17 +39,19 @@ export function DeleteActionButton({
     }
   }
 
+  const baseClassName =
+    className ??
+    "inline-flex h-8 items-center justify-center rounded-lg bg-rose-600 px-3 text-xs font-black text-white hover:bg-rose-700";
+
   return (
     <button
       type="button"
       disabled={loading}
       aria-disabled={loading}
       onClick={handleClick}
-      className={[
-        className ??
-          "inline-flex h-8 items-center justify-center rounded-lg bg-rose-600 px-3 text-xs font-black text-white transition hover:bg-rose-700",
-        loading ? "cursor-not-allowed opacity-60" : "cursor-pointer",
-      ].join(" ")}
+      className={buttonClassName(baseClassName, {
+        loading,
+      })}
     >
       {loading ? (
         <span className="inline-flex items-center gap-2">

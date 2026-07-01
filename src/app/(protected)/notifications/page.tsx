@@ -8,6 +8,7 @@ import { createActivityLog } from "@/lib/activity-logs/create-activity-log";
 import { PageShell } from "@/components/ui/page-shell";
 import { Hero, Card, Chip, KPI, PrimaryButton } from "@/components/ui/ux";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 export const runtime = "nodejs";
 
@@ -240,7 +241,7 @@ export default async function NotificationsPage({
               <form action={markAllAsRead}>
                 <button
                   type="submit"
-                  className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800"
+                  className={buttonClassName("inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800")}
                 >
                   すべて既読
                 </button>
@@ -304,7 +305,7 @@ export default async function NotificationsPage({
             <form action="/api/notifications/generate" method="post">
               <SubmitButton
   pendingText="生成中..."
-  className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-black text-white transition hover:bg-indigo-700"
+  className={buttonClassName("inline-flex h-10 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-black text-white transition hover:bg-indigo-700")}
 >
   通知を生成
 </SubmitButton>
@@ -363,7 +364,7 @@ export default async function NotificationsPage({
 
                         <Link
                           href={href}
-                          className="mt-3 block text-lg font-black text-slate-900 hover:underline"
+                          className={buttonClassName("mt-3 block text-lg font-black text-slate-900 hover:underline")}
                         >
                           {n.title}
                         </Link>
@@ -382,7 +383,7 @@ export default async function NotificationsPage({
                       <div className="flex flex-wrap gap-2">
                         <Link
                           href={href}
-                          className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+                          className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50")}
                         >
                           関連ページへ
                         </Link>
@@ -390,7 +391,7 @@ export default async function NotificationsPage({
                         {n.status === "unread" && (
                           <Link
                             href={readAndOpenHref}
-                            className="inline-flex h-9 items-center rounded-xl bg-indigo-600 px-4 text-sm font-black text-white hover:bg-indigo-700"
+                            className={buttonClassName("inline-flex h-9 items-center rounded-xl bg-indigo-600 px-4 text-sm font-black text-white hover:bg-indigo-700")}
                           >
                             開いて既読
                           </Link>
@@ -401,7 +402,7 @@ export default async function NotificationsPage({
                             <input type="hidden" name="id" value={n.id} />
                             <button
                               type="submit"
-                              className="inline-flex h-9 items-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800"
+                              className={buttonClassName("inline-flex h-9 items-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800")}
                             >
                               既読にする
                             </button>

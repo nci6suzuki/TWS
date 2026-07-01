@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createActivityLog } from "@/lib/activity-logs/create-activity-log";
 import { PageShell } from "@/components/ui/page-shell";
 import { Hero, Card, Chip, PrimaryButton, GhostButton } from "@/components/ui/ux";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 export const runtime = "nodejs";
 
@@ -318,21 +319,21 @@ export default async function QualificationEditPage({
             <div className="flex flex-wrap gap-2">
               <button
                 type="submit"
-                className="inline-flex h-11 items-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800"
+                className={buttonClassName("inline-flex h-11 items-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800")}
               >
                 更新する
               </button>
 
               <Link
                 href={`/employees/code/${employee.employee_code}/qualifications`}
-                className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+                className={buttonClassName("inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50")}
               >
                 資格管理へ戻る
               </Link>
 
               <Link
                 href={`/employees/code/${employee.employee_code}?tab=qualifications`}
-                className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+                className={buttonClassName("inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50")}
               >
                 資格タブへ戻る
               </Link>

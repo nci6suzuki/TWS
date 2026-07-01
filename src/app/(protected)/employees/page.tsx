@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/ux";
 import { InviteButton } from "@/components/employees/invite-button";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 export const runtime = "nodejs";
 
@@ -301,14 +302,14 @@ export default async function EmployeesPage({
 
             <SubmitButton
   pendingText="検索中..."
-  className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white transition hover:bg-slate-800"
+  className={buttonClassName("inline-flex h-10 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white transition hover:bg-slate-800")}
 >
   検索
 </SubmitButton>
 
             <Link
               href="/employees"
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+              className={buttonClassName("inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50")}
             >
               条件クリア
             </Link>
@@ -360,7 +361,7 @@ export default async function EmployeesPage({
                         <td className="px-4 py-3">
                           <Link
                             href={`/employees/code/${employee.employee_code}`}
-                            className="font-black text-indigo-600 hover:underline"
+                            className={buttonClassName("font-black text-indigo-600 hover:underline")}
                           >
                             {employee.name}
                           </Link>
@@ -404,7 +405,7 @@ export default async function EmployeesPage({
                           {hasAttention ? (
                             <Link
                               href={`/employees/code/${employee.employee_code}?tab=timeline`}
-                              className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-700 hover:bg-rose-100"
+                              className={buttonClassName("inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-700 hover:bg-rose-100")}
                             >
                               {attentionItem?.total ?? 0}件
                             </Link>
@@ -450,14 +451,14 @@ export default async function EmployeesPage({
                           <div className="flex flex-wrap gap-2">
                             <Link
                               href={`/employees/code/${employee.employee_code}`}
-                              className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50"
+                              className={buttonClassName("inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50")}
                             >
                               詳細
                             </Link>
 
                             <Link
                               href={`/employees/code/${employee.employee_code}/edit`}
-                              className="inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
+                              className={buttonClassName("inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800")}
                             >
                               編集
                             </Link>

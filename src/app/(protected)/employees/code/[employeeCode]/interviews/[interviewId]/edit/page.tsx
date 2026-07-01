@@ -13,6 +13,7 @@ import {
   PrimaryButton,
   GhostButton,
 } from "@/components/ui/ux";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 export const runtime = "nodejs";
 
@@ -441,21 +442,21 @@ export default async function InterviewEditPage({
             <div className="flex flex-wrap gap-2">
               <button
                 type="submit"
-                className="inline-flex h-11 items-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800"
+                className={buttonClassName("inline-flex h-11 items-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800")}
               >
                 更新する
               </button>
 
               <Link
                 href={`/employees/code/${employee.employee_code}/interviews`}
-                className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+                className={buttonClassName("inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50")}
               >
                 面談管理へ戻る
               </Link>
 
               <Link
                 href={`/employees/code/${employee.employee_code}?tab=interviews`}
-                className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+                className={buttonClassName("inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50")}
               >
                 面談タブへ戻る
               </Link>

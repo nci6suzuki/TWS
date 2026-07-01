@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { PageShell } from "@/components/ui/page-shell";
 import { Card, Chip } from "@/components/ui/ux";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 export const runtime = "nodejs";
 
@@ -242,7 +243,7 @@ export default async function SetupProfilePage() {
           <div className="flex justify-end gap-3">
             <button
               type="submit"
-              className="inline-flex h-11 items-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white hover:bg-slate-800"
+              className={buttonClassName("inline-flex h-11 items-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white hover:bg-slate-800")}
             >
               入力を完了する
             </button>

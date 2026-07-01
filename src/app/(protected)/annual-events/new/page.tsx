@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { PageShell } from "@/components/ui/page-shell";
 import { Card, Chip } from "@/components/ui/ux";
 import { AnnualEventTemplateForm } from "@/components/annual-events/annual-event-template-form";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 export const runtime = "nodejs";
 
@@ -190,14 +191,14 @@ export default async function AnnualEventNewPage({
 
               <Link
                 href={backToCalendarHref}
-                className="inline-flex h-9 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-700 hover:bg-indigo-100"
+                className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-700 hover:bg-indigo-100")}
               >
                 カレンダーへ戻る
               </Link>
 
               <Link
                 href="/annual-events"
-                className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+                className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50")}
               >
                 一覧へ戻る
               </Link>
@@ -233,14 +234,14 @@ export default async function AnnualEventNewPage({
           <div className="flex flex-col gap-3 md:flex-row md:justify-end">
             <Link
               href={cancelHref}
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 hover:bg-slate-50"
+              className={buttonClassName("inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 hover:bg-slate-50")}
             >
               キャンセル
             </Link>
 
             <button
               type="submit"
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white hover:bg-slate-800"
+              className={buttonClassName("inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white hover:bg-slate-800")}
             >
               登録する
             </button>

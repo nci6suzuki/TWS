@@ -3,6 +3,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 type DeleteSubmitButtonProps = {
   children?: React.ReactNode;
@@ -23,7 +24,7 @@ export function DeleteSubmitButton({
 
   const baseClassName =
     className ??
-    "inline-flex h-8 items-center justify-center rounded-lg bg-rose-600 px-3 text-xs font-black text-white transition hover:bg-rose-700";
+    "inline-flex h-8 items-center justify-center rounded-lg bg-rose-600 px-3 text-xs font-black text-white hover:bg-rose-700";
 
   return (
     <button
@@ -42,12 +43,10 @@ export function DeleteSubmitButton({
           e.preventDefault();
         }
       }}
-      className={[
-        baseClassName,
-        pending || disabled
-          ? "cursor-not-allowed opacity-60"
-          : "cursor-pointer",
-      ].join(" ")}
+      className={buttonClassName(baseClassName, {
+        disabled,
+        loading: pending,
+      })}
     >
       {pending ? (
         <span className="inline-flex items-center gap-2">

@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { PageShell } from "@/components/ui/page-shell";
 import { Card, Chip } from "@/components/ui/ux";
 import { DeleteAnnualEventButton } from "@/components/annual-events/delete-annual-event-button";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 export const runtime = "nodejs";
 
@@ -111,14 +112,14 @@ export default async function AnnualEventDetailPage({
             <div className="flex flex-wrap gap-2">
               <Link
                 href={calendarHref}
-                className="inline-flex h-9 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-700 hover:bg-indigo-100"
+                className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-700 hover:bg-indigo-100")}
               >
                 カレンダーへ戻る
               </Link>
 
               <Link
                 href={listHref}
-                className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+                className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50")}
               >
                 一覧へ戻る
               </Link>
@@ -126,7 +127,7 @@ export default async function AnnualEventDetailPage({
               {employee?.employee_code && (
                 <Link
                   href={employeeProfileHref}
-                  className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+                  className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50")}
                 >
                   社員カルテへ
                 </Link>
@@ -136,7 +137,7 @@ export default async function AnnualEventDetailPage({
                 <>
                   <Link
                     href={`/annual-events/${event.id}/edit`}
-                    className="inline-flex h-9 items-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800"
+                    className={buttonClassName("inline-flex h-9 items-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800")}
                   >
                     編集
                   </Link>
@@ -177,7 +178,7 @@ export default async function AnnualEventDetailPage({
 
               <Link
                 href={interviewHref}
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-black text-white hover:bg-indigo-700"
+                className={buttonClassName("inline-flex h-10 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-black text-white hover:bg-indigo-700")}
               >
                 元の面談履歴を開く
               </Link>
@@ -253,7 +254,7 @@ export default async function AnnualEventDetailPage({
 
                 <button
                   type="submit"
-                  className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-600 px-5 text-sm font-black text-white hover:bg-emerald-700"
+                  className={buttonClassName("inline-flex h-10 items-center justify-center rounded-xl bg-emerald-600 px-5 text-sm font-black text-white hover:bg-emerald-700")}
                 >
                   完了化する
                 </button>
@@ -280,7 +281,7 @@ export default async function AnnualEventDetailPage({
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href={employeeProfileHref}
-                    className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+                    className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50")}
                   >
                     社員カルテ
                   </Link>
@@ -289,7 +290,7 @@ export default async function AnnualEventDetailPage({
                     href={`/annual-events?employeeCode=${encodeURIComponent(
                       employee.employee_code
                     )}&view=calendar`}
-                    className="inline-flex h-9 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-700 hover:bg-indigo-100"
+                    className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-700 hover:bg-indigo-100")}
                   >
                     社員別カレンダー
                   </Link>

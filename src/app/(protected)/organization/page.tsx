@@ -10,6 +10,7 @@ import { OrganizationTree } from "@/components/organization/organization-tree";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { DeleteSubmitButton } from "@/components/ui/delete-submit-button";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 export const runtime = "nodejs";
 
@@ -410,7 +411,7 @@ async function assignEmployee(formData: FormData) {
 
                 <SubmitButton
   pendingText="更新中..."
-  className="inline-flex h-11 items-center rounded-xl bg-indigo-600 px-5 text-sm font-black text-white transition hover:bg-indigo-700"
+  className={buttonClassName("inline-flex h-11 items-center rounded-xl bg-indigo-600 px-5 text-sm font-black text-white transition hover:bg-indigo-700")}
 >
                   所属を更新
                 </SubmitButton>

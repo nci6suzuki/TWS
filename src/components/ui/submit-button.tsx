@@ -3,6 +3,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 type SubmitButtonProps = {
   children: React.ReactNode;
@@ -21,19 +22,17 @@ export function SubmitButton({
 
   const baseClassName =
     className ??
-    "inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white transition hover:bg-slate-800";
+    "inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800";
 
   return (
     <button
       type="submit"
       disabled={pending || disabled}
       aria-disabled={pending || disabled}
-      className={[
-        baseClassName,
-        pending || disabled
-          ? "cursor-not-allowed opacity-60"
-          : "cursor-pointer",
-      ].join(" ")}
+      className={buttonClassName(baseClassName, {
+        disabled,
+        loading: pending,
+      })}
     >
       {pending ? (
         <span className="inline-flex items-center gap-2">
