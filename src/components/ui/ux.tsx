@@ -1,5 +1,8 @@
+// src/components/ui/ux.tsx
+
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 type Tone = "default" | "info" | "ok" | "danger" | "gray";
 
@@ -59,14 +62,21 @@ export function Chip({
 export function PrimaryButton({
   href,
   children,
+  className = "",
 }: {
   href: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
     <Link
       href={href}
-      className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-md"
+      className={buttonClassName(
+        [
+          "inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-bold text-white shadow-sm hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-md",
+          className,
+        ].join(" ")
+      )}
     >
       {children}
     </Link>
@@ -76,14 +86,21 @@ export function PrimaryButton({
 export function GhostButton({
   href,
   children,
+  className = "",
 }: {
   href: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
     <Link
       href={href}
-      className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md"
+      className={buttonClassName(
+        [
+          "inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md",
+          className,
+        ].join(" ")
+      )}
     >
       {children}
     </Link>
@@ -102,7 +119,15 @@ export function KPI({
   href?: string;
 }) {
   const inner = (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <div
+      className={[
+        "rounded-3xl border border-slate-200 bg-white p-5 shadow-sm",
+        "transition duration-150 ease-out",
+        href
+          ? "hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] active:translate-y-px"
+          : "",
+      ].join(" ")}
+    >
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-bold text-slate-500">{label}</p>
         <span
@@ -118,6 +143,7 @@ export function KPI({
           ].join(" ")}
         />
       </div>
+
       <p
         className={[
           "mt-3 text-4xl font-black tracking-tight",
@@ -136,7 +162,10 @@ export function KPI({
   if (!href) return inner;
 
   return (
-    <Link href={href} className="block">
+    <Link
+      href={href}
+      className="block rounded-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+    >
       {inner}
     </Link>
   );
@@ -163,22 +192,21 @@ export function Hero({
           <p className="text-xs font-black uppercase tracking-[0.35em] text-slate-400">
             Workflow
           </p>
+
           <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 md:text-5xl">
             {title}
           </h1>
+
           {subtitle && (
             <p className="mt-3 max-w-2xl text-sm font-medium leading-7 text-slate-600">
               {subtitle}
             </p>
           )}
+
           {meta && <div className="mt-5">{meta}</div>}
         </div>
 
-        {right && (
-          <div className="flex flex-wrap items-center gap-3">
-            {right}
-          </div>
-        )}
+        {right && <div className="flex flex-wrap items-center gap-3">{right}</div>}
       </div>
     </section>
   );
