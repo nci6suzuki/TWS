@@ -8,6 +8,7 @@ import { PageShell } from "@/components/ui/page-shell";
 import { Hero, Card, Chip, KPI, PrimaryButton, GhostButton } from "@/components/ui/ux";
 import { OrganizationTree } from "@/components/organization/organization-tree";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { DeleteSubmitButton } from "@/components/ui/delete-submit-button";
 
 export const runtime = "nodejs";
 
@@ -524,12 +525,12 @@ async function assignEmployee(formData: FormData) {
                               <form action={deleteUnit}>
                                 <input type="hidden" name="id" value={unit.id} />
                                 <input type="hidden" name="name" value={unit.name} />
-                                <SubmitButton
+                                <DeleteSubmitButton
   pendingText="削除中..."
-  className="inline-flex h-11 items-center rounded-xl bg-rose-600 px-5 text-sm font-black text-white transition hover:bg-rose-700"
+  confirmMessage={`「${unit.name}」を削除します。配下の組織も削除される可能性があります。よろしいですか？`}
 >
-                                  削除
-                                </SubmitButton>
+  削除
+</DeleteSubmitButton>
                               </form>
                             </div>
                           </td>
