@@ -4,6 +4,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 type Form = {
   status: string;
@@ -135,13 +136,12 @@ export function AnnualEventFilters() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={apply}
-          className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
-        >
-          絞り込む
-        </button>
+        <SubmitButton
+  pendingText="絞り込み中..."
+  className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white transition hover:bg-slate-800"
+>
+  絞り込み
+</SubmitButton>
 
         <button
           type="button"

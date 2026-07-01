@@ -13,6 +13,7 @@ import {
   Card,
 } from "@/components/ui/ux";
 import { InviteButton } from "@/components/employees/invite-button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export const runtime = "nodejs";
 
@@ -298,12 +299,12 @@ export default async function EmployeesPage({
               <input type="hidden" name="attention" value={attention} />
             )}
 
-            <button
-              type="submit"
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800"
-            >
-              検索
-            </button>
+            <SubmitButton
+  pendingText="検索中..."
+  className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white transition hover:bg-slate-800"
+>
+  検索
+</SubmitButton>
 
             <Link
               href="/employees"

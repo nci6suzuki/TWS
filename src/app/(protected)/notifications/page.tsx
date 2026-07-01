@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createActivityLog } from "@/lib/activity-logs/create-activity-log";
 import { PageShell } from "@/components/ui/page-shell";
 import { Hero, Card, Chip, KPI, PrimaryButton } from "@/components/ui/ux";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export const runtime = "nodejs";
 
@@ -301,12 +302,12 @@ export default async function NotificationsPage({
             </div>
 
             <form action="/api/notifications/generate" method="post">
-              <button
-                type="submit"
-                className="inline-flex h-11 items-center rounded-xl bg-indigo-600 px-5 text-sm font-black text-white hover:bg-indigo-700"
-              >
-                通知を生成・更新
-              </button>
+              <SubmitButton
+  pendingText="生成中..."
+  className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-black text-white transition hover:bg-indigo-700"
+>
+  通知を生成
+</SubmitButton>
             </form>
           </div>
         </Card>
