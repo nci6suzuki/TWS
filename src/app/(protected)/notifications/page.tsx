@@ -9,6 +9,7 @@ import { PageShell } from "@/components/ui/page-shell";
 import { Hero, Card, Chip, KPI, PrimaryButton } from "@/components/ui/ux";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { buttonClassName } from "@/lib/ui/button-class";
+import { ReadAndOpenButton } from "@/components/notifications/read-and-open-button";
 
 export const runtime = "nodejs";
 
@@ -419,16 +420,7 @@ export default async function NotificationsPage({
                           関連ページへ
                         </Link>
 
-                        {isUnread && (
-                          <Link
-                            href={readAndOpenHref}
-                            className={buttonClassName(
-                              "inline-flex h-9 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-black text-white hover:bg-indigo-700"
-                            )}
-                          >
-                            開いて既読
-                          </Link>
-                        )}
+                        {isUnread && <ReadAndOpenButton href={readAndOpenHref} />}
 
                         {isUnread && (
                           <form action={markAsRead}>
