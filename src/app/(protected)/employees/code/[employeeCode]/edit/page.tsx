@@ -38,7 +38,7 @@ export default async function EmployeeEditPage({
   const { data: employee, error: employeeError } = await admin
     .from("employees")
     .select(
-      "id, employee_code, name, email, app_role, status, employment_type, hire_date"
+      "id, employee_code, name, email, app_role, status, employment_type, hire_date, birth_date, gender, is_management_role"
     )
     .eq("employee_code", code)
     .maybeSingle();
@@ -85,17 +85,21 @@ export default async function EmployeeEditPage({
     const { data: beforeEmployee, error: beforeEmployeeError } = await admin
       .from("employees")
       .select(
-        "id, employee_code, name, email, app_role, status, employment_type, hire_date"
+        "id, employee_code, name, email, app_role, status, employment_type, hire_date, birth_date, gender, is_management_role"
       )
       .eq("id", targetEmployeeId)
       .maybeSingle();
 
     if (beforeEmployeeError) {
-      redirect(`${baseUrl}?error=${encodeURIComponent(beforeEmployeeError.message)}`);
+      redirect(
+        `${baseUrl}?error=${encodeURIComponent(beforeEmployeeError.message)}`
+      );
     }
 
     if (!beforeEmployee) {
-      redirect(`/employees?error=${encodeURIComponent("社員情報が見つかりません")}`);
+      redirect(
+        `/employees?error=${encodeURIComponent("社員情報が見つかりません")}`
+      );
     }
 
     const canEdit =
@@ -129,7 +133,9 @@ export default async function EmployeeEditPage({
     const nextEmail = String(formData.get("email") ?? "").trim();
 
     if (!nextEmployeeCode) {
-      redirect(`${baseUrl}?error=${encodeURIComponent("社員番号を入力してください")}`);
+      redirect(
+        `${baseUrl}?error=${encodeURIComponent("社員番号を入力してください")}`
+      );
     }
 
     if (!nextName) {
@@ -144,15 +150,32 @@ export default async function EmployeeEditPage({
       app_role: canEditRole
         ? String(formData.get("app_role") ?? beforeEmployee.app_role)
         : beforeEmployee.app_role,
+
       status: canEditRole
         ? String(formData.get("status") ?? beforeEmployee.status)
         : beforeEmployee.status,
+
       employment_type: canEditRole
-        ? String(formData.get("employment_type") ?? beforeEmployee.employment_type)
+        ? String(
+            formData.get("employment_type") ?? beforeEmployee.employment_type
+          )
         : beforeEmployee.employment_type,
+
       hire_date: canEditRole
         ? normalizeDate(String(formData.get("hire_date") ?? ""))
         : beforeEmployee.hire_date,
+
+      birth_date: canEditRole
+        ? normalizeDate(String(formData.get("birth_date") ?? ""))
+        : beforeEmployee.birth_date,
+
+      gender: canEditRole
+        ? normalizeText(formData.get("gender"))
+        : beforeEmployee.gender,
+
+      is_management_role: canEditRole
+        ? formData.get("is_management_role") === "on"
+        : beforeEmployee.is_management_role,
     };
 
     const profilePayload = {
@@ -205,7 +228,8 @@ export default async function EmployeeEditPage({
       actorEmployeeId: me.employeeId,
       activityType: "employee_updated",
       title: "社員基本情報を編集しました",
-      description: "社員番号、氏名、メール、プロフィール、キャリア情報などを更新しました。",
+      description:
+        "社員番号、氏名、メール、分析項目、プロフィール、キャリア情報などを更新しました。",
       relatedType: "employee",
       relatedId: beforeEmployee.id,
       metadata: {
@@ -218,6 +242,9 @@ export default async function EmployeeEditPage({
             status: beforeEmployee.status,
             employment_type: beforeEmployee.employment_type,
             hire_date: beforeEmployee.hire_date,
+            birth_date: beforeEmployee.birth_date,
+            gender: beforeEmployee.gender,
+            is_management_role: beforeEmployee.is_management_role,
           },
           profile: beforeProfile ?? null,
           career: beforeCareer ?? null,
@@ -251,7 +278,7 @@ export default async function EmployeeEditPage({
                 社員情報の編集
               </h1>
               <p className="mt-2 text-sm font-semibold text-slate-500">
-                基本情報、プロフィール、キャリア希望を編集できます。保存するとタイムラインに履歴が残ります。
+                基本情報、分析項目、プロフィール、キャリア希望を編集できます。保存するとタイムラインに履歴が残ります。
               </p>
             </div>
 
@@ -390,9 +417,63 @@ export default async function EmployeeEditPage({
 
             {!canEditRole && (
               <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-700">
-                権限・状態・雇用区分・入社日は、管理者または人事のみ変更できます。
+                権限・状態・雇用区分・入社日・分析項目は、管理者または人事のみ変更できます。
               </div>
             )}
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-xl font-black text-slate-900">分析項目</h2>
+            <p className="mt-1 text-sm font-semibold text-slate-500">
+              平均年齢、女性比率、女性役職者率などの分析に使用します。
+            </p>
+
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Field label="生年月日">
+                <input
+                  name="birth_date"
+                  type="date"
+                  defaultValue={employee.birth_date ?? ""}
+                  disabled={!canEditRole}
+                  className="input disabled:bg-slate-100 disabled:text-slate-500"
+                />
+              </Field>
+
+              <Field label="性別">
+                <select
+                  name="gender"
+                  defaultValue={employee.gender ?? "unknown"}
+                  disabled={!canEditRole}
+                  className="input disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  <option value="unknown">未設定</option>
+                  <option value="male">男性</option>
+                  <option value="female">女性</option>
+                  <option value="other">その他</option>
+                </select>
+              </Field>
+
+              <div className="md:col-span-2">
+                <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <input
+                    type="checkbox"
+                    name="is_management_role"
+                    defaultChecked={employee.is_management_role === true}
+                    disabled={!canEditRole}
+                    className="mt-1 h-5 w-5 rounded border-slate-300 text-slate-900"
+                  />
+                  <span>
+                    <span className="block text-sm font-black text-slate-900">
+                      役職者として集計する
+                    </span>
+                    <span className="mt-1 block text-xs font-semibold leading-5 text-slate-500">
+                      チェックを入れると、女性役職者数・女性役職者率などの分析対象になります。
+                      app_role の manager/admin/hr とは別管理です。
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </div>
           </Card>
 
           <Card className="p-6">

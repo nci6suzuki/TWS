@@ -32,8 +32,10 @@ export function CompleteActionButton({
 
     try {
       await onComplete();
-    } catch (e: any) {
-      alert(e?.message ?? "完了処理に失敗しました");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "完了処理に失敗しました";
+      alert(message);
     } finally {
       setLoading(false);
     }
@@ -49,9 +51,7 @@ export function CompleteActionButton({
       disabled={loading}
       aria-disabled={loading}
       onClick={handleClick}
-      className={buttonClassName(baseClassName, {
-        loading,
-      })}
+      className={buttonClassName(baseClassName, { loading })}
     >
       {loading ? (
         <span className="inline-flex items-center gap-2">
