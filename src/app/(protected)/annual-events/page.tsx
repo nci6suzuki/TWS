@@ -209,8 +209,8 @@ export default async function AnnualEventsPage({
 
   const currentReturnToParams = new URLSearchParams(baseParams);
   currentReturnToParams.set("view", view);
-  const currentReturnTo = `/annual-events?${currentReturnToParams.toString()}`;
 
+  const currentReturnTo = `/annual-events?${currentReturnToParams.toString()}`;
   const currentBasePath = `/annual-events?${currentReturnToParams.toString()}`;
 
   return (
@@ -231,11 +231,13 @@ export default async function AnnualEventsPage({
               {/^\d{4}$/.test(year) && <Chip>年度: {year}</Chip>}
               {month === "this" && <Chip tone="info">今月のみ表示中</Chip>}
               {month === "next" && <Chip tone="info">来月のみ表示中</Chip>}
+
               {view === "calendar" && (
                 <Chip tone="info">
                   カレンダー: {targetYear}年{targetMonth}月
                 </Chip>
               )}
+
               {q && <Chip>検索: {q}</Chip>}
 
               {employeeCode && (
@@ -292,18 +294,21 @@ export default async function AnnualEventsPage({
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <KPI label="表示件数" value={events.length} />
+
           <KPI
             label="未完了"
             value={visiblePendingCount}
             tone={visiblePendingCount > 0 ? "danger" : "ok"}
             href={filterHref({ status: "pending" })}
           />
+
           <KPI
             label="期限超過"
             value={visibleOverdueCount}
             tone={visibleOverdueCount > 0 ? "danger" : "ok"}
             href={filterHref({ overdue: "1" })}
           />
+
           <KPI
             label="完了済み"
             value={visibleDoneCount}
@@ -311,6 +316,30 @@ export default async function AnnualEventsPage({
             href={filterHref({ status: "done" })}
           />
         </div>
+
+        {visibleOverdueCount > 0 && (
+          <Card className="border-rose-200 bg-rose-50 p-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="text-sm font-black text-rose-700">
+                  期限超過イベントがあります
+                </div>
+                <div className="mt-1 text-sm font-semibold text-rose-600">
+                  未完了のまま予定日を過ぎているイベントが {visibleOverdueCount} 件あります。
+                </div>
+              </div>
+
+              <Link
+                href={filterHref({ overdue: "1" })}
+                className={buttonClassName(
+                  "inline-flex h-10 items-center justify-center rounded-xl bg-rose-600 px-4 text-sm font-black text-white hover:bg-rose-700"
+                )}
+              >
+                期限超過のみ確認
+              </Link>
+            </div>
+          </Card>
+        )}
 
         <Card className="p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -332,24 +361,24 @@ export default async function AnnualEventsPage({
                 {month === "this"
                   ? "今月"
                   : month === "next"
-                  ? "来月"
-                  : "月指定なし"}
+                    ? "来月"
+                    : "月指定なし"}
               </Chip>
 
               <Chip tone={status ? "info" : "gray"}>
                 {status === "pending"
                   ? "未完了"
                   : status === "done"
-                  ? "完了済み"
-                  : status || "状態指定なし"}
+                    ? "完了済み"
+                    : status || "状態指定なし"}
               </Chip>
 
               <Chip tone={view === "calendar" ? "info" : "gray"}>
                 {view === "calendar"
                   ? "カレンダー表示"
                   : view === "cards"
-                  ? "カード表示"
-                  : "リスト表示"}
+                    ? "カード表示"
+                    : "リスト表示"}
               </Chip>
             </div>
           </div>
@@ -387,20 +416,23 @@ export default async function AnnualEventsPage({
                   <div
                     key={e.id}
                     className={[
-                      "rounded-3xl border p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
+                      "group rounded-3xl border p-5 shadow-sm",
+                      "transition duration-150 ease-out",
+                      "hover:-translate-y-0.5 hover:shadow-md",
+                      "active:scale-[0.99] active:translate-y-px",
                       isOverdue
-                        ? "border-rose-200 bg-rose-50"
-                        : "border-slate-200 bg-white",
+                        ? "border-rose-200 bg-rose-50 hover:border-rose-300"
+                        : "border-slate-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/30",
                     ].join(" ")}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
+                      <div className="min-w-0">
                         <div className="text-xs font-black tracking-[0.12em] text-slate-400">
                           {e.scheduled_date} / {getEventTypeLabel(e.event_type)}
                         </div>
 
                         <Link
-                          className="mt-2 block text-lg font-black text-slate-900 hover:underline"
+                          className="mt-2 block truncate text-lg font-black text-slate-900 hover:text-indigo-700 hover:underline"
                           href={`/annual-events/${e.id}`}
                         >
                           {e.title}
@@ -422,17 +454,17 @@ export default async function AnnualEventsPage({
                         )}
                       </div>
 
-                      <div className="flex flex-col items-end gap-2">
+                      <div className="flex shrink-0 flex-col items-end gap-2">
                         <Chip
                           tone={
                             e.status === "done"
                               ? "ok"
                               : isOverdue
-                              ? "danger"
-                              : "gray"
+                                ? "danger"
+                                : "gray"
                           }
                         >
-                          {isOverdue ? "期限超過" : e.status}
+                          {isOverdue ? "期限超過" : getStatusLabel(e.status)}
                         </Chip>
 
                         {e.source_type === "employee_interview" && (
@@ -445,14 +477,18 @@ export default async function AnnualEventsPage({
 
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Link
-                        className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-700 hover:bg-slate-50")}
+                        className={buttonClassName(
+                          "inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-700 hover:bg-slate-50"
+                        )}
                         href={`/annual-events/${e.id}`}
                       >
                         詳細
                       </Link>
 
                       <Link
-                        className={buttonClassName("inline-flex h-9 items-center rounded-xl bg-slate-900 px-3 text-sm font-black text-white hover:bg-slate-800")}
+                        className={buttonClassName(
+                          "inline-flex h-9 items-center rounded-xl bg-slate-900 px-3 text-sm font-black text-white hover:bg-slate-800"
+                        )}
                         href={`/annual-events/${e.id}/edit`}
                       >
                         編集
@@ -468,15 +504,16 @@ export default async function AnnualEventsPage({
                             name="returnTo"
                             value={currentReturnTo}
                           />
-                          <button
-                            type="submit"
-                            className={buttonClassName("inline-flex h-9 items-center rounded-xl bg-emerald-600 px-3 text-sm font-black text-white hover:bg-emerald-700")}
+
+                          <SubmitButton
+                            pendingText="完了処理中..."
+                            className="inline-flex h-9 items-center justify-center rounded-xl bg-emerald-600 px-3 text-sm font-black text-white hover:bg-emerald-700"
                           >
                             完了化
-                          </button>
+                          </SubmitButton>
                         </form>
                       ) : (
-                        <span className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-black text-emerald-700")}>
+                        <span className="inline-flex h-9 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-black text-emerald-700">
                           完了済み
                         </span>
                       )}
@@ -494,7 +531,7 @@ export default async function AnnualEventsPage({
           </div>
         ) : (
           <Card className="overflow-auto p-0">
-            <table className="min-w-[1200px] w-full text-sm">
+            <table className="w-full min-w-[1200px] text-sm">
               <thead className="sticky top-0 bg-white">
                 <tr className="border-b text-slate-500">
                   <th className="px-4 py-3 text-left font-black">予定日</th>
@@ -528,8 +565,10 @@ export default async function AnnualEventsPage({
                       <tr
                         key={e.id}
                         className={[
-                          "border-b last:border-b-0 hover:bg-slate-50",
-                          isOverdue ? "bg-rose-50" : "bg-white",
+                          "group border-b transition last:border-b-0",
+                          isOverdue
+                            ? "bg-rose-50 hover:bg-rose-100/70"
+                            : "bg-white hover:bg-indigo-50/40",
                         ].join(" ")}
                       >
                         <td className="px-4 py-3 font-bold text-slate-700">
@@ -540,7 +579,9 @@ export default async function AnnualEventsPage({
                           {employee ? (
                             <Link
                               href={`/employees/code/${employee.employee_code}?tab=schedule`}
-                              className="font-black text-indigo-600 hover:underline"
+                              className={buttonClassName(
+                                "font-black text-indigo-600 hover:underline"
+                              )}
                             >
                               {employee.employee_code} / {employee.name}
                             </Link>
@@ -552,7 +593,9 @@ export default async function AnnualEventsPage({
                         <td className="px-4 py-3">
                           <Link
                             href={`/annual-events/${e.id}`}
-                            className="font-black text-slate-900 hover:underline"
+                            className={buttonClassName(
+                              "font-black text-slate-900 hover:text-indigo-700 hover:underline"
+                            )}
                           >
                             {e.title}
                           </Link>
@@ -568,11 +611,11 @@ export default async function AnnualEventsPage({
                               e.status === "done"
                                 ? "ok"
                                 : isOverdue
-                                ? "danger"
-                                : "gray"
+                                  ? "danger"
+                                  : "gray"
                             }
                           >
-                            {isOverdue ? "期限超過" : e.status}
+                            {isOverdue ? "期限超過" : getStatusLabel(e.status)}
                           </Chip>
                         </td>
 
@@ -591,14 +634,18 @@ export default async function AnnualEventsPage({
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-2">
                             <Link
-                              className={buttonClassName("inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50")}
+                              className={buttonClassName(
+                                "inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50"
+                              )}
                               href={`/annual-events/${e.id}`}
                             >
                               詳細
                             </Link>
 
                             <Link
-                              className={buttonClassName("inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800")}
+                              className={buttonClassName(
+                                "inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
+                              )}
                               href={`/annual-events/${e.id}/edit`}
                             >
                               編集
@@ -614,15 +661,16 @@ export default async function AnnualEventsPage({
                                   name="returnTo"
                                   value={currentReturnTo}
                                 />
-                                <button
-                                  type="submit"
-                                  className={buttonClassName("inline-flex h-8 items-center rounded-lg bg-emerald-600 px-3 text-xs font-black text-white hover:bg-emerald-700")}
+
+                                <SubmitButton
+                                  pendingText="完了中..."
+                                  className="inline-flex h-8 items-center justify-center rounded-lg bg-emerald-600 px-3 text-xs font-black text-white hover:bg-emerald-700"
                                 >
                                   完了化
-                                </button>
+                                </SubmitButton>
                               </form>
                             ) : (
-                              <span className={buttonClassName("inline-flex h-8 items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-black text-emerald-700")}>
+                              <span className="inline-flex h-8 items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-black text-emerald-700">
                                 完了済み
                               </span>
                             )}
@@ -662,4 +710,11 @@ function getEventTypeLabel(type: string) {
   if (type === "onboarding") return "入社";
   if (type === "other") return "その他";
   return type || "その他";
+}
+
+function getStatusLabel(status: string) {
+  if (status === "pending") return "未完了";
+  if (status === "done") return "完了済み";
+  if (status === "cancelled") return "キャンセル";
+  return status || "";
 }
