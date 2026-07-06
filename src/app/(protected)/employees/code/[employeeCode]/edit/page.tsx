@@ -8,6 +8,7 @@ import { createActivityLog } from "@/lib/activity-logs/create-activity-log";
 import { PageShell } from "@/components/ui/page-shell";
 import { Card, Chip, PrimaryButton, GhostButton } from "@/components/ui/ux";
 import { buttonClassName } from "@/lib/ui/button-class";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export const runtime = "nodejs";
 
@@ -140,7 +141,6 @@ export default async function EmployeeEditPage({
       name: nextName,
       email: nextEmail || null,
 
-      // admin/hr 以外は権限・状態・雇用区分を変更させない
       app_role: canEditRole
         ? String(formData.get("app_role") ?? beforeEmployee.app_role)
         : beforeEmployee.app_role,
@@ -234,7 +234,7 @@ export default async function EmployeeEditPage({
     redirect(
       `/employees/code/${encodeURIComponent(
         employeePayload.employee_code
-      )}?tab=timeline&updated=1`
+      )}?tab=timeline&updated=${encodeURIComponent(employeePayload.name)}`
     );
   }
 
@@ -487,20 +487,28 @@ export default async function EmployeeEditPage({
             </div>
           </Card>
 
-          <div className="flex flex-col gap-3 md:flex-row md:justify-end">
-            <Link
-              href={`/employees/code/${employee.employee_code}`}
-              className={buttonClassName("inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 hover:bg-slate-50")}
-            >
-              キャンセル
-            </Link>
+          <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+            <div className="text-xs font-semibold text-slate-400">
+              保存すると、変更内容がタイムラインに記録されます。
+            </div>
 
-            <button
-              type="submit"
-              className={buttonClassName("inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white hover:bg-slate-800")}
-            >
-              保存する
-            </button>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Link
+                href={`/employees/code/${employee.employee_code}`}
+                className={buttonClassName(
+                  "inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 hover:bg-slate-50"
+                )}
+              >
+                キャンセル
+              </Link>
+
+              <SubmitButton
+                pendingText="保存中..."
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white hover:bg-slate-800"
+              >
+                保存する
+              </SubmitButton>
+            </div>
           </div>
         </form>
       </div>
