@@ -34,6 +34,7 @@ export default async function NotificationsPage({
   const severity = getParam("severity");
   const errorMessage = getParam("error");
   const generated = getParam("generated");
+  const read = getParam("read");
 
   const admin = createSupabaseAdminClient();
 
@@ -78,6 +79,15 @@ export default async function NotificationsPage({
   const warningCount = all.filter((n) => n.severity === "warning").length;
   const infoCount = all.filter((n) => n.severity === "info").length;
 
+  const currentParams = new URLSearchParams();
+
+  if (status) currentParams.set("status", status);
+  if (severity) currentParams.set("severity", severity);
+
+  const currentReturnTo = `/notifications${
+    currentParams.toString() ? `?${currentParams.toString()}` : ""
+  }`;
+
   async function markAsRead(formData: FormData) {
     "use server";
 
@@ -88,6 +98,8 @@ export default async function NotificationsPage({
     }
 
     const id = String(formData.get("id") ?? "");
+    const returnTo = String(formData.get("returnTo") ?? "/notifications");
+
     const admin = createSupabaseAdminClient();
 
     const { data: notification, error: fetchError } = await admin
@@ -145,10 +157,10 @@ export default async function NotificationsPage({
       });
     }
 
-    redirect("/notifications");
+    redirect(addToastParam(returnTo, "read", "1"));
   }
 
-  async function markAllAsRead() {
+  async function markAllAsRead(formData: FormData) {
     "use server";
 
     const me = await requireAuth();
@@ -156,6 +168,8 @@ export default async function NotificationsPage({
     if (me.role !== "admin" && me.role !== "hr") {
       redirect("/unauthorized");
     }
+
+    const returnTo = String(formData.get("returnTo") ?? "/notifications");
 
     const admin = createSupabaseAdminClient();
 
@@ -211,7 +225,7 @@ export default async function NotificationsPage({
       });
     }
 
-    redirect("/notifications");
+    redirect(addToastParam(returnTo, "read", "1"));
   }
 
   return (
@@ -226,25 +240,31 @@ export default async function NotificationsPage({
               <Chip>表示件数: {all.length}</Chip>
               <Chip>状態: {status}</Chip>
               {severity && <Chip>重要度: {severity}</Chip>}
+              {read && <Chip tone="ok">既読処理済み</Chip>}
             </div>
           }
           right={
             <>
               <PrimaryButton href="/notifications">未読</PrimaryButton>
+
               <PrimaryButton href="/notifications?status=all">
                 すべて
               </PrimaryButton>
+
               <PrimaryButton href="/notifications?severity=danger">
                 重要
               </PrimaryButton>
 
               <form action={markAllAsRead}>
-                <button
-                  type="submit"
-                  className={buttonClassName("inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800")}
+                <input type="hidden" name="returnTo" value={currentReturnTo} />
+
+                <SubmitButton
+                  pendingText="一括処理中..."
+                  disabled={unreadCount === 0}
+                  className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800"
                 >
                   すべて既読
-                </button>
+                </SubmitButton>
               </form>
             </>
           }
@@ -278,16 +298,19 @@ export default async function NotificationsPage({
             value={unreadCount}
             tone={unreadCount > 0 ? "danger" : "ok"}
           />
+
           <KPI
             label="重要"
             value={dangerCount}
             tone={dangerCount > 0 ? "danger" : "ok"}
           />
+
           <KPI
             label="注意"
             value={warningCount}
             tone={warningCount > 0 ? "danger" : "ok"}
           />
+
           <KPI label="情報" value={infoCount} tone="ok" />
         </div>
 
@@ -304,11 +327,11 @@ export default async function NotificationsPage({
 
             <form action="/api/notifications/generate" method="post">
               <SubmitButton
-  pendingText="生成中..."
-  className={buttonClassName("inline-flex h-10 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-black text-white transition hover:bg-indigo-700")}
->
-  通知を生成
-</SubmitButton>
+                pendingText="生成中..."
+                className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-black text-white hover:bg-indigo-700"
+              >
+                通知を生成
+              </SubmitButton>
             </form>
           </div>
         </Card>
@@ -334,12 +357,16 @@ export default async function NotificationsPage({
                   n.id
                 }/read-and-redirect?to=${encodeURIComponent(href)}`;
 
+                const isUnread = n.status === "unread";
+
                 return (
                   <div
                     key={n.id}
                     className={[
-                      "p-5",
-                      n.status === "unread" ? "bg-white" : "bg-slate-50",
+                      "group p-5 transition duration-150 ease-out",
+                      isUnread
+                        ? "bg-white hover:bg-indigo-50/40"
+                        : "bg-slate-50 hover:bg-slate-100",
                     ].join(" ")}
                   >
                     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -349,8 +376,8 @@ export default async function NotificationsPage({
                             {getSeverityLabel(n.severity)}
                           </Chip>
 
-                          <Chip tone={n.status === "unread" ? "info" : "gray"}>
-                            {n.status === "unread" ? "未読" : "既読"}
+                          <Chip tone={isUnread ? "info" : "gray"}>
+                            {isUnread ? "未読" : "既読"}
                           </Chip>
 
                           {n.due_date && <Chip>期限: {n.due_date}</Chip>}
@@ -364,7 +391,9 @@ export default async function NotificationsPage({
 
                         <Link
                           href={href}
-                          className={buttonClassName("mt-3 block text-lg font-black text-slate-900 hover:underline")}
+                          className={buttonClassName(
+                            "mt-3 block text-lg font-black text-slate-900 hover:text-indigo-700 hover:underline"
+                          )}
                         >
                           {n.title}
                         </Link>
@@ -380,32 +409,42 @@ export default async function NotificationsPage({
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex shrink-0 flex-wrap gap-2">
                         <Link
                           href={href}
-                          className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50")}
+                          className={buttonClassName(
+                            "inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+                          )}
                         >
                           関連ページへ
                         </Link>
 
-                        {n.status === "unread" && (
+                        {isUnread && (
                           <Link
                             href={readAndOpenHref}
-                            className={buttonClassName("inline-flex h-9 items-center rounded-xl bg-indigo-600 px-4 text-sm font-black text-white hover:bg-indigo-700")}
+                            className={buttonClassName(
+                              "inline-flex h-9 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-black text-white hover:bg-indigo-700"
+                            )}
                           >
                             開いて既読
                           </Link>
                         )}
 
-                        {n.status === "unread" && (
+                        {isUnread && (
                           <form action={markAsRead}>
                             <input type="hidden" name="id" value={n.id} />
-                            <button
-                              type="submit"
-                              className={buttonClassName("inline-flex h-9 items-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800")}
+                            <input
+                              type="hidden"
+                              name="returnTo"
+                              value={currentReturnTo}
+                            />
+
+                            <SubmitButton
+                              pendingText="既読処理中..."
+                              className="inline-flex h-9 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800"
                             >
                               既読にする
-                            </button>
+                            </SubmitButton>
                           </form>
                         )}
                       </div>
@@ -419,6 +458,11 @@ export default async function NotificationsPage({
       </div>
     </PageShell>
   );
+}
+
+function addToastParam(url: string, key: string, value: string) {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}${key}=${encodeURIComponent(value)}`;
 }
 
 function getSeverityTone(severity: string) {
