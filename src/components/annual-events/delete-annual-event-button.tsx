@@ -1,6 +1,8 @@
+// src/components/annual-events/delete-annual-event-button.tsx
+
 "use client";
 
-import { useState } from "react";
+import { DeleteActionButton } from "@/components/ui/delete-action-button";
 
 export function DeleteAnnualEventButton({
   eventId,
@@ -13,64 +15,42 @@ export function DeleteAnnualEventButton({
   label?: string;
   size?: "sm" | "md";
 }) {
-  const [loading, setLoading] = useState(false);
-
-  async function onDelete() {
-    const ok = confirm(
-      "この年間イベントを削除します。\n削除すると元に戻せません。よろしいですか？"
-    );
-
-    if (!ok) return;
-
-    setLoading(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("returnTo", returnTo);
-
-      const res = await fetch(`/api/annual-events/${eventId}/delete`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok && !res.redirected) {
-        const text = await res.text();
-        alert(text || "削除に失敗しました");
-        return;
-      }
-
-      if (res.redirected) {
-        window.location.href = res.url;
-        return;
-      }
-
-      window.location.href = returnTo;
-    } catch (e: any) {
-      alert(e?.message ?? "削除に失敗しました");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   const sizeClass =
     size === "md"
-      ? "h-9 rounded-xl px-4 text-sm"
-      : "h-8 rounded-lg px-3 text-xs";
+      ? "inline-flex h-9 items-center justify-center rounded-xl bg-rose-600 px-4 text-sm font-black text-white hover:bg-rose-700"
+      : "inline-flex h-8 items-center justify-center rounded-lg bg-rose-600 px-3 text-xs font-black text-white hover:bg-rose-700";
 
   return (
-    <button
-      type="button"
-      disabled={loading}
-      onClick={onDelete}
-      className={[
-        "inline-flex items-center font-black text-white transition",
-        sizeClass,
-        loading
-          ? "cursor-not-allowed bg-slate-400"
-          : "bg-rose-600 hover:bg-rose-700",
-      ].join(" ")}
+    <DeleteActionButton
+      className={sizeClass}
+      pendingText="削除中..."
+      confirmMessage={
+        "この年間イベントを削除します。\n削除すると元に戻せません。よろしいですか？"
+      }
+      onDelete={async () => {
+        const formData = new FormData();
+        formData.append("returnTo", returnTo);
+
+        const res = await fetch(`/api/annual-events/${eventId}/delete`, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (res.redirected) {
+          window.location.href = res.url;
+          return;
+        }
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || "年間イベントの削除に失敗しました");
+        }
+
+        const separator = returnTo.includes("?") ? "&" : "?";
+        window.location.href = `${returnTo}${separator}deleted=年間イベント`;
+      }}
     >
-      {loading ? "削除中..." : label}
-    </button>
+      {label}
+    </DeleteActionButton>
   );
 }
