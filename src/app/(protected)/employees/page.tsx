@@ -15,8 +15,17 @@ import {
 import { InviteButton } from "@/components/employees/invite-button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { buttonClassName } from "@/lib/ui/button-class";
+import { ClickableRow } from "@/components/ui/clickable-row";
 
 export const runtime = "nodejs";
+
+type AttentionItem = {
+  total: number;
+  expiredQualifications: number;
+  soonQualifications: number;
+  overdueEvents: number;
+  pendingInterviews: number;
+};
 
 export default async function EmployeesPage({
   searchParams,
@@ -105,16 +114,7 @@ export default async function EmployeesPage({
           .in("employee_id", employeeIds)
       : { data: [] as any[] };
 
-  const attentionByEmployeeId = new Map<
-    string,
-    {
-      total: number;
-      expiredQualifications: number;
-      soonQualifications: number;
-      overdueEvents: number;
-      pendingInterviews: number;
-    }
-  >();
+  const attentionByEmployeeId = new Map<string, AttentionItem>();
 
   for (const employee of employees) {
     attentionByEmployeeId.set(employee.id, {
@@ -129,9 +129,7 @@ export default async function EmployeesPage({
   for (const qualification of qualifications ?? []) {
     if (!qualification.expires_on) continue;
 
-    const attentionItem = attentionByEmployeeId.get(
-      qualification.employee_id
-    );
+    const attentionItem = attentionByEmployeeId.get(qualification.employee_id);
     if (!attentionItem) continue;
 
     if (qualification.expires_on < today) {
@@ -258,7 +256,6 @@ export default async function EmployeesPage({
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <KPI label="社員数" value={totalCount} />
-
           <KPI label="在籍中" value={activeCount} tone="ok" />
 
           <KPI
@@ -301,24 +298,134 @@ export default async function EmployeesPage({
             )}
 
             <SubmitButton
-  pendingText="検索中..."
-  className={buttonClassName("inline-flex h-10 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white transition hover:bg-slate-800")}
->
-  検索
-</SubmitButton>
+              pendingText="検索中..."
+              className={buttonClassName(
+                "inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800"
+              )}
+            >
+              検索
+            </SubmitButton>
 
             <Link
               href="/employees"
-              className={buttonClassName("inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50")}
+              className={buttonClassName(
+                "inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+              )}
             >
               条件クリア
             </Link>
           </form>
         </Card>
 
-        <Card className="overflow-hidden">
+        <div className="space-y-3 md:hidden">
+          {visibleEmployees.length === 0 ? (
+            <Card className="p-6 text-center text-sm font-bold text-slate-500">
+              表示できる社員がいません
+            </Card>
+          ) : (
+            visibleEmployees.map((employee) => {
+              const attentionItem = attentionByEmployeeId.get(employee.id);
+              const hasAttention = (attentionItem?.total ?? 0) > 0;
+
+              return (
+                <Card key={employee.id} className="p-3">
+                  <ClickableRow
+                    href={`/employees/code/${employee.employee_code}`}
+                    className="border-slate-100 bg-slate-50 p-4 shadow-none"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-xs font-black text-slate-400">
+                          {employee.employee_code}
+                        </div>
+
+                        <div className="mt-1 truncate text-lg font-black text-slate-900 group-hover:text-indigo-700">
+                          {employee.name}
+                        </div>
+
+                        <div className="mt-1 truncate text-xs font-semibold text-slate-500">
+                          {employee.email || "-"}
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 text-xs font-black text-indigo-600">
+                        詳細 →
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Chip tone="info">{getRoleLabel(employee.app_role)}</Chip>
+
+                      <Chip
+                        tone={employee.status === "active" ? "ok" : "danger"}
+                      >
+                        {getStatusLabel(employee.status)}
+                      </Chip>
+
+                      {employee.user_id ? (
+                        <Chip tone="ok">招待済</Chip>
+                      ) : (
+                        <Chip tone="danger">未招待</Chip>
+                      )}
+
+                      {hasAttention ? (
+                        <Chip tone="danger">
+                          要対応 {attentionItem?.total ?? 0}件
+                        </Chip>
+                      ) : (
+                        <Chip tone="ok">要対応なし</Chip>
+                      )}
+                    </div>
+                  </ClickableRow>
+
+                  {hasAttention && (
+                    <div className="mt-3 rounded-2xl bg-rose-50 p-3">
+                      <AttentionSummary attentionItem={attentionItem} />
+                    </div>
+                  )}
+
+                  {employee.last_invited_at && (
+                    <div className="mt-3 text-xs font-semibold text-slate-400">
+                      最終招待: {formatDateTime(employee.last_invited_at)}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Link
+                      href={`/employees/code/${employee.employee_code}`}
+                      className={buttonClassName(
+                        "inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50"
+                      )}
+                    >
+                      詳細
+                    </Link>
+
+                    <Link
+                      href={`/employees/code/${employee.employee_code}/edit`}
+                      className={buttonClassName(
+                        "inline-flex h-9 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
+                      )}
+                    >
+                      編集
+                    </Link>
+
+                    {(me.role === "admin" || me.role === "hr") && (
+                      <InviteButton
+                        employeeId={employee.id}
+                        force={!employee.user_id}
+                        label={employee.user_id ? "再招待" : "招待"}
+                      />
+                    )}
+                  </div>
+                </Card>
+              );
+            })
+          )}
+        </div>
+
+        <Card className="hidden overflow-hidden md:block">
           <div className="overflow-auto">
-            <table className="min-w-[1100px] w-full text-sm">
+            <table className="w-full min-w-[1100px] text-sm">
               <thead className="bg-slate-50">
                 <tr className="border-b border-slate-200 text-slate-500">
                   <th className="px-4 py-3 text-left font-black">社員番号</th>
@@ -352,7 +459,7 @@ export default async function EmployeesPage({
                     return (
                       <tr
                         key={employee.id}
-                        className="border-b border-slate-100 bg-white hover:bg-slate-50"
+                        className="group border-b border-slate-100 bg-white transition hover:bg-indigo-50/40"
                       >
                         <td className="px-4 py-3 font-black text-slate-900">
                           {employee.employee_code}
@@ -361,7 +468,9 @@ export default async function EmployeesPage({
                         <td className="px-4 py-3">
                           <Link
                             href={`/employees/code/${employee.employee_code}`}
-                            className={buttonClassName("font-black text-indigo-600 hover:underline")}
+                            className={buttonClassName(
+                              "font-black text-indigo-600 hover:underline"
+                            )}
                           >
                             {employee.name}
                           </Link>
@@ -405,7 +514,9 @@ export default async function EmployeesPage({
                           {hasAttention ? (
                             <Link
                               href={`/employees/code/${employee.employee_code}?tab=timeline`}
-                              className={buttonClassName("inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-700 hover:bg-rose-100")}
+                              className={buttonClassName(
+                                "inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-700 hover:bg-rose-100"
+                              )}
                             >
                               {attentionItem?.total ?? 0}件
                             </Link>
@@ -414,35 +525,8 @@ export default async function EmployeesPage({
                           )}
 
                           {hasAttention && (
-                            <div className="mt-2 space-y-1 text-xs font-semibold text-slate-500">
-                              {(attentionItem?.expiredQualifications ?? 0) >
-                                0 && (
-                                <div>
-                                  資格期限切れ:{" "}
-                                  {attentionItem?.expiredQualifications}
-                                </div>
-                              )}
-
-                              {(attentionItem?.soonQualifications ?? 0) > 0 && (
-                                <div>
-                                  資格30日以内:{" "}
-                                  {attentionItem?.soonQualifications}
-                                </div>
-                              )}
-
-                              {(attentionItem?.overdueEvents ?? 0) > 0 && (
-                                <div>
-                                  イベント期限超過:{" "}
-                                  {attentionItem?.overdueEvents}
-                                </div>
-                              )}
-
-                              {(attentionItem?.pendingInterviews ?? 0) > 0 && (
-                                <div>
-                                  次回面談予定:{" "}
-                                  {attentionItem?.pendingInterviews}
-                                </div>
-                              )}
+                            <div className="mt-2">
+                              <AttentionSummary attentionItem={attentionItem} />
                             </div>
                           )}
                         </td>
@@ -451,14 +535,18 @@ export default async function EmployeesPage({
                           <div className="flex flex-wrap gap-2">
                             <Link
                               href={`/employees/code/${employee.employee_code}`}
-                              className={buttonClassName("inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50")}
+                              className={buttonClassName(
+                                "inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50"
+                              )}
                             >
                               詳細
                             </Link>
 
                             <Link
                               href={`/employees/code/${employee.employee_code}/edit`}
-                              className={buttonClassName("inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800")}
+                              className={buttonClassName(
+                                "inline-flex h-8 items-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
+                              )}
                             >
                               編集
                             </Link>
@@ -482,6 +570,34 @@ export default async function EmployeesPage({
         </Card>
       </div>
     </PageShell>
+  );
+}
+
+function AttentionSummary({
+  attentionItem,
+}: {
+  attentionItem: AttentionItem | undefined;
+}) {
+  if (!attentionItem) return null;
+
+  return (
+    <div className="space-y-1 text-xs font-semibold text-slate-500">
+      {attentionItem.expiredQualifications > 0 && (
+        <div>資格期限切れ: {attentionItem.expiredQualifications}</div>
+      )}
+
+      {attentionItem.soonQualifications > 0 && (
+        <div>資格30日以内: {attentionItem.soonQualifications}</div>
+      )}
+
+      {attentionItem.overdueEvents > 0 && (
+        <div>イベント期限超過: {attentionItem.overdueEvents}</div>
+      )}
+
+      {attentionItem.pendingInterviews > 0 && (
+        <div>次回面談予定: {attentionItem.pendingInterviews}</div>
+      )}
+    </div>
   );
 }
 
