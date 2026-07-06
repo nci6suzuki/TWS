@@ -6,8 +6,15 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createActivityLog } from "@/lib/activity-logs/create-activity-log";
 import { PageShell } from "@/components/ui/page-shell";
-import { Hero, Card, Chip, PrimaryButton, GhostButton } from "@/components/ui/ux";
+import {
+  Hero,
+  Card,
+  Chip,
+  PrimaryButton,
+  GhostButton,
+} from "@/components/ui/ux";
 import { buttonClassName } from "@/lib/ui/button-class";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export const runtime = "nodejs";
 
@@ -50,12 +57,15 @@ export default async function QualificationEditPage({
 
   const { data: qualification, error: qualificationError } = await admin
     .from("employee_qualifications")
-    .select("id, employee_id, qualification_name, acquired_on, expires_on, status, memo")
+    .select(
+      "id, employee_id, qualification_name, acquired_on, expires_on, status, memo"
+    )
     .eq("id", qualificationId)
     .eq("employee_id", employee.id)
     .maybeSingle();
 
   if (qualificationError) throw qualificationError;
+
   if (!qualification) {
     redirect(
       `/employees/code/${encodeURIComponent(
@@ -75,9 +85,11 @@ export default async function QualificationEditPage({
 
     const admin = createSupabaseAdminClient();
 
-    const employeeId = String(formData.get("employee_id") ?? "");
-    const employeeCode = String(formData.get("employee_code") ?? "");
-    const qualificationId = String(formData.get("qualification_id") ?? "");
+    const employeeId = String(formData.get("employee_id") ?? "").trim();
+    const employeeCode = String(formData.get("employee_code") ?? "").trim();
+    const qualificationId = String(
+      formData.get("qualification_id") ?? ""
+    ).trim();
 
     const qualificationName = String(
       formData.get("qualification_name") ?? ""
@@ -109,7 +121,9 @@ export default async function QualificationEditPage({
 
     const { data: beforeQualification, error: beforeError } = await admin
       .from("employee_qualifications")
-      .select("id, employee_id, qualification_name, acquired_on, expires_on, status, memo")
+      .select(
+        "id, employee_id, qualification_name, acquired_on, expires_on, status, memo"
+      )
       .eq("id", qualificationId)
       .eq("employee_id", employeeId)
       .maybeSingle();
@@ -135,7 +149,9 @@ export default async function QualificationEditPage({
       })
       .eq("id", qualificationId)
       .eq("employee_id", employeeId)
-      .select("id, employee_id, qualification_name, acquired_on, expires_on, status, memo")
+      .select(
+        "id, employee_id, qualification_name, acquired_on, expires_on, status, memo"
+      )
       .single();
 
     if (error) {
@@ -171,7 +187,9 @@ export default async function QualificationEditPage({
     });
 
     redirect(
-      `${baseUrl}?updated=${encodeURIComponent(updatedQualification.qualification_name)}`
+      `${listUrl}?updated=${encodeURIComponent(
+        updatedQualification.qualification_name
+      )}`
     );
   }
 
@@ -197,6 +215,7 @@ export default async function QualificationEditPage({
               >
                 資格管理へ戻る
               </GhostButton>
+
               <PrimaryButton
                 href={`/employees/code/${employee.employee_code}?tab=timeline`}
               >
@@ -316,27 +335,37 @@ export default async function QualificationEditPage({
               />
             </label>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="submit"
-                className={buttonClassName("inline-flex h-11 items-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800")}
-              >
-                更新する
-              </button>
+            <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+              <div className="text-xs font-semibold text-slate-400">
+                保存すると、資格編集の履歴がタイムラインに記録されます。
+              </div>
 
-              <Link
-                href={`/employees/code/${employee.employee_code}/qualifications`}
-                className={buttonClassName("inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50")}
-              >
-                資格管理へ戻る
-              </Link>
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Link
+                  href={`/employees/code/${employee.employee_code}/qualifications`}
+                  className={buttonClassName(
+                    "inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+                  )}
+                >
+                  資格管理へ戻る
+                </Link>
 
-              <Link
-                href={`/employees/code/${employee.employee_code}?tab=qualifications`}
-                className={buttonClassName("inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50")}
-              >
-                資格タブへ戻る
-              </Link>
+                <Link
+                  href={`/employees/code/${employee.employee_code}?tab=qualifications`}
+                  className={buttonClassName(
+                    "inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+                  )}
+                >
+                  資格タブへ戻る
+                </Link>
+
+                <SubmitButton
+                  pendingText="保存中..."
+                  className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800"
+                >
+                  更新する
+                </SubmitButton>
+              </div>
             </div>
           </form>
         </Card>
