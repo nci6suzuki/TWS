@@ -8,6 +8,7 @@ import { PageShell } from "@/components/ui/page-shell";
 import { Card, Chip } from "@/components/ui/ux";
 import { AnnualEventTemplateForm } from "@/components/annual-events/annual-event-template-form";
 import { buttonClassName } from "@/lib/ui/button-class";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export const runtime = "nodejs";
 
@@ -29,15 +30,7 @@ export default async function AnnualEventNewPage({
   };
 
   const errorMessage = getParam("error");
-
-  // 社員カルテ・社員別カレンダーから
-  // /annual-events/new?employeeCode=000101
-  // で来た場合に使う
   const defaultEmployeeCode = getParam("employeeCode");
-
-  // カレンダーの日付セルから
-  // /annual-events/new?scheduledDate=2026-06-20
-  // で来た場合に使う
   const scheduledDateParam = getParam("scheduledDate");
 
   const today = new Date().toISOString().slice(0, 10);
@@ -144,7 +137,7 @@ export default async function AnnualEventNewPage({
       redirect(`${baseErrorUrl}&error=${encodeURIComponent(error.message)}`);
     }
 
-    redirect(returnTo);
+    redirect(addToastParam(returnTo, "created", "年間イベント"));
   }
 
   const backToCalendarHref = buildCalendarHref({
@@ -167,9 +160,11 @@ export default async function AnnualEventNewPage({
               <div className="text-xs font-black tracking-[0.18em] text-indigo-600">
                 NEW ANNUAL EVENT
               </div>
+
               <h1 className="mt-2 text-3xl font-black text-slate-900">
                 年間イベント登録
               </h1>
+
               <p className="mt-2 text-sm font-semibold text-slate-500">
                 面談、評価、研修、資格更新など、社員ごとの予定を登録します。
               </p>
@@ -191,14 +186,18 @@ export default async function AnnualEventNewPage({
 
               <Link
                 href={backToCalendarHref}
-                className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-700 hover:bg-indigo-100")}
+                className={buttonClassName(
+                  "inline-flex h-9 items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-700 hover:bg-indigo-100"
+                )}
               >
                 カレンダーへ戻る
               </Link>
 
               <Link
                 href="/annual-events"
-                className={buttonClassName("inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50")}
+                className={buttonClassName(
+                  "inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+                )}
               >
                 一覧へ戻る
               </Link>
@@ -231,20 +230,28 @@ export default async function AnnualEventNewPage({
             defaultScheduledDate={defaultScheduledDate}
           />
 
-          <div className="flex flex-col gap-3 md:flex-row md:justify-end">
-            <Link
-              href={cancelHref}
-              className={buttonClassName("inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 hover:bg-slate-50")}
-            >
-              キャンセル
-            </Link>
+          <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+            <div className="text-xs font-semibold text-slate-400">
+              登録後はカレンダー表示へ戻ります。
+            </div>
 
-            <button
-              type="submit"
-              className={buttonClassName("inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white hover:bg-slate-800")}
-            >
-              登録する
-            </button>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Link
+                href={cancelHref}
+                className={buttonClassName(
+                  "inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 hover:bg-slate-50"
+                )}
+              >
+                キャンセル
+              </Link>
+
+              <SubmitButton
+                pendingText="登録中..."
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white hover:bg-slate-800"
+              >
+                登録する
+              </SubmitButton>
+            </div>
           </div>
         </form>
       </div>
@@ -317,4 +324,9 @@ function buildErrorUrl({
   const qs = p.toString();
 
   return qs ? `/annual-events/new?${qs}` : "/annual-events/new?";
+}
+
+function addToastParam(url: string, key: string, value: string) {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}${key}=${encodeURIComponent(value)}`;
 }
