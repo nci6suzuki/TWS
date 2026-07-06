@@ -15,8 +15,8 @@ import {
   Card,
 } from "@/components/ui/ux";
 import { PageShell } from "@/components/ui/page-shell";
-import { SubmitButton } from "@/components/ui/submit-button";
 import { buttonClassName } from "@/lib/ui/button-class";
+import { CompleteAnnualEventButton } from "@/components/annual-events/complete-annual-event-button";
 
 export const runtime = "nodejs";
 
@@ -495,23 +495,11 @@ export default async function AnnualEventsPage({
                       </Link>
 
                       {e.status !== "done" ? (
-                        <form
-                          action={`/api/annual-events/${e.id}/complete`}
-                          method="post"
-                        >
-                          <input
-                            type="hidden"
-                            name="returnTo"
-                            value={currentReturnTo}
-                          />
-
-                          <SubmitButton
-                            pendingText="完了処理中..."
-                            className="inline-flex h-9 items-center justify-center rounded-xl bg-emerald-600 px-3 text-sm font-black text-white hover:bg-emerald-700"
-                          >
-                            完了化
-                          </SubmitButton>
-                        </form>
+                        <CompleteAnnualEventButton
+                        eventId={e.id}
+                        returnTo={currentReturnTo}
+                        size="md"
+                        />
                       ) : (
                         <span className="inline-flex h-9 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-black text-emerald-700">
                           完了済み
@@ -652,23 +640,10 @@ export default async function AnnualEventsPage({
                             </Link>
 
                             {e.status !== "done" ? (
-                              <form
-                                action={`/api/annual-events/${e.id}/complete`}
-                                method="post"
-                              >
-                                <input
-                                  type="hidden"
-                                  name="returnTo"
-                                  value={currentReturnTo}
-                                />
-
-                                <SubmitButton
-                                  pendingText="完了中..."
-                                  className="inline-flex h-8 items-center justify-center rounded-lg bg-emerald-600 px-3 text-xs font-black text-white hover:bg-emerald-700"
-                                >
-                                  完了化
-                                </SubmitButton>
-                              </form>
+                              <CompleteAnnualEventButton
+                                eventId={e.id}
+                                returnTo={currentReturnTo}
+                              />
                             ) : (
                               <span className="inline-flex h-8 items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-black text-emerald-700">
                                 完了済み
