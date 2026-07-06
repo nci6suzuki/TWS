@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { PageShell } from "@/components/ui/page-shell";
-import { Hero, Card, Chip, KPI, PrimaryButton } from "@/components/ui/ux";
+import { Hero, Card, Chip, PrimaryButton } from "@/components/ui/ux";
 
 export const runtime = "nodejs";
 
@@ -21,14 +21,14 @@ type EmployeeRow = {
   is_management_role: boolean | null;
 };
 
+type EmployeeWithAge = EmployeeRow & {
+  age: number | null;
+};
+
 export default async function EmployeeAnalyticsPage() {
   const me = await requireAuth();
 
-  if (
-    me.role !== "admin" &&
-    me.role !== "hr" &&
-    me.role !== "manager"
-  ) {
+  if (me.role !== "admin" && me.role !== "hr" && me.role !== "manager") {
     redirect("/unauthorized");
   }
 
@@ -47,9 +47,10 @@ export default async function EmployeeAnalyticsPage() {
 
   const activeEmployees = employees.filter((e) => e.status === "active");
 
-  const ageItems = activeEmployees
+  const ageItems: EmployeeWithAge[] = activeEmployees
     .map((e) => {
       const age = calcAge(e.birth_date);
+
       return {
         ...e,
         age,
@@ -75,9 +76,11 @@ export default async function EmployeeAnalyticsPage() {
 
   const managementCount = managementEmployees.length;
 
-  const femaleManagementCount = managementEmployees.filter(
+  const femaleManagementEmployees = managementEmployees.filter(
     (e) => normalizeGender(e.gender) === "female"
-  ).length;
+  );
+
+  const femaleManagementCount = femaleManagementEmployees.length;
 
   const femaleRate =
     totalActive > 0 ? Math.round((femaleCount / totalActive) * 1000) / 10 : 0;
@@ -89,9 +92,11 @@ export default async function EmployeeAnalyticsPage() {
 
   const ageBuckets = buildAgeBuckets(ageItems);
   const genderBuckets = buildGenderBuckets(activeEmployees);
+
   const employmentBuckets = buildCountBuckets(
     activeEmployees.map((e) => e.employment_type || "未設定")
   );
+
   const roleBuckets = buildCountBuckets(
     activeEmployees.map((e) => e.app_role || "未設定")
   );
@@ -120,27 +125,28 @@ export default async function EmployeeAnalyticsPage() {
         />
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <KPI
+          <StatCard
             label="在籍中社員数"
             value={`${totalActive}名`}
             sub="status = active の社員"
-            tone="ok"
           />
-          <KPI
+
+          <StatCard
             label="平均年齢"
             value={averageAge === null ? "-" : `${averageAge.toFixed(1)}歳`}
             sub={`年齢入力済み ${ageInputCount}名`}
           />
-          <KPI
+
+          <StatCard
             label="女性比率"
             value={`${femaleRate}%`}
             sub={`女性 ${femaleCount}名 / 在籍中 ${totalActive}名`}
           />
-          <KPI
+
+          <StatCard
             label="女性役職者率"
             value={`${femaleManagementRate}%`}
             sub={`女性役職者 ${femaleManagementCount}名 / 役職者 ${managementCount}名`}
-            tone={femaleManagementCount > 0 ? "ok" : undefined}
           />
         </div>
 
@@ -150,6 +156,7 @@ export default async function EmployeeAnalyticsPage() {
               title="年齢分布"
               description="生年月日が入力されている在籍中社員を対象に集計しています。"
             />
+
             <div className="mt-5 space-y-3">
               {ageBuckets.map((b) => (
                 <BarRow
@@ -168,6 +175,7 @@ export default async function EmployeeAnalyticsPage() {
               title="性別分布"
               description="社員情報の gender をもとに集計しています。"
             />
+
             <div className="mt-5 space-y-3">
               {genderBuckets.map((b) => (
                 <BarRow
@@ -186,6 +194,7 @@ export default async function EmployeeAnalyticsPage() {
               title="雇用区分別人数"
               description="employment_type ごとの人数です。"
             />
+
             <div className="mt-5 space-y-3">
               {employmentBuckets.map((b) => (
                 <BarRow
@@ -204,6 +213,7 @@ export default async function EmployeeAnalyticsPage() {
               title="システムロール別人数"
               description="app_role ごとの人数です。役職とは別のシステム権限です。"
             />
+
             <div className="mt-5 space-y-3">
               {roleBuckets.map((b) => (
                 <BarRow
@@ -235,27 +245,26 @@ export default async function EmployeeAnalyticsPage() {
                     <th className="px-4 py-3">ロール</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {managementEmployees
-                    .filter((e) => normalizeGender(e.gender) === "female")
-                    .map((e) => (
-                      <tr key={e.id}>
-                        <td className="px-4 py-3 font-bold text-slate-700">
-                          {e.employee_code ?? "-"}
-                        </td>
-                        <td className="px-4 py-3 font-black text-slate-900">
-                          {e.name ?? "-"}
-                        </td>
-                        <td className="px-4 py-3 font-semibold text-slate-600">
-                          {calcAge(e.birth_date) ?? "-"}
-                        </td>
-                        <td className="px-4 py-3 font-semibold text-slate-600">
-                          {e.app_role ?? "-"}
-                        </td>
-                      </tr>
-                    ))}
 
-                  {femaleManagementCount === 0 && (
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {femaleManagementEmployees.map((e) => (
+                    <tr key={e.id}>
+                      <td className="px-4 py-3 font-bold text-slate-700">
+                        {e.employee_code ?? "-"}
+                      </td>
+                      <td className="px-4 py-3 font-black text-slate-900">
+                        {e.name ?? "-"}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-slate-600">
+                        {calcAge(e.birth_date) ?? "-"}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-slate-600">
+                        {e.app_role ?? "-"}
+                      </td>
+                    </tr>
+                  ))}
+
+                  {femaleManagementEmployees.length === 0 && (
                     <tr>
                       <td
                         colSpan={4}
@@ -303,12 +312,35 @@ export default async function EmployeeAnalyticsPage() {
             </div>
 
             <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-700">
-              正確な分析を行うには、社員編集画面で「生年月日」「性別」「役職者フラグ」を登録できるようにする必要があります。
+              正確な分析を行うには、社員編集画面で「生年月日」「性別」「役職者フラグ」を登録してください。
             </div>
           </Card>
         </div>
       </div>
     </PageShell>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+}) {
+  return (
+    <Card className="p-5">
+      <div className="text-sm font-black text-slate-500">{label}</div>
+      <div className="mt-3 text-3xl font-black tracking-tight text-slate-900">
+        {value}
+      </div>
+
+      {sub && (
+        <div className="mt-2 text-xs font-semibold text-slate-400">{sub}</div>
+      )}
+    </Card>
   );
 }
 
@@ -351,6 +383,7 @@ function BarRow({
           {suffix}
         </div>
       </div>
+
       <div className="h-3 overflow-hidden rounded-full bg-slate-100">
         <div
           className="h-full rounded-full bg-slate-900"
@@ -383,9 +416,7 @@ function calcAge(birthDate: string | null) {
   return age;
 }
 
-function buildAgeBuckets(
-  employees: Array<EmployeeRow & { age: number | null }>
-) {
+function buildAgeBuckets(employees: EmployeeWithAge[]) {
   const buckets = [
     { label: "10代", min: 10, max: 19, count: 0 },
     { label: "20代", min: 20, max: 29, count: 0 },
@@ -443,7 +474,9 @@ function buildCountBuckets(values: string[]) {
     .sort((a, b) => b.count - a.count);
 }
 
-function normalizeGender(value: string | null): "male" | "female" | "other" | "unknown" {
+function normalizeGender(
+  value: string | null
+): "male" | "female" | "other" | "unknown" {
   if (!value) return "unknown";
 
   if (value === "male") return "male";
@@ -459,5 +492,6 @@ function getEmploymentLabel(value: string) {
   if (value === "part_time") return "パート";
   if (value === "other") return "その他";
   if (value === "未設定") return "未設定";
+
   return value;
 }
