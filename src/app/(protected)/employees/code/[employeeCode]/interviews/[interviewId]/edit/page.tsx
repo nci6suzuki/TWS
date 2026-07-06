@@ -14,6 +14,7 @@ import {
   GhostButton,
 } from "@/components/ui/ux";
 import { buttonClassName } from "@/lib/ui/button-class";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export const runtime = "nodejs";
 
@@ -305,11 +306,13 @@ export default async function InterviewEditPage({
               >
                 面談管理へ戻る
               </GhostButton>
+
               <PrimaryButton
                 href={`/employees/code/${employee.employee_code}?tab=interviews`}
               >
                 面談タブへ
               </PrimaryButton>
+
               <PrimaryButton
                 href={`/employees/code/${employee.employee_code}?tab=timeline`}
               >
@@ -439,27 +442,37 @@ export default async function InterviewEditPage({
               />
             </label>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="submit"
-                className={buttonClassName("inline-flex h-11 items-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800")}
-              >
-                更新する
-              </button>
+            <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+              <div className="text-xs font-semibold text-slate-400">
+                保存すると、面談編集の履歴がタイムラインに記録されます。
+              </div>
 
-              <Link
-                href={`/employees/code/${employee.employee_code}/interviews`}
-                className={buttonClassName("inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50")}
-              >
-                面談管理へ戻る
-              </Link>
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Link
+                  href={`/employees/code/${employee.employee_code}/interviews`}
+                  className={buttonClassName(
+                    "inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+                  )}
+                >
+                  面談管理へ戻る
+                </Link>
 
-              <Link
-                href={`/employees/code/${employee.employee_code}?tab=interviews`}
-                className={buttonClassName("inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50")}
-              >
-                面談タブへ戻る
-              </Link>
+                <Link
+                  href={`/employees/code/${employee.employee_code}?tab=interviews`}
+                  className={buttonClassName(
+                    "inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+                  )}
+                >
+                  面談タブへ戻る
+                </Link>
+
+                <SubmitButton
+                  pendingText="保存中..."
+                  className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800"
+                >
+                  更新する
+                </SubmitButton>
+              </div>
             </div>
           </form>
         </Card>
