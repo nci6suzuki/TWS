@@ -1,9 +1,13 @@
+// src/app/(protected)/annual-events/[id]/edit/page.tsx
+
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { PageShell } from "@/components/ui/page-shell";
 import { Card, Chip } from "@/components/ui/ux";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 export const runtime = "nodejs";
 
@@ -50,6 +54,7 @@ export default async function AnnualEventEditPage({
     "use server";
 
     const me = await requireAuth();
+
     if (me.role !== "admin" && me.role !== "hr") {
       redirect("/unauthorized");
     }
@@ -60,9 +65,7 @@ export default async function AnnualEventEditPage({
 
     const title = String(formData.get("title") ?? "").trim();
     const eventType = String(formData.get("event_type") ?? "other").trim();
-    const scheduledDate = String(
-      formData.get("scheduled_date") ?? ""
-    ).trim();
+    const scheduledDate = String(formData.get("scheduled_date") ?? "").trim();
     const status = String(formData.get("status") ?? "pending").trim();
     const priorityRaw = String(formData.get("priority") ?? "2").trim();
     const description = String(formData.get("description") ?? "").trim();
@@ -81,6 +84,14 @@ export default async function AnnualEventEditPage({
       );
     }
 
+    if (!isValidDateString(scheduledDate)) {
+      redirect(
+        `/annual-events/${eventId}/edit?error=${encodeURIComponent(
+          "予定日の形式が正しくありません"
+        )}`
+      );
+    }
+
     const { data: currentEvent, error: currentError } = await admin
       .from("employee_annual_events")
       .select("id, source_type, source_id")
@@ -95,8 +106,7 @@ export default async function AnnualEventEditPage({
       );
     }
 
-    const completedAt =
-      status === "done" ? new Date().toISOString() : null;
+    const completedAt = status === "done" ? new Date().toISOString() : null;
 
     const { error: updateError } = await admin
       .from("employee_annual_events")
@@ -119,10 +129,6 @@ export default async function AnnualEventEditPage({
       );
     }
 
-    /**
-     * 面談履歴から作られたイベントの場合、
-     * 予定日の変更を面談履歴側の next_interview_date に反映
-     */
     if (
       currentEvent.source_type === "employee_interview" &&
       currentEvent.source_id
@@ -165,7 +171,9 @@ export default async function AnnualEventEditPage({
       }
     }
 
-    redirect(`/annual-events/${eventId}`);
+    redirect(
+      `/annual-events/${eventId}?updated=${encodeURIComponent("年間イベント")}`
+    );
   }
 
   const isFromInterview =
@@ -180,9 +188,11 @@ export default async function AnnualEventEditPage({
               <div className="text-xs font-black tracking-[0.18em] text-indigo-600">
                 ANNUAL EVENT EDIT
               </div>
+
               <h1 className="mt-2 text-3xl font-black text-slate-900">
                 年間イベント編集
               </h1>
+
               <p className="mt-2 text-sm font-semibold text-slate-500">
                 予定日、状態、優先度、説明を編集できます。
               </p>
@@ -191,9 +201,12 @@ export default async function AnnualEventEditPage({
             <div className="flex flex-wrap gap-2">
               {employee && <Chip tone="info">{employee.employee_code}</Chip>}
               {isFromInterview && <Chip tone="info">面談連動</Chip>}
+
               <Link
                 href={`/annual-events/${event.id}`}
-                className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+                className={buttonClassName(
+                  "inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+                )}
               >
                 詳細へ戻る
               </Link>
@@ -323,20 +336,28 @@ export default async function AnnualEventEditPage({
             </Card>
           )}
 
-          <div className="flex flex-col gap-3 md:flex-row md:justify-end">
-            <Link
-              href={`/annual-events/${event.id}`}
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 hover:bg-slate-50"
-            >
-              キャンセル
-            </Link>
+          <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+            <div className="text-xs font-semibold text-slate-400">
+              保存後は年間イベント詳細へ移動します。
+            </div>
 
-            <button
-              type="submit"
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white hover:bg-slate-800"
-            >
-              保存する
-            </button>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Link
+                href={`/annual-events/${event.id}`}
+                className={buttonClassName(
+                  "inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 hover:bg-slate-50"
+                )}
+              >
+                キャンセル
+              </Link>
+
+              <SubmitButton
+                pendingText="保存中..."
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white hover:bg-slate-800"
+              >
+                保存する
+              </SubmitButton>
+            </div>
           </div>
         </form>
       </div>
@@ -357,4 +378,13 @@ function Field({
       <div className="mt-2">{children}</div>
     </label>
   );
+}
+
+function isValidDateString(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return false;
+
+  return d.toISOString().slice(0, 10) === value;
 }
