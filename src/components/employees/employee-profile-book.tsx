@@ -6,14 +6,19 @@ import { DeleteInterviewButton } from "@/components/employees/delete-interview-b
 
 type Props = {
   employee: {
-    id: string;
-    employee_code: string;
-    name: string;
-    email: string;
-    app_role: string;
-    status: string;
-    hire_date: string | null;
-  };
+  id: string;
+  employee_code: string;
+  name: string;
+  email: string;
+  app_role: string;
+  status: string;
+  hire_date: string | null;
+
+  // 社員分析用
+  birth_date?: string | null;
+  gender?: string | null;
+  is_management_role?: boolean | null;
+};
   profile: any | null;
   goals: any | null;
   qualifications: any[];
@@ -616,9 +621,30 @@ const timelineItems = [
 
           <div className="rounded-2xl border bg-slate-50 p-4">
             <Row label="社員番号" value={employee.employee_code} />
-            <Row label="氏名" value={employee.name} />
-            <Row label="メール" value={employee.email} />
-            <Row label="入社日" value={employee.hire_date ?? "-"} />
+<Row label="氏名" value={employee.name} />
+<Row label="メール" value={employee.email} />
+<Row label="入社日" value={employee.hire_date ?? "-"} />
+
+<Row
+  label="年齢"
+  value={
+    calcAge(employee.birth_date ?? null) === null
+      ? "未入力"
+      : `${calcAge(employee.birth_date ?? null)}歳`
+  }
+/>
+<Row
+  label="性別"
+  value={getGenderLabel(employee.gender ?? null)}
+/>
+<Row
+  label="役職者"
+  value={
+    employee.is_management_role === true
+      ? "対象"
+      : "対象外"
+  }
+/>
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -1203,4 +1229,35 @@ function formatTimelineDate(value: string | null | undefined) {
   if (Number.isNaN(d.getTime())) return value;
 
   return d.toLocaleString("ja-JP");
+}
+
+function calcAge(birthDate: string | null) {
+  if (!birthDate) return null;
+
+  const birth = new Date(birthDate);
+  if (Number.isNaN(birth.getTime())) return null;
+
+  const today = new Date();
+
+  let age = today.getFullYear() - birth.getFullYear();
+
+  const monthDiff = today.getMonth() - birth.getMonth();
+  const dayDiff = today.getDate() - birth.getDate();
+
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+    age -= 1;
+  }
+
+  if (age < 0 || age > 120) return null;
+
+  return age;
+}
+
+function getGenderLabel(value: string | null) {
+  if (value === "male") return "男性";
+  if (value === "female") return "女性";
+  if (value === "other") return "その他";
+  if (value === "unknown") return "未設定";
+
+  return "未設定";
 }
