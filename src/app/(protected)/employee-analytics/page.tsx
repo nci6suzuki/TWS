@@ -153,6 +153,10 @@ export default async function EmployeeAnalyticsPage({
     employmentType: employmentTypeFilter,
   });
 
+  const incompleteExportHref = `${exportHref}${
+    exportHref.includes("?") ? "&" : "?"
+  }incomplete=analytics`;
+
   return (
     <PageShell>
       <div className="space-y-6">
@@ -185,11 +189,15 @@ export default async function EmployeeAnalyticsPage({
           }
           right={
             <>
-              <PrimaryButton href={exportHref}>CSV出力</PrimaryButton>
-              <PrimaryButton href="/employees">社員一覧へ</PrimaryButton>
-            </>
-          }
-        />
+                  <PrimaryButton href={exportHref}>CSV出力</PrimaryButton>
+                  <PrimaryButton href={incompleteExportHref}>
+                    未入力者CSV
+                  </PrimaryButton>
+                  <PrimaryButton href="/employees">社員一覧へ</PrimaryButton>
+                </>
+              }
+            />
+
 
         <Card className="p-5">
           <div className="mb-4">

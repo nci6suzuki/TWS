@@ -35,6 +35,9 @@ export async function GET(req: NextRequest) {
   const employmentTypeFilter =
     url.searchParams.get("employment_type") || "all";
 
+  // incomplete=analytics の場合、分析項目未入力者のみCSV出力
+  const incompleteFilter = url.searchParams.get("incomplete") || "";
+
   const admin = createSupabaseAdminClient();
 
   const { data, error } = await admin
@@ -61,7 +64,10 @@ export async function GET(req: NextRequest) {
       return false;
     }
 
-    if (managementFilter === "non_management" && e.is_management_role === true) {
+    if (
+      managementFilter === "non_management" &&
+      e.is_management_role === true
+    ) {
       return false;
     }
 
@@ -69,6 +75,14 @@ export async function GET(req: NextRequest) {
       if (employmentTypeFilter === "unknown") {
         if (e.employment_type) return false;
       } else if (e.employment_type !== employmentTypeFilter) {
+        return false;
+      }
+    }
+
+    if (incompleteFilter === "analytics") {
+      const gender = normalizeGender(e.gender);
+
+      if (e.birth_date && gender !== "unknown") {
         return false;
       }
     }
@@ -88,10 +102,12 @@ export async function GET(req: NextRequest) {
     "年齢",
     "性別",
     "役職者",
+    "未入力項目",
   ];
 
   const rows = employees.map((e) => {
     const age = calcAge(e.birth_date);
+    const missingItems = buildMissingItems(e);
 
     return [
       e.employee_code ?? "",
@@ -105,6 +121,7 @@ export async function GET(req: NextRequest) {
       age === null ? "" : String(age),
       getGenderLabel(e.gender),
       e.is_management_role ? "対象" : "対象外",
+      missingItems.join(" / "),
     ];
   });
 
@@ -124,6 +141,7 @@ export async function GET(req: NextRequest) {
         gender: genderFilter,
         management: managementFilter,
         employmentType: employmentTypeFilter,
+        incomplete: incompleteFilter,
       })}"`,
     },
   });
@@ -196,19 +214,36 @@ function getStatusLabel(value: string | null) {
   return value;
 }
 
+function buildMissingItems(employee: EmployeeRow) {
+  const items: string[] = [];
+
+  if (!employee.birth_date) {
+    items.push("生年月日");
+  }
+
+  if (normalizeGender(employee.gender) === "unknown") {
+    items.push("性別");
+  }
+
+  return items;
+}
+
 function buildFileName({
   status,
   gender,
   management,
   employmentType,
+  incomplete,
 }: {
   status: string;
   gender: string;
   management: string;
   employmentType: string;
+  incomplete: string;
 }) {
   const parts = ["employee-analytics"];
 
+  if (incomplete === "analytics") parts.push("incomplete");
   if (status && status !== "active") parts.push(`status-${status}`);
   if (gender && gender !== "all") parts.push(`gender-${gender}`);
   if (management && management !== "all") parts.push(`management-${management}`);
