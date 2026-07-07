@@ -118,9 +118,13 @@ export default async function EmployeeAnalyticsPage() {
             </div>
           }
           right={
-            <>
+              <>
+              <PrimaryButton href="/api/employee-analytics/export">
+              CSV出力
+              </PrimaryButton>
+              
               <PrimaryButton href="/employees">社員一覧へ</PrimaryButton>
-            </>
+              </>
           }
         />
 
