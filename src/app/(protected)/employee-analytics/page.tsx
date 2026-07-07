@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { PageShell } from "@/components/ui/page-shell";
 import { Hero, Card, Chip, PrimaryButton } from "@/components/ui/ux";
+import { EmployeeAnalyticsFilters } from "@/components/employee-analytics/employee-analytics-filters";
 
 export const runtime = "nodejs";
 
@@ -25,12 +26,27 @@ type EmployeeWithAge = EmployeeRow & {
   age: number | null;
 };
 
-export default async function EmployeeAnalyticsPage() {
+export default async function EmployeeAnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const me = await requireAuth();
+  const sp = await searchParams;
 
   if (me.role !== "admin" && me.role !== "hr" && me.role !== "manager") {
     redirect("/unauthorized");
   }
+
+  const getParam = (key: string) => {
+    const v = sp[key];
+    return Array.isArray(v) ? v[0] ?? "" : v ?? "";
+  };
+
+  const statusFilter = getParam("status") || "active";
+  const genderFilter = getParam("gender") || "all";
+  const managementFilter = getParam("management") || "all";
+  const employmentTypeFilter = getParam("employment_type") || "all";
 
   const admin = createSupabaseAdminClient();
 
@@ -45,9 +61,44 @@ export default async function EmployeeAnalyticsPage() {
 
   const employees = (data ?? []) as EmployeeRow[];
 
-  const activeEmployees = employees.filter((e) => e.status === "active");
+  const filteredEmployees = employees.filter((e) => {
+    if (statusFilter !== "all" && e.status !== statusFilter) {
+      return false;
+    }
 
-  const ageItems: EmployeeWithAge[] = activeEmployees
+    if (
+      genderFilter !== "all" &&
+      normalizeGender(e.gender) !== genderFilter
+    ) {
+      return false;
+    }
+
+    if (
+      managementFilter === "management" &&
+      e.is_management_role !== true
+    ) {
+      return false;
+    }
+
+    if (
+      managementFilter === "non_management" &&
+      e.is_management_role === true
+    ) {
+      return false;
+    }
+
+    if (employmentTypeFilter !== "all") {
+      if (employmentTypeFilter === "unknown") {
+        if (e.employment_type) return false;
+      } else if (e.employment_type !== employmentTypeFilter) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  const ageItems: EmployeeWithAge[] = filteredEmployees
     .map((e) => {
       const age = calcAge(e.birth_date);
 
@@ -58,7 +109,7 @@ export default async function EmployeeAnalyticsPage() {
     })
     .filter((e) => e.age !== null);
 
-  const totalActive = activeEmployees.length;
+  const totalTarget = filteredEmployees.length;
   const ageInputCount = ageItems.length;
 
   const averageAge =
@@ -66,11 +117,11 @@ export default async function EmployeeAnalyticsPage() {
       ? ageItems.reduce((sum, e) => sum + (e.age ?? 0), 0) / ageItems.length
       : null;
 
-  const femaleCount = activeEmployees.filter(
+  const femaleCount = filteredEmployees.filter(
     (e) => normalizeGender(e.gender) === "female"
   ).length;
 
-  const managementEmployees = activeEmployees.filter(
+  const managementEmployees = filteredEmployees.filter(
     (e) => e.is_management_role === true
   );
 
@@ -83,7 +134,7 @@ export default async function EmployeeAnalyticsPage() {
   const femaleManagementCount = femaleManagementEmployees.length;
 
   const femaleRate =
-    totalActive > 0 ? Math.round((femaleCount / totalActive) * 1000) / 10 : 0;
+    totalTarget > 0 ? Math.round((femaleCount / totalTarget) * 1000) / 10 : 0;
 
   const femaleManagementRate =
     managementCount > 0
@@ -91,18 +142,25 @@ export default async function EmployeeAnalyticsPage() {
       : 0;
 
   const ageBuckets = buildAgeBuckets(ageItems);
-  const genderBuckets = buildGenderBuckets(activeEmployees);
+  const genderBuckets = buildGenderBuckets(filteredEmployees);
 
   const employmentBuckets = buildCountBuckets(
-    activeEmployees.map((e) => e.employment_type || "未設定")
+    filteredEmployees.map((e) => e.employment_type || "未設定")
   );
 
   const roleBuckets = buildCountBuckets(
-    activeEmployees.map((e) => e.app_role || "未設定")
+    filteredEmployees.map((e) => e.app_role || "未設定")
   );
 
-  const noBirthDateEmployees = activeEmployees.filter((e) => !e.birth_date);
-  const noGenderEmployees = activeEmployees.filter((e) => !e.gender);
+  const noBirthDateEmployees = filteredEmployees.filter((e) => !e.birth_date);
+  const noGenderEmployees = filteredEmployees.filter((e) => !e.gender);
+
+  const exportHref = buildExportHref({
+    status: statusFilter,
+    gender: genderFilter,
+    management: managementFilter,
+    employmentType: employmentTypeFilter,
+  });
 
   return (
     <PageShell>
@@ -113,26 +171,58 @@ export default async function EmployeeAnalyticsPage() {
           meta={
             <div className="flex flex-wrap gap-2">
               <Chip tone="info">Employee Analytics</Chip>
-              <Chip>対象: 在籍中社員</Chip>
+              <Chip>対象: {getStatusFilterLabel(statusFilter)}</Chip>
+              <Chip>表示件数: {totalTarget}名</Chip>
               <Chip tone="gray">閲覧権限: admin / hr / manager</Chip>
+
+              {genderFilter !== "all" && (
+                <Chip tone="info">性別: {getGenderFilterLabel(genderFilter)}</Chip>
+              )}
+
+              {managementFilter !== "all" && (
+                <Chip tone="info">
+                  役職者: {getManagementFilterLabel(managementFilter)}
+                </Chip>
+              )}
+
+              {employmentTypeFilter !== "all" && (
+                <Chip tone="info">
+                  雇用区分: {getEmploymentLabel(employmentTypeFilter)}
+                </Chip>
+              )}
             </div>
           }
           right={
-              <>
-              <PrimaryButton href="/api/employee-analytics/export">
-              CSV出力
-              </PrimaryButton>
-              
+            <>
+              <PrimaryButton href={exportHref}>CSV出力</PrimaryButton>
               <PrimaryButton href="/employees">社員一覧へ</PrimaryButton>
-              </>
+            </>
           }
         />
 
+        <Card className="p-5">
+          <div className="mb-4">
+            <h2 className="text-lg font-black text-slate-900">
+              分析条件
+            </h2>
+            <p className="mt-1 text-sm font-semibold text-slate-500">
+              条件を変更すると、平均年齢・女性比率・年齢分布などが絞り込み後の社員で再集計されます。
+            </p>
+          </div>
+
+          <EmployeeAnalyticsFilters
+            status={statusFilter}
+            gender={genderFilter}
+            management={managementFilter}
+            employmentType={employmentTypeFilter}
+          />
+        </Card>
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            label="在籍中社員数"
-            value={`${totalActive}名`}
-            sub="status = active の社員"
+            label="対象社員数"
+            value={`${totalTarget}名`}
+            sub="現在の絞り込み条件に一致する社員"
           />
 
           <StatCard
@@ -144,7 +234,7 @@ export default async function EmployeeAnalyticsPage() {
           <StatCard
             label="女性比率"
             value={`${femaleRate}%`}
-            sub={`女性 ${femaleCount}名 / 在籍中 ${totalActive}名`}
+            sub={`女性 ${femaleCount}名 / 対象 ${totalTarget}名`}
           />
 
           <StatCard
@@ -158,7 +248,7 @@ export default async function EmployeeAnalyticsPage() {
           <Card className="p-5">
             <SectionHeader
               title="年齢分布"
-              description="生年月日が入力されている在籍中社員を対象に集計しています。"
+              description="生年月日が入力されている社員を対象に集計しています。"
             />
 
             <div className="mt-5 space-y-3">
@@ -435,7 +525,10 @@ function buildAgeBuckets(employees: EmployeeWithAge[]) {
     if (employee.age === null) continue;
 
     const bucket = buckets.find(
-      (b) => employee.age !== null && employee.age >= b.min && employee.age <= b.max
+      (b) =>
+        employee.age !== null &&
+        employee.age >= b.min &&
+        employee.age <= b.max
     );
 
     if (bucket) bucket.count += 1;
@@ -495,7 +588,60 @@ function getEmploymentLabel(value: string) {
   if (value === "contract") return "契約社員";
   if (value === "part_time") return "パート";
   if (value === "other") return "その他";
+  if (value === "unknown") return "未設定";
   if (value === "未設定") return "未設定";
 
   return value;
+}
+
+function getStatusFilterLabel(value: string) {
+  if (value === "active") return "在籍中";
+  if (value === "all") return "すべて";
+  if (value === "leave") return "休職中";
+  if (value === "inactive") return "退職・無効";
+
+  return value || "在籍中";
+}
+
+function getGenderFilterLabel(value: string) {
+  if (value === "male") return "男性";
+  if (value === "female") return "女性";
+  if (value === "other") return "その他";
+  if (value === "unknown") return "未設定";
+  if (value === "all") return "すべて";
+
+  return value || "すべて";
+}
+
+function getManagementFilterLabel(value: string) {
+  if (value === "management") return "役職者のみ";
+  if (value === "non_management") return "役職者以外";
+  if (value === "all") return "すべて";
+
+  return value || "すべて";
+}
+
+function buildExportHref({
+  status,
+  gender,
+  management,
+  employmentType,
+}: {
+  status: string;
+  gender: string;
+  management: string;
+  employmentType: string;
+}) {
+  const p = new URLSearchParams();
+
+  if (status && status !== "active") p.set("status", status);
+  if (gender && gender !== "all") p.set("gender", gender);
+  if (management && management !== "all") p.set("management", management);
+  if (employmentType && employmentType !== "all") {
+    p.set("employment_type", employmentType);
+  }
+
+  const qs = p.toString();
+
+  return `/api/employee-analytics/export${qs ? `?${qs}` : ""}`;
 }
