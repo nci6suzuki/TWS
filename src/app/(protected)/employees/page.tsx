@@ -234,6 +234,10 @@ export default async function EmployeesPage({
             <>
               <PrimaryButton href="/employees">全社員</PrimaryButton>
 
+              <PrimaryButton href="/employee-analytics">
+                社員分析
+              </PrimaryButton>
+
               <GhostButton href={filterHref({ invite: "uninvited" })}>
                 未招待
               </GhostButton>
@@ -623,6 +627,7 @@ function getRoleLabel(role: string) {
   if (role === "manager") return "上長";
   if (role === "mentor") return "メンター";
   if (role === "employee") return "社員";
+
   return role || "";
 }
 
@@ -630,5 +635,6 @@ function getStatusLabel(status: string) {
   if (status === "active") return "在籍中";
   if (status === "leave") return "休職中";
   if (status === "inactive") return "退職・無効";
+
   return status || "";
 }
