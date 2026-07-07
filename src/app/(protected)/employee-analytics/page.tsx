@@ -1,11 +1,13 @@
 // src/app/(protected)/employee-analytics/page.tsx
 
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { PageShell } from "@/components/ui/page-shell";
 import { Hero, Card, Chip, PrimaryButton } from "@/components/ui/ux";
 import { EmployeeAnalyticsFilters } from "@/components/employee-analytics/employee-analytics-filters";
+import { buttonClassName } from "@/lib/ui/button-class";
 
 export const runtime = "nodejs";
 
@@ -62,28 +64,17 @@ export default async function EmployeeAnalyticsPage({
   const employees = (data ?? []) as EmployeeRow[];
 
   const filteredEmployees = employees.filter((e) => {
-    if (statusFilter !== "all" && e.status !== statusFilter) {
+    if (statusFilter !== "all" && e.status !== statusFilter) return false;
+
+    if (genderFilter !== "all" && normalizeGender(e.gender) !== genderFilter) {
       return false;
     }
 
-    if (
-      genderFilter !== "all" &&
-      normalizeGender(e.gender) !== genderFilter
-    ) {
+    if (managementFilter === "management" && e.is_management_role !== true) {
       return false;
     }
 
-    if (
-      managementFilter === "management" &&
-      e.is_management_role !== true
-    ) {
-      return false;
-    }
-
-    if (
-      managementFilter === "non_management" &&
-      e.is_management_role === true
-    ) {
+    if (managementFilter === "non_management" && e.is_management_role === true) {
       return false;
     }
 
@@ -99,14 +90,7 @@ export default async function EmployeeAnalyticsPage({
   });
 
   const ageItems: EmployeeWithAge[] = filteredEmployees
-    .map((e) => {
-      const age = calcAge(e.birth_date);
-
-      return {
-        ...e,
-        age,
-      };
-    })
+    .map((e) => ({ ...e, age: calcAge(e.birth_date) }))
     .filter((e) => e.age !== null);
 
   const totalTarget = filteredEmployees.length;
@@ -153,7 +137,14 @@ export default async function EmployeeAnalyticsPage({
   );
 
   const noBirthDateEmployees = filteredEmployees.filter((e) => !e.birth_date);
-  const noGenderEmployees = filteredEmployees.filter((e) => !e.gender);
+  const noGenderEmployees = filteredEmployees.filter(
+    (e) => normalizeGender(e.gender) === "unknown"
+  );
+
+  const incompleteAnalyticsEmployees = filteredEmployees.filter((e) => {
+    const gender = normalizeGender(e.gender);
+    return !e.birth_date || gender === "unknown";
+  });
 
   const exportHref = buildExportHref({
     status: statusFilter,
@@ -202,9 +193,7 @@ export default async function EmployeeAnalyticsPage({
 
         <Card className="p-5">
           <div className="mb-4">
-            <h2 className="text-lg font-black text-slate-900">
-              分析条件
-            </h2>
+            <h2 className="text-lg font-black text-slate-900">分析条件</h2>
             <p className="mt-1 text-sm font-semibold text-slate-500">
               条件を変更すると、平均年齢・女性比率・年齢分布などが絞り込み後の社員で再集計されます。
             </p>
@@ -407,6 +396,94 @@ export default async function EmployeeAnalyticsPage({
 
             <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-700">
               正確な分析を行うには、社員編集画面で「生年月日」「性別」「役職者フラグ」を登録してください。
+            </div>
+          </Card>
+
+          <Card className="p-5 xl:col-span-2">
+            <SectionHeader
+              title="分析項目 未入力者一覧"
+              description="生年月日または性別が未入力の社員です。社員編集画面から登録できます。"
+            />
+
+            <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead className="bg-slate-50 text-xs font-black text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">社員番号</th>
+                    <th className="px-4 py-3">氏名</th>
+                    <th className="px-4 py-3">生年月日</th>
+                    <th className="px-4 py-3">性別</th>
+                    <th className="px-4 py-3">役職者</th>
+                    <th className="px-4 py-3">操作</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {incompleteAnalyticsEmployees.map((e) => {
+                    const gender = normalizeGender(e.gender);
+
+                    return (
+                      <tr key={e.id}>
+                        <td className="px-4 py-3 font-bold text-slate-700">
+                          {e.employee_code ?? "-"}
+                        </td>
+
+                        <td className="px-4 py-3 font-black text-slate-900">
+                          {e.name ?? "-"}
+                        </td>
+
+                        <td className="px-4 py-3 font-semibold text-slate-600">
+                          {e.birth_date ? (
+                            e.birth_date
+                          ) : (
+                            <span className="text-rose-600">未入力</span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3 font-semibold text-slate-600">
+                          {gender === "unknown" ? (
+                            <span className="text-rose-600">未設定</span>
+                          ) : (
+                            getGenderFilterLabel(gender)
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3 font-semibold text-slate-600">
+                          {e.is_management_role ? "対象" : "対象外"}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {e.employee_code ? (
+                            <Link
+                              href={`/employees/code/${encodeURIComponent(
+                                e.employee_code
+                              )}/edit`}
+                              className={buttonClassName(
+                                "inline-flex h-8 items-center justify-center rounded-lg bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
+                              )}
+                            >
+                              編集
+                            </Link>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {incompleteAnalyticsEmployees.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-4 py-8 text-center text-sm font-semibold text-slate-400"
+                      >
+                        未入力の社員はいません。
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </Card>
         </div>
