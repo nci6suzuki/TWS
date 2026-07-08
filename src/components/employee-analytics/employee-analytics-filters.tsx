@@ -7,16 +7,25 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { buttonClassName } from "@/lib/ui/button-class";
 
+type OrganizationOption = {
+  id: string;
+  name: string;
+};
+
 export function EmployeeAnalyticsFilters({
   status,
   gender,
   management,
   employmentType,
+  organizationUnitId,
+  organizations,
 }: {
   status: string;
   gender: string;
   management: string;
   employmentType: string;
+  organizationUnitId: string;
+  organizations: OrganizationOption[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -28,12 +37,20 @@ export function EmployeeAnalyticsFilters({
     const nextGender = String(formData.get("gender") ?? "all");
     const nextManagement = String(formData.get("management") ?? "all");
     const nextEmploymentType = String(formData.get("employment_type") ?? "all");
+    const nextOrganizationUnitId = String(
+      formData.get("organization_unit_id") ?? "all"
+    );
 
     if (nextStatus !== "active") p.set("status", nextStatus);
     if (nextGender !== "all") p.set("gender", nextGender);
     if (nextManagement !== "all") p.set("management", nextManagement);
+
     if (nextEmploymentType !== "all") {
       p.set("employment_type", nextEmploymentType);
+    }
+
+    if (nextOrganizationUnitId !== "all") {
+      p.set("organization_unit_id", nextOrganizationUnitId);
     }
 
     const qs = p.toString();
@@ -46,7 +63,7 @@ export function EmployeeAnalyticsFilters({
   return (
     <form
       action={applyFilters}
-      className="grid grid-cols-1 gap-3 md:grid-cols-5"
+      className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6"
     >
       <Select
         label="在籍状態"
@@ -98,6 +115,24 @@ export function EmployeeAnalyticsFilters({
         ]}
       />
 
+      <label className="grid gap-2">
+        <span className="text-xs font-black text-slate-500">所属組織</span>
+        <select
+          name="organization_unit_id"
+          defaultValue={organizationUnitId}
+          className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+        >
+          <option value="all">すべて</option>
+          <option value="unassigned">未設定</option>
+
+          {organizations.map((org) => (
+            <option key={org.id} value={org.id}>
+              {org.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <div className="flex items-end gap-2">
         <button
           type="submit"
@@ -108,7 +143,14 @@ export function EmployeeAnalyticsFilters({
             { loading: pending }
           )}
         >
-          {pending ? "絞り込み中..." : "絞り込み"}
+          {pending ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              絞り込み中...
+            </span>
+          ) : (
+            "絞り込み"
+          )}
         </button>
 
         <Link
@@ -138,6 +180,7 @@ function Select({
   return (
     <label className="grid gap-2">
       <span className="text-xs font-black text-slate-500">{label}</span>
+
       <select
         name={name}
         defaultValue={defaultValue}
