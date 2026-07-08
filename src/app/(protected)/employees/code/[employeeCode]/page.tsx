@@ -3,6 +3,7 @@
 import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getEmployeeProfileBookByCode } from "@/lib/queries/employee-profile";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { EmployeeProfileBook } from "@/components/employees/employee-profile-book";
 import { PageShell } from "@/components/ui/page-shell";
 import { Hero, Card, Chip, GhostButton, PrimaryButton } from "@/components/ui/ux";
@@ -15,6 +16,12 @@ type AnalyticsEmployeeFields = {
   birth_date?: string | null;
   gender?: string | null;
   is_management_role?: boolean | null;
+  organization_unit_id?: string | null;
+};
+
+type OrganizationUnitRow = {
+  id: string;
+  name: string;
 };
 
 export default async function EmployeeByCodePage({
@@ -40,6 +47,29 @@ export default async function EmployeeByCodePage({
   const employee = book.employee;
   const analyticsEmployee = employee as typeof employee & AnalyticsEmployeeFields;
 
+  const admin = createSupabaseAdminClient();
+
+  const { data: employeeOrgRow } = await admin
+    .from("employees")
+    .select("id, organization_unit_id")
+    .eq("id", employee.id)
+    .maybeSingle();
+
+  const organizationUnitId =
+    employeeOrgRow?.organization_unit_id ??
+    analyticsEmployee.organization_unit_id ??
+    null;
+
+  const { data: organizationUnit } = organizationUnitId
+    ? await admin
+        .from("organization_units")
+        .select("id, name")
+        .eq("id", organizationUnitId)
+        .maybeSingle()
+    : { data: null as OrganizationUnitRow | null };
+
+  const organizationName = organizationUnit?.name ?? "未設定";
+
   const age = calcAge(analyticsEmployee.birth_date ?? null);
   const genderLabel = getGenderLabel(analyticsEmployee.gender ?? null);
   const managementLabel =
@@ -50,11 +80,15 @@ export default async function EmployeeByCodePage({
       <div className="space-y-6">
         <Hero
           title={employee.name ?? "社員カルテ"}
-          subtitle="基本情報、キャリア希望、資格、年間イベント、面談履歴を確認できます。"
+          subtitle="基本情報、所属組織、キャリア希望、資格、年間イベント、面談履歴を確認できます。"
           meta={
             <div className="flex flex-wrap gap-2">
               <Chip tone="info">Employee Profile</Chip>
               <Chip>社員番号: {employee.employee_code}</Chip>
+
+              <Chip tone={organizationName === "未設定" ? "danger" : "gray"}>
+                所属組織: {organizationName}
+              </Chip>
 
               {employee.status && (
                 <Chip tone={employee.status === "active" ? "ok" : "gray"}>
@@ -89,7 +123,7 @@ export default async function EmployeeByCodePage({
                 分析項目
               </h2>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                平均年齢、女性比率、女性役職者率などの分析に使用される項目です。
+                所属組織、平均年齢、女性比率、女性役職者率などの分析に使用される項目です。
               </p>
             </div>
 
@@ -98,7 +132,18 @@ export default async function EmployeeByCodePage({
             </PrimaryButton>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-4">
+            <AnalyticsItem
+              label="所属組織"
+              value={organizationName}
+              sub={
+                organizationName === "未設定"
+                  ? "所属組織が未設定です"
+                  : "組織別分析・所属組織フィルターに反映されます"
+              }
+              tone={organizationName === "未設定" ? "danger" : "ok"}
+            />
+
             <AnalyticsItem
               label="年齢"
               value={age === null ? "未入力" : `${age}歳`}
@@ -139,11 +184,12 @@ export default async function EmployeeByCodePage({
             />
           </div>
 
-          {(!analyticsEmployee.birth_date ||
+          {(!organizationUnitId ||
+            !analyticsEmployee.birth_date ||
             !analyticsEmployee.gender ||
             analyticsEmployee.gender === "unknown") && (
             <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-700">
-              分析精度を上げるには、社員編集画面で「生年月日」「性別」「役職者フラグ」を登録してください。
+              分析精度を上げるには、社員編集画面で「所属組織」「生年月日」「性別」「役職者フラグ」を登録してください。
             </div>
           )}
         </Card>
