@@ -22,10 +22,32 @@ type EmployeeRow = {
   birth_date: string | null;
   gender: string | null;
   is_management_role: boolean | null;
+  organization_unit_id: string | null;
+};
+
+type OrganizationUnitRow = {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  sort_order: number | null;
+  is_active: boolean | null;
 };
 
 type EmployeeWithAge = EmployeeRow & {
   age: number | null;
+};
+
+type OrganizationAnalyticsRow = {
+  organizationUnitId: string | null;
+  organizationName: string;
+  count: number;
+  averageAge: number | null;
+  ageInputCount: number;
+  femaleCount: number;
+  femaleRate: number;
+  managementCount: number;
+  femaleManagementCount: number;
+  femaleManagementRate: number;
 };
 
 export default async function EmployeeAnalyticsPage({
@@ -52,16 +74,30 @@ export default async function EmployeeAnalyticsPage({
 
   const admin = createSupabaseAdminClient();
 
-  const { data, error } = await admin
-    .from("employees")
-    .select(
-      "id, employee_code, name, email, app_role, status, employment_type, birth_date, gender, is_management_role"
-    )
-    .order("employee_code", { ascending: true });
+  const [{ data, error }, { data: organizationUnits, error: orgError }] =
+    await Promise.all([
+      admin
+        .from("employees")
+        .select(
+          "id, employee_code, name, email, app_role, status, employment_type, birth_date, gender, is_management_role, organization_unit_id"
+        )
+        .order("employee_code", { ascending: true }),
+      admin
+        .from("organization_units")
+        .select("id, name, parent_id, sort_order, is_active")
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true }),
+    ]);
 
   if (error) throw error;
+  if (orgError) throw orgError;
 
   const employees = (data ?? []) as EmployeeRow[];
+  const organizations = (organizationUnits ?? []) as OrganizationUnitRow[];
+
+  const organizationById = new Map(
+    organizations.map((org) => [org.id, org])
+  );
 
   const filteredEmployees = employees.filter((e) => {
     if (statusFilter !== "all" && e.status !== statusFilter) return false;
@@ -136,6 +172,11 @@ export default async function EmployeeAnalyticsPage({
     filteredEmployees.map((e) => e.app_role || "未設定")
   );
 
+  const organizationAnalyticsRows = buildOrganizationAnalyticsRows({
+    employees: filteredEmployees,
+    organizationById,
+  });
+
   const noBirthDateEmployees = filteredEmployees.filter((e) => !e.birth_date);
   const noGenderEmployees = filteredEmployees.filter(
     (e) => normalizeGender(e.gender) === "unknown"
@@ -171,7 +212,9 @@ export default async function EmployeeAnalyticsPage({
               <Chip tone="gray">閲覧権限: admin / hr / manager</Chip>
 
               {genderFilter !== "all" && (
-                <Chip tone="info">性別: {getGenderFilterLabel(genderFilter)}</Chip>
+                <Chip tone="info">
+                  性別: {getGenderFilterLabel(genderFilter)}
+                </Chip>
               )}
 
               {managementFilter !== "all" && (
@@ -189,15 +232,14 @@ export default async function EmployeeAnalyticsPage({
           }
           right={
             <>
-                  <PrimaryButton href={exportHref}>CSV出力</PrimaryButton>
-                  <PrimaryButton href={incompleteExportHref}>
-                    未入力者CSV
-                  </PrimaryButton>
-                  <PrimaryButton href="/employees">社員一覧へ</PrimaryButton>
-                </>
-              }
-            />
-
+              <PrimaryButton href={exportHref}>CSV出力</PrimaryButton>
+              <PrimaryButton href={incompleteExportHref}>
+                未入力者CSV
+              </PrimaryButton>
+              <PrimaryButton href="/employees">社員一覧へ</PrimaryButton>
+            </>
+          }
+        />
 
         <Card className="p-5">
           <div className="mb-4">
@@ -240,6 +282,81 @@ export default async function EmployeeAnalyticsPage({
             sub={`女性役職者 ${femaleManagementCount}名 / 役職者 ${managementCount}名`}
           />
         </div>
+
+        <Card className="p-5">
+          <SectionHeader
+            title="組織別分析"
+            description="シナプスツリーの所属組織ごとに、人数・平均年齢・女性比率・役職者数を集計しています。"
+          />
+
+          <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
+            <table className="w-full min-w-[980px] text-left text-sm">
+              <thead className="bg-slate-50 text-xs font-black text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">組織名</th>
+                  <th className="px-4 py-3 text-right">人数</th>
+                  <th className="px-4 py-3 text-right">平均年齢</th>
+                  <th className="px-4 py-3 text-right">女性人数</th>
+                  <th className="px-4 py-3 text-right">女性比率</th>
+                  <th className="px-4 py-3 text-right">役職者</th>
+                  <th className="px-4 py-3 text-right">女性役職者</th>
+                  <th className="px-4 py-3 text-right">女性役職者率</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {organizationAnalyticsRows.map((row) => (
+                  <tr key={row.organizationUnitId ?? "unassigned"}>
+                    <td className="px-4 py-3 font-black text-slate-900">
+                      {row.organizationName}
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-700">
+                      {row.count}名
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-700">
+                      {row.averageAge === null
+                        ? "-"
+                        : `${row.averageAge.toFixed(1)}歳`}
+                      <div className="text-[11px] font-semibold text-slate-400">
+                        入力済 {row.ageInputCount}名
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-700">
+                      {row.femaleCount}名
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-700">
+                      {row.femaleRate}%
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-700">
+                      {row.managementCount}名
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-700">
+                      {row.femaleManagementCount}名
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-700">
+                      {row.femaleManagementRate}%
+                    </td>
+                  </tr>
+                ))}
+
+                {organizationAnalyticsRows.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-4 py-8 text-center text-sm font-semibold text-slate-400"
+                    >
+                      集計対象の社員がいません。
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-700">
+            「未設定」が多い場合は、シナプスツリー画面で社員の所属組織を登録してください。
+          </div>
+        </Card>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <Card className="p-5">
@@ -654,6 +771,79 @@ function buildCountBuckets(values: string[]) {
   return Array.from(map.entries())
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count);
+}
+
+function buildOrganizationAnalyticsRows({
+  employees,
+  organizationById,
+}: {
+  employees: EmployeeRow[];
+  organizationById: Map<string, OrganizationUnitRow>;
+}): OrganizationAnalyticsRow[] {
+  const grouped = new Map<string, EmployeeRow[]>();
+
+  for (const employee of employees) {
+    const key = employee.organization_unit_id || "unassigned";
+    const current = grouped.get(key) ?? [];
+    current.push(employee);
+    grouped.set(key, current);
+  }
+
+  return Array.from(grouped.entries())
+    .map(([key, rows]) => {
+      const org =
+        key === "unassigned" ? null : organizationById.get(key) ?? null;
+
+      const organizationName = org?.name ?? "未設定";
+
+      const ageItems = rows
+        .map((e) => calcAge(e.birth_date))
+        .filter((age): age is number => age !== null);
+
+      const averageAge =
+        ageItems.length > 0
+          ? ageItems.reduce((sum, age) => sum + age, 0) / ageItems.length
+          : null;
+
+      const femaleCount = rows.filter(
+        (e) => normalizeGender(e.gender) === "female"
+      ).length;
+
+      const femaleRate =
+        rows.length > 0 ? Math.round((femaleCount / rows.length) * 1000) / 10 : 0;
+
+      const managementRows = rows.filter(
+        (e) => e.is_management_role === true
+      );
+
+      const femaleManagementCount = managementRows.filter(
+        (e) => normalizeGender(e.gender) === "female"
+      ).length;
+
+      const femaleManagementRate =
+        managementRows.length > 0
+          ? Math.round((femaleManagementCount / managementRows.length) * 1000) /
+            10
+          : 0;
+
+      return {
+        organizationUnitId: key === "unassigned" ? null : key,
+        organizationName,
+        count: rows.length,
+        averageAge,
+        ageInputCount: ageItems.length,
+        femaleCount,
+        femaleRate,
+        managementCount: managementRows.length,
+        femaleManagementCount,
+        femaleManagementRate,
+      };
+    })
+    .sort((a, b) => {
+      if (a.organizationName === "未設定") return 1;
+      if (b.organizationName === "未設定") return -1;
+      return b.count - a.count;
+    });
 }
 
 function normalizeGender(
