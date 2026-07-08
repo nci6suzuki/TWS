@@ -59,6 +59,13 @@ export function OrganizationTree({
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <Link
+            href="/employees?organization_unit_id=unassigned"
+            className="inline-flex h-9 items-center rounded-xl border border-amber-200 bg-amber-50 px-4 text-sm font-black text-amber-700 hover:bg-amber-100"
+          >
+            未所属社員
+          </Link>
+
           <button
             type="button"
             onClick={() => setShowMembers((v) => !v)}
@@ -84,7 +91,12 @@ export function OrganizationTree({
           label="所属設定済"
           value={employees.filter((e) => e.organization_unit_id).length}
         />
-        <SummaryCard label="未所属" value={unassignedEmployees.length} />
+        <SummaryLinkCard
+          label="未所属"
+          value={unassignedEmployees.length}
+          href="/employees?organization_unit_id=unassigned"
+          danger={unassignedEmployees.length > 0}
+        />
       </div>
 
       <div className="mt-6 overflow-auto">
@@ -125,8 +137,17 @@ export function OrganizationTree({
               </div>
             </div>
 
-            <div className="rounded-full bg-white px-3 py-1 text-xs font-black text-amber-700">
-              {unassignedEmployees.length}名
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="rounded-full bg-white px-3 py-1 text-xs font-black text-amber-700">
+                {unassignedEmployees.length}名
+              </div>
+
+              <Link
+                href="/employees?organization_unit_id=unassigned"
+                className="inline-flex h-8 items-center rounded-xl bg-amber-600 px-3 text-xs font-black text-white hover:bg-amber-700"
+              >
+                未所属社員を見る
+              </Link>
             </div>
           </div>
 
@@ -202,9 +223,33 @@ function TreeBranch({
               </div>
             </div>
 
-            <div className="text-2xl font-black text-slate-900">
-              {totalMemberCount}
-            </div>
+            <Link
+              href={`/employees?organization_unit_id=${node.id}`}
+              className="shrink-0 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-center hover:bg-indigo-100"
+            >
+              <span className="block text-2xl font-black text-indigo-700">
+                {totalMemberCount}
+              </span>
+              <span className="block text-[10px] font-black text-indigo-600">
+                社員
+              </span>
+            </Link>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Link
+              href={`/employees?organization_unit_id=${node.id}`}
+              className="inline-flex h-9 items-center justify-center rounded-xl bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-800"
+            >
+              所属社員を見る
+            </Link>
+
+            <Link
+              href={`/employee-analytics?organization_unit_id=${node.id}`}
+              className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50"
+            >
+              分析を見る
+            </Link>
           </div>
 
           {showMembers && node.members.length > 0 && (
@@ -219,9 +264,12 @@ function TreeBranch({
                 ))}
 
                 {node.members.length > 8 && (
-                  <div className="px-3 py-1 text-xs font-black text-slate-400">
-                    他 {node.members.length - 8} 名
-                  </div>
+                  <Link
+                    href={`/employees?organization_unit_id=${node.id}`}
+                    className="rounded-xl bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-100"
+                  >
+                    他 {node.members.length - 8} 名を社員一覧で見る
+                  </Link>
                 )}
               </div>
             </div>
@@ -314,6 +362,47 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
   );
 }
 
+function SummaryLinkCard({
+  label,
+  value,
+  href,
+  danger,
+}: {
+  label: string;
+  value: number;
+  href: string;
+  danger?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={[
+        "block rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:shadow-sm",
+        danger
+          ? "border-rose-200 bg-rose-50"
+          : "border-slate-200 bg-slate-50",
+      ].join(" ")}
+    >
+      <div
+        className={[
+          "text-xs font-black",
+          danger ? "text-rose-500" : "text-slate-400",
+        ].join(" ")}
+      >
+        {label}
+      </div>
+      <div
+        className={[
+          "mt-1 text-2xl font-black",
+          danger ? "text-rose-700" : "text-slate-900",
+        ].join(" ")}
+      >
+        {value}
+      </div>
+    </Link>
+  );
+}
+
 function Badge({
   children,
   tone,
@@ -325,10 +414,10 @@ function Badge({
     tone === "indigo"
       ? "bg-indigo-50 text-indigo-700"
       : tone === "sky"
-      ? "bg-sky-50 text-sky-700"
-      : tone === "rose"
-      ? "bg-rose-50 text-rose-700"
-      : "bg-slate-100 text-slate-600";
+        ? "bg-sky-50 text-sky-700"
+        : tone === "rose"
+          ? "bg-rose-50 text-rose-700"
+          : "bg-slate-100 text-slate-600";
 
   return (
     <span className={`rounded-full px-2 py-0.5 text-xs font-black ${className}`}>
