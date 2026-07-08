@@ -27,6 +27,13 @@ type AttentionItem = {
   pendingInterviews: number;
 };
 
+type OrganizationUnitRow = {
+  id: string;
+  name: string;
+  is_active: boolean | null;
+  sort_order: number | null;
+};
+
 export default async function EmployeesPage({
   searchParams,
 }: {
@@ -52,25 +59,19 @@ export default async function EmployeesPage({
   alertDateObj.setDate(alertDateObj.getDate() + 30);
   const alertDate = formatDate(alertDateObj);
 
-  let query = supabase
-    .from("employees")
-    .select(
-      "id, employee_code, name, email, app_role, status, user_id, last_invited_at"
-    )
-    .order("employee_code", { ascending: true })
-    .limit(1000);
-
-  if (q) {
-    query = query.or(
-      `employee_code.ilike.%${q}%,name.ilike.%${q}%,email.ilike.%${q}%`
-    );
-  }
-
-  if (invite === "uninvited") {
-    query = query.is("user_id", null);
-  }
-
-  const { data, error } = await query;
+  const [{ data, error }, { data: organizationUnits, error: orgError }] =
+    await Promise.all([
+      buildEmployeesQuery({
+        supabase,
+        q,
+        invite,
+      }),
+      supabase
+        .from("organization_units")
+        .select("id, name, is_active, sort_order")
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true }),
+    ]);
 
   if (error) {
     return (
@@ -85,7 +86,26 @@ export default async function EmployeesPage({
     );
   }
 
+  if (orgError) {
+    return (
+      <PageShell>
+        <Card className="p-6">
+          <div className="text-xl font-black text-slate-900">社員一覧</div>
+          <div className="mt-2 text-sm font-semibold text-rose-600">
+            所属組織の読み込みに失敗：{orgError.message}
+          </div>
+        </Card>
+      </PageShell>
+    );
+  }
+
   const employees = data ?? [];
+  const organizations = (organizationUnits ?? []) as OrganizationUnitRow[];
+
+  const organizationById = new Map(
+    organizations.map((org) => [org.id, org.name])
+  );
+
   const employeeIds = employees.map((e) => e.id);
 
   const { data: qualifications } =
@@ -180,6 +200,10 @@ export default async function EmployeesPage({
   const invitedCount = employees.filter((e) => e.user_id).length;
   const uninvitedCount = employees.filter((e) => !e.user_id).length;
 
+  const organizationUnsetCount = employees.filter(
+    (e) => !e.organization_unit_id
+  ).length;
+
   const attentionCount = employees.filter((employee) => {
     const item = attentionByEmployeeId.get(employee.id);
     return (item?.total ?? 0) > 0;
@@ -212,7 +236,7 @@ export default async function EmployeesPage({
       <div className="space-y-6">
         <Hero
           title="社員一覧"
-          subtitle="社員カルテ、招待状況、資格期限、年間イベント、面談予定をまとめて確認できます。"
+          subtitle="社員カルテ、所属組織、招待状況、資格期限、年間イベント、面談予定をまとめて確認できます。"
           meta={
             <div className="flex flex-wrap gap-2">
               <Chip tone="info">Employees</Chip>
@@ -258,7 +282,7 @@ export default async function EmployeesPage({
           }
         />
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-7">
           <KPI label="社員数" value={totalCount} />
           <KPI label="在籍中" value={activeCount} tone="ok" />
 
@@ -275,6 +299,13 @@ export default async function EmployeesPage({
             value={uninvitedCount}
             tone={uninvitedCount > 0 ? "danger" : "ok"}
             href={filterHref({ invite: "uninvited" })}
+          />
+
+          <KPI
+            label="所属未設定"
+            value={organizationUnsetCount}
+            tone={organizationUnsetCount > 0 ? "danger" : "ok"}
+            href="/employee-analytics?organization_unit_id=unassigned"
           />
 
           <KPI
@@ -330,6 +361,10 @@ export default async function EmployeesPage({
             visibleEmployees.map((employee) => {
               const attentionItem = attentionByEmployeeId.get(employee.id);
               const hasAttention = (attentionItem?.total ?? 0) > 0;
+              const organizationName = getOrganizationName(
+                employee.organization_unit_id,
+                organizationById
+              );
 
               return (
                 <Card key={employee.id} className="p-3">
@@ -350,6 +385,19 @@ export default async function EmployeesPage({
                         <div className="mt-1 truncate text-xs font-semibold text-slate-500">
                           {employee.email || "-"}
                         </div>
+
+                        <div className="mt-2 text-xs font-bold text-slate-500">
+                          所属組織:{" "}
+                          <span
+                            className={
+                              organizationName === "未設定"
+                                ? "text-rose-600"
+                                : "text-slate-700"
+                            }
+                          >
+                            {organizationName}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="shrink-0 text-xs font-black text-indigo-600">
@@ -364,6 +412,14 @@ export default async function EmployeesPage({
                         tone={employee.status === "active" ? "ok" : "danger"}
                       >
                         {getStatusLabel(employee.status)}
+                      </Chip>
+
+                      <Chip
+                        tone={
+                          organizationName === "未設定" ? "danger" : "gray"
+                        }
+                      >
+                        {organizationName}
                       </Chip>
 
                       {employee.user_id ? (
@@ -429,12 +485,13 @@ export default async function EmployeesPage({
 
         <Card className="hidden overflow-hidden md:block">
           <div className="overflow-auto">
-            <table className="w-full min-w-[1100px] text-sm">
+            <table className="w-full min-w-[1200px] text-sm">
               <thead className="bg-slate-50">
                 <tr className="border-b border-slate-200 text-slate-500">
                   <th className="px-4 py-3 text-left font-black">社員番号</th>
                   <th className="px-4 py-3 text-left font-black">氏名</th>
                   <th className="px-4 py-3 text-left font-black">メール</th>
+                  <th className="px-4 py-3 text-left font-black">所属組織</th>
                   <th className="px-4 py-3 text-left font-black">ロール</th>
                   <th className="px-4 py-3 text-left font-black">状態</th>
                   <th className="px-4 py-3 text-left font-black">招待</th>
@@ -447,7 +504,7 @@ export default async function EmployeesPage({
                 {visibleEmployees.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={9}
                       className="px-4 py-10 text-center text-sm font-bold text-slate-500"
                     >
                       表示できる社員がいません
@@ -459,6 +516,10 @@ export default async function EmployeesPage({
                       employee.id
                     );
                     const hasAttention = (attentionItem?.total ?? 0) > 0;
+                    const organizationName = getOrganizationName(
+                      employee.organization_unit_id,
+                      organizationById
+                    );
 
                     return (
                       <tr
@@ -482,6 +543,18 @@ export default async function EmployeesPage({
 
                         <td className="px-4 py-3 text-slate-600">
                           {employee.email || "-"}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <Chip
+                            tone={
+                              organizationName === "未設定"
+                                ? "danger"
+                                : "gray"
+                            }
+                          >
+                            {organizationName}
+                          </Chip>
                         </td>
 
                         <td className="px-4 py-3">
@@ -577,6 +650,36 @@ export default async function EmployeesPage({
   );
 }
 
+function buildEmployeesQuery({
+  supabase,
+  q,
+  invite,
+}: {
+  supabase: Awaited<ReturnType<typeof createSupabaseServerDbClient>>;
+  q: string;
+  invite: string;
+}) {
+  let query = supabase
+    .from("employees")
+    .select(
+      "id, employee_code, name, email, app_role, status, user_id, last_invited_at, organization_unit_id"
+    )
+    .order("employee_code", { ascending: true })
+    .limit(1000);
+
+  if (q) {
+    query = query.or(
+      `employee_code.ilike.%${q}%,name.ilike.%${q}%,email.ilike.%${q}%`
+    );
+  }
+
+  if (invite === "uninvited") {
+    query = query.is("user_id", null);
+  }
+
+  return query;
+}
+
 function AttentionSummary({
   attentionItem,
 }: {
@@ -605,6 +708,15 @@ function AttentionSummary({
   );
 }
 
+function getOrganizationName(
+  organizationUnitId: string | null | undefined,
+  organizationById: Map<string, string>
+) {
+  if (!organizationUnitId) return "未設定";
+
+  return organizationById.get(organizationUnitId) ?? "未設定";
+}
+
 function formatDate(d: Date) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -621,7 +733,7 @@ function formatDateTime(value: string | null | undefined) {
   return d.toLocaleString("ja-JP");
 }
 
-function getRoleLabel(role: string) {
+function getRoleLabel(role: string | null) {
   if (role === "admin") return "管理者";
   if (role === "hr") return "人事";
   if (role === "manager") return "上長";
@@ -631,7 +743,7 @@ function getRoleLabel(role: string) {
   return role || "";
 }
 
-function getStatusLabel(status: string) {
+function getStatusLabel(status: string | null) {
   if (status === "active") return "在籍中";
   if (status === "leave") return "休職中";
   if (status === "inactive") return "退職・無効";
