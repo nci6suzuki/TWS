@@ -40,6 +40,8 @@ export async function GET(req: NextRequest) {
   const managementFilter = url.searchParams.get("management") || "all";
   const employmentTypeFilter =
     url.searchParams.get("employment_type") || "all";
+  const organizationUnitIdFilter =
+    url.searchParams.get("organization_unit_id") || "all";
 
   const incompleteFilter = url.searchParams.get("incomplete") || "";
 
@@ -98,6 +100,14 @@ export async function GET(req: NextRequest) {
       if (employmentTypeFilter === "unknown") {
         if (e.employment_type) return false;
       } else if (e.employment_type !== employmentTypeFilter) {
+        return false;
+      }
+    }
+
+    if (organizationUnitIdFilter !== "all") {
+      if (organizationUnitIdFilter === "unassigned") {
+        if (e.organization_unit_id) return false;
+      } else if (e.organization_unit_id !== organizationUnitIdFilter) {
         return false;
       }
     }
@@ -167,6 +177,7 @@ export async function GET(req: NextRequest) {
         gender: genderFilter,
         management: managementFilter,
         employmentType: employmentTypeFilter,
+        organizationUnitId: organizationUnitIdFilter,
         incomplete: incompleteFilter,
       })}"`,
     },
@@ -268,12 +279,14 @@ function buildFileName({
   gender,
   management,
   employmentType,
+  organizationUnitId,
   incomplete,
 }: {
   status: string;
   gender: string;
   management: string;
   employmentType: string;
+  organizationUnitId: string;
   incomplete: string;
 }) {
   const parts = ["employee-analytics"];
@@ -284,6 +297,9 @@ function buildFileName({
   if (management && management !== "all") parts.push(`management-${management}`);
   if (employmentType && employmentType !== "all") {
     parts.push(`employment-${employmentType}`);
+  }
+  if (organizationUnitId && organizationUnitId !== "all") {
+    parts.push(`org-${organizationUnitId}`);
   }
 
   return `${parts.join("_")}.csv`;
