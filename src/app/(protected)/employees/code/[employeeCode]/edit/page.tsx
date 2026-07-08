@@ -12,6 +12,14 @@ import { SubmitButton } from "@/components/ui/submit-button";
 
 export const runtime = "nodejs";
 
+type OrganizationUnitRow = {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  sort_order: number | null;
+  is_active: boolean | null;
+};
+
 export default async function EmployeeEditPage({
   params,
   searchParams,
@@ -35,16 +43,28 @@ export default async function EmployeeEditPage({
 
   const admin = createSupabaseAdminClient();
 
-  const { data: employee, error: employeeError } = await admin
-    .from("employees")
-    .select(
-      "id, employee_code, name, email, app_role, status, employment_type, hire_date, birth_date, gender, is_management_role"
-    )
-    .eq("employee_code", code)
-    .maybeSingle();
+  const [{ data: employee, error: employeeError }, { data: organizationUnits }] =
+    await Promise.all([
+      admin
+        .from("employees")
+        .select(
+          "id, employee_code, name, email, app_role, status, employment_type, hire_date, birth_date, gender, is_management_role, organization_unit_id"
+        )
+        .eq("employee_code", code)
+        .maybeSingle(),
+      admin
+        .from("organization_units")
+        .select("id, name, parent_id, sort_order, is_active")
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true }),
+    ]);
 
   if (employeeError) throw employeeError;
   if (!employee) notFound();
+
+  const organizations = ((organizationUnits ?? []) as OrganizationUnitRow[]).filter(
+    (org) => org.is_active !== false
+  );
 
   const canEdit =
     me.role === "admin" || me.role === "hr" || me.employeeId === employee.id;
@@ -85,7 +105,7 @@ export default async function EmployeeEditPage({
     const { data: beforeEmployee, error: beforeEmployeeError } = await admin
       .from("employees")
       .select(
-        "id, employee_code, name, email, app_role, status, employment_type, hire_date, birth_date, gender, is_management_role"
+        "id, employee_code, name, email, app_role, status, employment_type, hire_date, birth_date, gender, is_management_role, organization_unit_id"
       )
       .eq("id", targetEmployeeId)
       .maybeSingle();
@@ -176,6 +196,10 @@ export default async function EmployeeEditPage({
       is_management_role: canEditRole
         ? formData.get("is_management_role") === "on"
         : beforeEmployee.is_management_role,
+
+      organization_unit_id: canEditRole
+        ? normalizeText(formData.get("organization_unit_id"))
+        : beforeEmployee.organization_unit_id,
     };
 
     const profilePayload = {
@@ -229,7 +253,7 @@ export default async function EmployeeEditPage({
       activityType: "employee_updated",
       title: "社員基本情報を編集しました",
       description:
-        "社員番号、氏名、メール、分析項目、プロフィール、キャリア情報などを更新しました。",
+        "社員番号、氏名、メール、所属組織、分析項目、プロフィール、キャリア情報などを更新しました。",
       relatedType: "employee",
       relatedId: beforeEmployee.id,
       metadata: {
@@ -245,6 +269,7 @@ export default async function EmployeeEditPage({
             birth_date: beforeEmployee.birth_date,
             gender: beforeEmployee.gender,
             is_management_role: beforeEmployee.is_management_role,
+            organization_unit_id: beforeEmployee.organization_unit_id,
           },
           profile: beforeProfile ?? null,
           career: beforeCareer ?? null,
@@ -278,7 +303,7 @@ export default async function EmployeeEditPage({
                 社員情報の編集
               </h1>
               <p className="mt-2 text-sm font-semibold text-slate-500">
-                基本情報、分析項目、プロフィール、キャリア希望を編集できます。保存するとタイムラインに履歴が残ります。
+                基本情報、所属組織、分析項目、プロフィール、キャリア希望を編集できます。保存するとタイムラインに履歴が残ります。
               </p>
             </div>
 
@@ -331,7 +356,7 @@ export default async function EmployeeEditPage({
           <Card className="p-6">
             <h2 className="text-xl font-black text-slate-900">基本情報</h2>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              社員番号・氏名・メール・権限・状態を管理します。
+              社員番号・氏名・メール・権限・状態・所属組織を管理します。
             </p>
 
             <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -370,6 +395,22 @@ export default async function EmployeeEditPage({
                   disabled={!canEditRole}
                   className="input disabled:bg-slate-100 disabled:text-slate-500"
                 />
+              </Field>
+
+              <Field label="所属組織">
+                <select
+                  name="organization_unit_id"
+                  defaultValue={employee.organization_unit_id ?? ""}
+                  disabled={!canEditRole}
+                  className="input disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  <option value="">未設定</option>
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
               </Field>
 
               <Field label="ロール">
@@ -417,7 +458,7 @@ export default async function EmployeeEditPage({
 
             {!canEditRole && (
               <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-700">
-                権限・状態・雇用区分・入社日・分析項目は、管理者または人事のみ変更できます。
+                権限・状態・雇用区分・入社日・所属組織・分析項目は、管理者または人事のみ変更できます。
               </div>
             )}
           </Card>
