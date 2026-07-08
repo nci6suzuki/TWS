@@ -9,7 +9,7 @@ export async function getEmployeeProfileBookById(employeeId: string) {
   const { data: emp, error: empErr } = await supabase
     .from("employees")
     .select(
-      "id, employee_code, name, email, app_role, status, hire_date, birth_date, gender, is_management_role"
+      "id, employee_code, name, email, app_role, status, hire_date, birth_date, gender, is_management_role, organization_unit_id"
     )
     .eq("id", employeeId)
     .maybeSingle();
@@ -81,7 +81,7 @@ export async function getEmployeeProfileBookByCode(employeeCode: string) {
   const { data: emp, error: empErr } = await supabase
     .from("employees")
     .select(
-      "id, employee_code, name, email, app_role, status, hire_date, birth_date, gender, is_management_role"
+      "id, employee_code, name, email, app_role, status, hire_date, birth_date, gender, is_management_role, organization_unit_id"
     )
     .eq("employee_code", code)
     .maybeSingle();
