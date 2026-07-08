@@ -16,6 +16,7 @@ const nav: NavItem[] = [
   { href: "/dashboard", label: "ダッシュボード" },
   { href: "/employees", label: "社員" },
   { href: "/employee-analytics", label: "社員分析" },
+  { href: "/manager-overview", label: "上司別配下" },
   { href: "/annual-events", label: "年間イベント" },
   { href: "/organization", label: "シナプスツリー" },
   { href: "/notifications", label: "通知", badgeKey: "notifications" },
