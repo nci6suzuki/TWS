@@ -6,6 +6,11 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
+type OrganizationUnitRow = {
+  id: string;
+  name: string;
+};
+
 function csvEscape(value: unknown) {
   const text = String(value ?? "");
   return `"${text.replaceAll(`"`, `""`)}"`;
@@ -48,7 +53,7 @@ export async function GET(req: NextRequest) {
   let query = admin
     .from("employees")
     .select(
-      "id, employee_code, name, email, app_role, status, user_id, last_invited_at"
+      "id, employee_code, name, email, app_role, status, user_id, last_invited_at, organization_unit_id"
     )
     .order("employee_code", { ascending: true })
     .limit(5000);
@@ -63,7 +68,11 @@ export async function GET(req: NextRequest) {
     query = query.is("user_id", null);
   }
 
-  const { data: employees, error } = await query;
+  const [{ data: employees, error }, { data: organizationUnits, error: orgError }] =
+    await Promise.all([
+      query,
+      admin.from("organization_units").select("id, name"),
+    ]);
 
   if (error) {
     return NextResponse.json(
@@ -71,6 +80,19 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
+
+  if (orgError) {
+    return NextResponse.json(
+      { success: false, message: orgError.message },
+      { status: 500 }
+    );
+  }
+
+  const organizations = (organizationUnits ?? []) as OrganizationUnitRow[];
+
+  const organizationById = new Map(
+    organizations.map((org) => [org.id, org.name])
+  );
 
   const employeeIds = (employees ?? []).map((e) => e.id);
 
@@ -173,6 +195,7 @@ export async function GET(req: NextRequest) {
       "社員番号",
       "氏名",
       "メール",
+      "所属組織",
       "ロール",
       "状態",
       "招待状況",
@@ -187,11 +210,16 @@ export async function GET(req: NextRequest) {
 
   for (const employee of exportEmployees) {
     const attentionItem = attentionByEmployeeId.get(employee.id);
+    const organizationName = getOrganizationName(
+      employee.organization_unit_id,
+      organizationById
+    );
 
     rows.push([
       employee.employee_code,
       employee.name,
       employee.email,
+      organizationName,
       getRoleLabel(employee.app_role),
       getStatusLabel(employee.status),
       employee.user_id ? "招待済み" : "未招待",
@@ -214,6 +242,15 @@ export async function GET(req: NextRequest) {
       "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });
+}
+
+function getOrganizationName(
+  organizationUnitId: string | null | undefined,
+  organizationById: Map<string, string>
+) {
+  if (!organizationUnitId) return "未設定";
+
+  return organizationById.get(organizationUnitId) ?? "未設定";
 }
 
 function getRoleLabel(role: string) {
