@@ -34,6 +34,21 @@ type OrganizationUnitRow = {
   sort_order: number | null;
 };
 
+type EmployeeRow = {
+  id: string;
+  employee_code: string;
+  name: string;
+  email: string | null;
+  app_role: string | null;
+  status: string | null;
+  user_id: string | null;
+  last_invited_at: string | null;
+  organization_unit_id: string | null;
+  manager_employee_id: string | null;
+  position_title: string | null;
+  position_started_on: string | null;
+};
+
 export default async function EmployeesPage({
   searchParams,
 }: {
@@ -101,12 +116,45 @@ export default async function EmployeesPage({
     );
   }
 
-  const employees = data ?? [];
+  const employees = (data ?? []) as EmployeeRow[];
   const organizations = (organizationUnits ?? []) as OrganizationUnitRow[];
 
   const organizationById = new Map(
     organizations.map((org) => [org.id, org.name])
   );
+
+  const managerIds = Array.from(
+    new Set(employees.map((e) => e.manager_employee_id).filter(Boolean))
+  ) as string[];
+
+  const existingEmployeeIds = new Set(employees.map((e) => e.id));
+  const missingManagerIds = managerIds.filter((id) => !existingEmployeeIds.has(id));
+
+  const { data: missingManagers } =
+    missingManagerIds.length > 0
+      ? await supabase
+          .from("employees")
+          .select("id, employee_code, name, email, app_role, status")
+          .in("id", missingManagerIds)
+      : { data: [] as any[] };
+
+  const managerById = new Map<string, { id: string; employee_code?: string; name: string }>();
+
+  for (const employee of employees) {
+    managerById.set(employee.id, {
+      id: employee.id,
+      employee_code: employee.employee_code,
+      name: employee.name,
+    });
+  }
+
+  for (const manager of missingManagers ?? []) {
+    managerById.set(manager.id, {
+      id: manager.id,
+      employee_code: manager.employee_code,
+      name: manager.name,
+    });
+  }
 
   const employeeIds = employees.map((e) => e.id);
 
@@ -206,6 +254,9 @@ export default async function EmployeesPage({
     (e) => !e.organization_unit_id
   ).length;
 
+  const managerUnsetCount = employees.filter((e) => !e.manager_employee_id).length;
+  const positionUnsetCount = employees.filter((e) => !e.position_title).length;
+
   const attentionCount = employees.filter((employee) => {
     const item = attentionByEmployeeId.get(employee.id);
     return (item?.total ?? 0) > 0;
@@ -224,27 +275,27 @@ export default async function EmployeesPage({
     baseParams.toString() ? `?${baseParams.toString()}` : ""
   }`;
 
-const filterHref = (params: Record<string, string>) => {
-  const p = new URLSearchParams();
+  const filterHref = (params: Record<string, string>) => {
+    const p = new URLSearchParams();
 
-  if (q) p.set("q", q);
-  if (organizationUnitId !== "all") {
-    p.set("organization_unit_id", organizationUnitId);
-  }
+    if (q) p.set("q", q);
+    if (organizationUnitId !== "all") {
+      p.set("organization_unit_id", organizationUnitId);
+    }
 
-  Object.entries(params).forEach(([key, value]) => {
-    if (value) p.set(key, value);
-  });
+    Object.entries(params).forEach(([key, value]) => {
+      if (value) p.set(key, value);
+    });
 
-  return `/employees?${p.toString()}`;
-};
+    return `/employees?${p.toString()}`;
+  };
 
   return (
     <PageShell>
       <div className="space-y-6">
         <Hero
           title="社員一覧"
-          subtitle="社員カルテ、所属組織、招待状況、資格期限、年間イベント、面談予定をまとめて確認できます。"
+          subtitle="社員カルテ、所属組織、直属上司、役職、招待状況、資格期限、年間イベント、面談予定をまとめて確認できます。"
           meta={
             <div className="flex flex-wrap gap-2">
               <Chip tone="info">Employees</Chip>
@@ -262,11 +313,13 @@ const filterHref = (params: Record<string, string>) => {
               )}
 
               {organizationUnitId !== "all" && (
-                <Chip tone={organizationUnitId === "unassigned" ? "danger" : "info"}>
+                <Chip
+                  tone={organizationUnitId === "unassigned" ? "danger" : "info"}
+                >
                   所属組織:{" "}
                   {organizationUnitId === "unassigned"
-                  ? "未設定"
-                  : organizationById.get(organizationUnitId) ?? "不明な組織"}
+                    ? "未設定"
+                    : organizationById.get(organizationUnitId) ?? "不明な組織"}
                 </Chip>
               )}
             </div>
@@ -299,7 +352,7 @@ const filterHref = (params: Record<string, string>) => {
           }
         />
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-7">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4 xl:grid-cols-9">
           <KPI label="社員数" value={totalCount} />
           <KPI label="在籍中" value={activeCount} tone="ok" />
 
@@ -326,6 +379,18 @@ const filterHref = (params: Record<string, string>) => {
           />
 
           <KPI
+            label="上司未設定"
+            value={managerUnsetCount}
+            tone={managerUnsetCount > 0 ? "danger" : "ok"}
+          />
+
+          <KPI
+            label="役職未設定"
+            value={positionUnsetCount}
+            tone={positionUnsetCount > 0 ? "danger" : "ok"}
+          />
+
+          <KPI
             label="要対応あり"
             value={attentionCount}
             tone={attentionCount > 0 ? "danger" : "ok"}
@@ -344,19 +409,19 @@ const filterHref = (params: Record<string, string>) => {
             />
 
             <select
-            name="organization_unit_id"
-            defaultValue={organizationUnitId}
-            className="input"
+              name="organization_unit_id"
+              defaultValue={organizationUnitId}
+              className="input"
             >
               <option value="all">すべての所属組織</option>
               <option value="unassigned">未設定</option>
               {organizations
-                  .filter((org) => org.is_active !== false)
-                  .map((org) => (
-                    <option key={org.id} value={org.id}>
-                      {org.name}
-                    </option>
-              ))}
+                .filter((org) => org.is_active !== false)
+                .map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {org.name}
+                  </option>
+                ))}
             </select>
 
             {invite && <input type="hidden" name="invite" value={invite} />}
@@ -398,6 +463,10 @@ const filterHref = (params: Record<string, string>) => {
                 employee.organization_unit_id,
                 organizationById
               );
+              const managerName = getManagerName(
+                employee.manager_employee_id,
+                managerById
+              );
 
               return (
                 <Card key={employee.id} className="p-3">
@@ -419,17 +488,48 @@ const filterHref = (params: Record<string, string>) => {
                           {employee.email || "-"}
                         </div>
 
-                        <div className="mt-2 text-xs font-bold text-slate-500">
-                          所属組織:{" "}
-                          <span
-                            className={
-                              organizationName === "未設定"
-                                ? "text-rose-600"
-                                : "text-slate-700"
-                            }
-                          >
-                            {organizationName}
-                          </span>
+                        <div className="mt-3 space-y-1 text-xs font-bold text-slate-500">
+                          <div>
+                            所属組織:{" "}
+                            <span
+                              className={
+                                organizationName === "未設定"
+                                  ? "text-rose-600"
+                                  : "text-slate-700"
+                              }
+                            >
+                              {organizationName}
+                            </span>
+                          </div>
+
+                          <div>
+                            直属上司:{" "}
+                            <span
+                              className={
+                                managerName === "未設定"
+                                  ? "text-rose-600"
+                                  : "text-slate-700"
+                              }
+                            >
+                              {managerName}
+                            </span>
+                          </div>
+
+                          <div>
+                            役職:{" "}
+                            <span
+                              className={
+                                employee.position_title
+                                  ? "text-slate-700"
+                                  : "text-rose-600"
+                              }
+                            >
+                              {employee.position_title || "未設定"}
+                            </span>
+                            {employee.position_started_on
+                              ? ` / ${employee.position_started_on}〜`
+                              : ""}
+                          </div>
                         </div>
                       </div>
 
@@ -453,6 +553,14 @@ const filterHref = (params: Record<string, string>) => {
                         }
                       >
                         {organizationName}
+                      </Chip>
+
+                      <Chip tone={managerName === "未設定" ? "danger" : "gray"}>
+                        上司: {managerName}
+                      </Chip>
+
+                      <Chip tone={employee.position_title ? "info" : "danger"}>
+                        役職: {employee.position_title || "未設定"}
                       </Chip>
 
                       {employee.user_id ? (
@@ -518,13 +626,16 @@ const filterHref = (params: Record<string, string>) => {
 
         <Card className="hidden overflow-hidden md:block">
           <div className="overflow-auto">
-            <table className="w-full min-w-[1200px] text-sm">
+            <table className="w-full min-w-[1500px] text-sm">
               <thead className="bg-slate-50">
                 <tr className="border-b border-slate-200 text-slate-500">
                   <th className="px-4 py-3 text-left font-black">社員番号</th>
                   <th className="px-4 py-3 text-left font-black">氏名</th>
                   <th className="px-4 py-3 text-left font-black">メール</th>
                   <th className="px-4 py-3 text-left font-black">所属組織</th>
+                  <th className="px-4 py-3 text-left font-black">直属上司</th>
+                  <th className="px-4 py-3 text-left font-black">現在役職</th>
+                  <th className="px-4 py-3 text-left font-black">役職開始日</th>
                   <th className="px-4 py-3 text-left font-black">ロール</th>
                   <th className="px-4 py-3 text-left font-black">状態</th>
                   <th className="px-4 py-3 text-left font-black">招待</th>
@@ -537,7 +648,7 @@ const filterHref = (params: Record<string, string>) => {
                 {visibleEmployees.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={12}
                       className="px-4 py-10 text-center text-sm font-bold text-slate-500"
                     >
                       表示できる社員がいません
@@ -552,6 +663,10 @@ const filterHref = (params: Record<string, string>) => {
                     const organizationName = getOrganizationName(
                       employee.organization_unit_id,
                       organizationById
+                    );
+                    const managerName = getManagerName(
+                      employee.manager_employee_id,
+                      managerById
                     );
 
                     return (
@@ -588,6 +703,22 @@ const filterHref = (params: Record<string, string>) => {
                           >
                             {organizationName}
                           </Chip>
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <Chip tone={managerName === "未設定" ? "danger" : "gray"}>
+                            {managerName}
+                          </Chip>
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <Chip tone={employee.position_title ? "info" : "danger"}>
+                            {employee.position_title || "未設定"}
+                          </Chip>
+                        </td>
+
+                        <td className="px-4 py-3 text-slate-600">
+                          {employee.position_started_on || "-"}
                         </td>
 
                         <td className="px-4 py-3">
@@ -697,7 +828,7 @@ function buildEmployeesQuery({
   let query = supabase
     .from("employees")
     .select(
-      "id, employee_code, name, email, app_role, status, user_id, last_invited_at, organization_unit_id"
+      "id, employee_code, name, email, app_role, status, user_id, last_invited_at, organization_unit_id, manager_employee_id, position_title, position_started_on"
     )
     .order("employee_code", { ascending: true })
     .limit(1000);
@@ -758,6 +889,20 @@ function getOrganizationName(
   if (!organizationUnitId) return "未設定";
 
   return organizationById.get(organizationUnitId) ?? "未設定";
+}
+
+function getManagerName(
+  managerEmployeeId: string | null | undefined,
+  managerById: Map<string, { id: string; employee_code?: string; name: string }>
+) {
+  if (!managerEmployeeId) return "未設定";
+
+  const manager = managerById.get(managerEmployeeId);
+  if (!manager) return "未設定";
+
+  return manager.employee_code
+    ? `${manager.employee_code} / ${manager.name}`
+    : manager.name;
 }
 
 function formatDate(d: Date) {
