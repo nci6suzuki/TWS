@@ -11,6 +11,12 @@ type OrganizationUnitRow = {
   name: string;
 };
 
+type ManagerRow = {
+  id: string;
+  employee_code: string | null;
+  name: string;
+};
+
 function csvEscape(value: unknown) {
   const text = String(value ?? "");
   return `"${text.replaceAll(`"`, `""`)}"`;
@@ -43,7 +49,8 @@ export async function GET(req: NextRequest) {
   const q = url.searchParams.get("q") ?? "";
   const invite = url.searchParams.get("invite") ?? "";
   const attention = url.searchParams.get("attention") ?? "";
-  const organizationUnitId = url.searchParams.get("organization_unit_id") ?? "all";
+  const organizationUnitId =
+    url.searchParams.get("organization_unit_id") ?? "all";
 
   const today = formatDate(new Date());
 
@@ -54,7 +61,7 @@ export async function GET(req: NextRequest) {
   let query = admin
     .from("employees")
     .select(
-      "id, employee_code, name, email, app_role, status, user_id, last_invited_at, organization_unit_id"
+      "id, employee_code, name, email, app_role, status, user_id, last_invited_at, organization_unit_id, manager_employee_id, position_title, position_started_on"
     )
     .order("employee_code", { ascending: true })
     .limit(5000);
@@ -77,11 +84,13 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const [{ data: employees, error }, { data: organizationUnits, error: orgError }] =
-    await Promise.all([
-      query,
-      admin.from("organization_units").select("id, name"),
-    ]);
+  const [
+    { data: employees, error },
+    { data: organizationUnits, error: orgError },
+  ] = await Promise.all([
+    query,
+    admin.from("organization_units").select("id, name"),
+  ]);
 
   if (error) {
     return NextResponse.json(
@@ -104,6 +113,26 @@ export async function GET(req: NextRequest) {
   );
 
   const employeeIds = (employees ?? []).map((e) => e.id);
+
+  const managerIds = Array.from(
+    new Set(
+      (employees ?? [])
+        .map((employee) => employee.manager_employee_id)
+        .filter(Boolean)
+    )
+  ) as string[];
+
+  const { data: managers } =
+    managerIds.length > 0
+      ? await admin
+          .from("employees")
+          .select("id, employee_code, name")
+          .in("id", managerIds)
+      : { data: [] as ManagerRow[] };
+
+  const managerById = new Map(
+    ((managers ?? []) as ManagerRow[]).map((manager) => [manager.id, manager])
+  );
 
   const { data: qualifications } =
     employeeIds.length > 0
@@ -205,6 +234,9 @@ export async function GET(req: NextRequest) {
       "氏名",
       "メール",
       "所属組織",
+      "直属上司",
+      "現在役職",
+      "役職開始日",
       "ロール",
       "状態",
       "招待状況",
@@ -223,12 +255,19 @@ export async function GET(req: NextRequest) {
       employee.organization_unit_id,
       organizationById
     );
+    const managerName = getManagerName(
+      employee.manager_employee_id,
+      managerById
+    );
 
     rows.push([
       employee.employee_code,
       employee.name,
       employee.email,
       organizationName,
+      managerName,
+      employee.position_title || "未設定",
+      employee.position_started_on ?? "",
       getRoleLabel(employee.app_role),
       getStatusLabel(employee.status),
       employee.user_id ? "招待済み" : "未招待",
@@ -262,7 +301,21 @@ function getOrganizationName(
   return organizationById.get(organizationUnitId) ?? "未設定";
 }
 
-function getRoleLabel(role: string) {
+function getManagerName(
+  managerEmployeeId: string | null | undefined,
+  managerById: Map<string, ManagerRow>
+) {
+  if (!managerEmployeeId) return "未設定";
+
+  const manager = managerById.get(managerEmployeeId);
+  if (!manager) return "未設定";
+
+  return manager.employee_code
+    ? `${manager.employee_code} / ${manager.name}`
+    : manager.name;
+}
+
+function getRoleLabel(role: string | null) {
   if (role === "admin") return "管理者";
   if (role === "hr") return "人事";
   if (role === "manager") return "上長";
@@ -271,7 +324,7 @@ function getRoleLabel(role: string) {
   return role || "";
 }
 
-function getStatusLabel(status: string) {
+function getStatusLabel(status: string | null) {
   if (status === "active") return "在籍中";
   if (status === "leave") return "休職中";
   if (status === "inactive") return "退職・無効";
