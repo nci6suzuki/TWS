@@ -202,6 +202,7 @@ export default async function EmployeeByCodePage({
             qualifications={book.qualifications}
             events={book.events}
             interviews={book.interviews}
+            positionHistories={book.positionHistories}
             activityLogs={book.activityLogs ?? []}
             activeTab={tab}
           />

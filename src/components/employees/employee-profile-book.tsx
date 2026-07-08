@@ -31,6 +31,7 @@ type Props = {
   qualifications: any[];
   events: any[];
   interviews: any[];
+  positionHistories: any[];
   activityLogs: any[];
   activeTab: string;
 };
@@ -41,6 +42,7 @@ const tabs = [
   { key: "qualifications", label: "資格" },
   { key: "schedule", label: "年間スケジュール" },
   { key: "interviews", label: "面談履歴" },
+  { key: "positions", label: "役職履歴" },
   { key: "timeline", label: "履歴タイムライン" },
 ];
 
@@ -230,6 +232,14 @@ function TimelineBadge({ type }: { type: string }) {
     );
   }
 
+  if (type === "position") {
+    return (
+      <span className="inline-flex items-center rounded-xl border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-black text-purple-700">
+        役職
+      </span>
+    );
+  }
+
   return (
     <span className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-600">
       その他
@@ -244,6 +254,7 @@ export async function EmployeeProfileBook({
   qualifications,
   events,
   interviews,
+  positionHistories,
   activityLogs,
   activeTab,
 }: Props) {
@@ -372,6 +383,27 @@ const timelineItems = [
       .filter(Boolean)
       .join("\n"),
     href: `/employees/code/${employee.employee_code}/interviews/${i.id}/edit`,
+  })),
+
+  ...positionHistories.map((history: any) => ({
+    id: `position-history-${history.id}`,
+    type: "position",
+    date: history.started_on ?? history.created_at ?? "",
+    title: `${getPositionChangeTypeLabel(history.change_type)}：${
+      history.position_title || "未設定"
+    }`,
+    description: [
+      history.previous_position_title
+        ? `前役職：${history.previous_position_title}`
+        : "",
+      history.started_on ? `開始日：${history.started_on}` : "",
+      history.ended_on ? `終了日：${history.ended_on}` : "",
+      history.reason ? `理由：${history.reason}` : "",
+      history.memo ? `メモ：${history.memo}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    href: `/employees/code/${employee.employee_code}?tab=positions`,
   })),
 ]
   .filter((item) => item.date)
@@ -1176,6 +1208,146 @@ const timelineItems = [
         </div>
       )}
 
+      {tab === "positions" && (
+        <div className="space-y-4 rounded-2xl border bg-white p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="text-lg font-bold">役職履歴</div>
+              <p className="mt-1 text-sm font-semibold text-slate-500">
+                昇格、降格、任命、異動、役職変更、役職解除の履歴を確認できます。
+              </p>
+            </div>
+
+            <Link
+              href={`/employees/code/${employee.employee_code}/edit`}
+              className="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+            >
+              役職を編集
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div className="rounded-2xl border bg-slate-50 p-4">
+              <div className="text-xs font-black tracking-[0.12em] text-slate-500">
+                現在役職
+              </div>
+              <div className="mt-2 text-xl font-black text-slate-900">
+                {employee.position_title || "未設定"}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border bg-slate-50 p-4">
+              <div className="text-xs font-black tracking-[0.12em] text-slate-500">
+                役職開始日
+              </div>
+              <div className="mt-2 text-xl font-black text-slate-900">
+                {employee.position_started_on ?? "-"}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+              <div className="text-xs font-black tracking-[0.12em] text-indigo-700">
+                履歴数
+              </div>
+              <div className="mt-2 text-2xl font-black text-indigo-700">
+                {positionHistories.length}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+              <div className="text-xs font-black tracking-[0.12em] text-emerald-700">
+                昇格回数
+              </div>
+              <div className="mt-2 text-2xl font-black text-emerald-700">
+                {
+                  positionHistories.filter(
+                    (history: any) => history.change_type === "promotion"
+                  ).length
+                }
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-auto rounded-2xl border bg-slate-50">
+            <table className="min-w-[1100px] w-full text-sm">
+              <thead className="text-slate-500">
+                <tr className="border-b bg-white">
+                  <th className="px-4 py-3 text-left font-black">開始日</th>
+                  <th className="px-4 py-3 text-left font-black">終了日</th>
+                  <th className="px-4 py-3 text-left font-black">変更区分</th>
+                  <th className="px-4 py-3 text-left font-black">役職</th>
+                  <th className="px-4 py-3 text-left font-black">前役職</th>
+                  <th className="px-4 py-3 text-left font-black">理由</th>
+                  <th className="px-4 py-3 text-left font-black">メモ</th>
+                  <th className="px-4 py-3 text-left font-black">登録日</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {positionHistories.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-4 py-10 text-center text-sm font-bold text-slate-500"
+                    >
+                      役職履歴はまだありません。社員編集画面で役職を変更すると自動登録されます。
+                    </td>
+                  </tr>
+                ) : (
+                  positionHistories.map((history: any) => (
+                    <tr
+                      key={history.id}
+                      className="border-b bg-white last:border-b-0 hover:bg-slate-50"
+                    >
+                      <td className="px-4 py-3 font-black text-slate-900">
+                        {history.started_on ?? "-"}
+                      </td>
+
+                      <td className="px-4 py-3 text-slate-600">
+                        {history.ended_on ?? "現行"}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <span
+                          className={[
+                            "inline-flex rounded-xl border px-3 py-1 text-xs font-black",
+                            getPositionChangeTypeClassName(
+                              history.change_type
+                            ),
+                          ].join(" ")}
+                        >
+                          {getPositionChangeTypeLabel(history.change_type)}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3 font-black text-slate-900">
+                        {history.position_title || "未設定"}
+                      </td>
+
+                      <td className="px-4 py-3 text-slate-600">
+                        {history.previous_position_title ?? "-"}
+                      </td>
+
+                      <td className="px-4 py-3 text-slate-600">
+                        {history.reason ?? "-"}
+                      </td>
+
+                      <td className="px-4 py-3 text-slate-600">
+                        {history.memo ?? "-"}
+                      </td>
+
+                      <td className="px-4 py-3 text-slate-500">
+                        {formatTimelineDate(history.created_at)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {tab === "timeline" && (
         <div className="space-y-4 rounded-2xl border bg-white p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -1202,6 +1374,9 @@ const timelineItems = [
               <span className="rounded-xl border bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">
                 面談: {interviews.length}
               </span>
+<span className="rounded-xl border bg-purple-50 px-3 py-2 text-xs font-black text-purple-700">
+  役職: {positionHistories.length}
+</span>
             </div>
           </div>
 
@@ -1329,4 +1504,39 @@ function getGenderLabel(value: string | null) {
   if (value === "unknown") return "未設定";
 
   return "未設定";
+}
+
+function getPositionChangeTypeLabel(value: string | null | undefined) {
+  if (value === "appointed") return "任命";
+  if (value === "promotion") return "昇格";
+  if (value === "demotion") return "降格";
+  if (value === "transfer") return "異動";
+  if (value === "changed") return "役職変更";
+  if (value === "removed") return "役職解除";
+
+  return "役職変更";
+}
+
+function getPositionChangeTypeClassName(value: string | null | undefined) {
+  if (value === "promotion") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  if (value === "demotion") {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+
+  if (value === "transfer") {
+    return "border-indigo-200 bg-indigo-50 text-indigo-700";
+  }
+
+  if (value === "removed") {
+    return "border-slate-200 bg-slate-100 text-slate-600";
+  }
+
+  if (value === "appointed") {
+    return "border-sky-200 bg-sky-50 text-sky-700";
+  }
+
+  return "border-purple-200 bg-purple-50 text-purple-700";
 }

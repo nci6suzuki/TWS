@@ -59,6 +59,16 @@ export async function getEmployeeProfileBookById(employeeId: string) {
     .order("interview_date", { ascending: false })
     .order("created_at", { ascending: false });
 
+  // 役職履歴
+  const { data: positionHistories } = await supabase
+    .from("employee_position_histories")
+    .select(
+      "id, employee_id, position_title, change_type, started_on, ended_on, previous_position_title, reason, memo, created_by_employee_id, created_at, updated_at"
+    )
+    .eq("employee_id", employeeId)
+    .order("started_on", { ascending: false })
+    .order("created_at", { ascending: false });
+
   // 操作履歴・対応履歴
   const activityLogs = await getEmployeeActivityLogs(supabase, employeeId);
 
@@ -69,6 +79,7 @@ export async function getEmployeeProfileBookById(employeeId: string) {
     qualifications: qualifications ?? [],
     events: events ?? [],
     interviews: interviews ?? [],
+    positionHistories: positionHistories ?? [],
     activityLogs,
   };
 }
@@ -133,6 +144,16 @@ export async function getEmployeeProfileBookByCode(employeeCode: string) {
     .order("interview_date", { ascending: false })
     .order("created_at", { ascending: false });
 
+  // 役職履歴
+  const { data: positionHistories } = await supabase
+    .from("employee_position_histories")
+    .select(
+      "id, employee_id, position_title, change_type, started_on, ended_on, previous_position_title, reason, memo, created_by_employee_id, created_at, updated_at"
+    )
+    .eq("employee_id", employeeId)
+    .order("started_on", { ascending: false })
+    .order("created_at", { ascending: false });
+
   // 操作履歴・対応履歴
   const activityLogs = await getEmployeeActivityLogs(supabase, employeeId);
 
@@ -143,6 +164,7 @@ export async function getEmployeeProfileBookByCode(employeeCode: string) {
     qualifications: qualifications ?? [],
     events: events ?? [],
     interviews: interviews ?? [],
+    positionHistories: positionHistories ?? [],
     activityLogs,
   };
 }
