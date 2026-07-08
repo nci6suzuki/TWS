@@ -18,6 +18,13 @@ type OrganizationUnitRow = {
   is_active: boolean | null;
 };
 
+type EmployeeOptionRow = {
+  id: string;
+  employee_code: string;
+  name: string;
+  status: string | null;
+};
+
 export default async function EmployeeNewPage({
   searchParams,
 }: {
@@ -39,11 +46,21 @@ export default async function EmployeeNewPage({
 
   const supabase = await createSupabaseServerDbClient();
 
-  const { data: organizationUnits, error: organizationError } = await supabase
-    .from("organization_units")
-    .select("id, name, sort_order, is_active")
-    .order("sort_order", { ascending: true })
-    .order("name", { ascending: true });
+  const [
+    { data: organizationUnits, error: organizationError },
+    { data: employeeOptions, error: employeeOptionsError },
+  ] = await Promise.all([
+    supabase
+      .from("organization_units")
+      .select("id, name, sort_order, is_active")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+    supabase
+      .from("employees")
+      .select("id, employee_code, name, status")
+      .order("employee_code", { ascending: true })
+      .limit(5000),
+  ]);
 
   if (organizationError) {
     return (
@@ -58,14 +75,48 @@ export default async function EmployeeNewPage({
     );
   }
 
+  if (employeeOptionsError) {
+    return (
+      <PageShell>
+        <Card className="p-6">
+          <div className="text-xl font-black text-slate-900">社員登録</div>
+          <div className="mt-2 text-sm font-semibold text-rose-600">
+            直属上司候補の読み込みに失敗：{employeeOptionsError.message}
+          </div>
+        </Card>
+      </PageShell>
+    );
+  }
+
   const organizations = ((organizationUnits ?? []) as OrganizationUnitRow[]).filter(
     (org) => org.is_active !== false
   );
 
+  const managerOptions = (employeeOptions ?? []) as EmployeeOptionRow[];
+
   async function createEmployee(formData: FormData) {
     "use server";
 
+    const me = await requireAuth();
+
+    if (me.role !== "admin" && me.role !== "hr") {
+      redirect("/unauthorized");
+    }
+
     const supabase = await createSupabaseServerDbClient();
+
+    const positionTitle = normalizeText(formData.get("position_title"));
+    const positionStartedOn = normalizeDate(
+      String(formData.get("position_started_on") ?? "")
+    );
+
+    if (positionTitle && !positionStartedOn) {
+      redirect(
+        `/employees/new?error=${encodeURIComponent(
+          "初期役職を登録する場合は、役職開始日を入力してください"
+        )}`
+      );
+    }
 
     const payload = {
       employee_code: String(formData.get("employee_code") ?? "").trim(),
@@ -74,7 +125,12 @@ export default async function EmployeeNewPage({
       app_role: String(formData.get("app_role") ?? "employee"),
       status: String(formData.get("status") ?? "active"),
       employment_type: String(formData.get("employment_type") ?? "full_time"),
+
       organization_unit_id: normalizeText(formData.get("organization_unit_id")),
+      manager_employee_id: normalizeText(formData.get("manager_employee_id")),
+
+      position_title: positionTitle,
+      position_started_on: positionStartedOn,
 
       birth_date: normalizeDate(String(formData.get("birth_date") ?? "")),
       gender: normalizeText(formData.get("gender")) ?? "unknown",
@@ -89,10 +145,38 @@ export default async function EmployeeNewPage({
       );
     }
 
-    const { error } = await supabase.from("employees").insert(payload);
+    const { data: createdEmployee, error } = await supabase
+      .from("employees")
+      .insert(payload)
+      .select("id, employee_code, name")
+      .single();
 
     if (error) {
       redirect(`/employees/new?error=${encodeURIComponent(error.message)}`);
+    }
+
+    if (payload.position_title && payload.position_started_on) {
+      const { error: positionHistoryError } = await supabase
+        .from("employee_position_histories")
+        .insert({
+          employee_id: createdEmployee.id,
+          position_title: payload.position_title,
+          change_type: "appointed",
+          started_on: payload.position_started_on,
+          ended_on: null,
+          previous_position_title: null,
+          reason: "初期登録",
+          memo: null,
+          created_by_employee_id: me.employeeId ?? null,
+        });
+
+      if (positionHistoryError) {
+        redirect(
+          `/employees/new?error=${encodeURIComponent(
+            `社員は登録されましたが、役職履歴の登録に失敗しました：${positionHistoryError.message}`
+          )}`
+        );
+      }
     }
 
     redirect(`/employees?created=${encodeURIComponent(payload.name)}`);
@@ -103,11 +187,12 @@ export default async function EmployeeNewPage({
       <div className="space-y-6">
         <Hero
           title="社員登録"
-          subtitle="社員番号・氏名・メール・権限・在籍状態・所属組織・分析項目を登録します。"
+          subtitle="社員番号・氏名・メール・権限・在籍状態・所属組織・直属上司・初期役職・分析項目を登録します。"
           meta={
             <div className="flex flex-wrap gap-2">
               <Chip tone="info">Create Employee</Chip>
               <Chip>登録権限: {me.role}</Chip>
+              <Chip tone="gray">組織・役職対応</Chip>
               <Chip tone="gray">分析項目対応</Chip>
             </div>
           }
@@ -153,24 +238,13 @@ export default async function EmployeeNewPage({
                     基本情報
                   </h3>
                   <p className="mt-1 text-sm font-medium text-slate-500">
-                    社員番号・氏名・メール・所属組織などを登録します。
+                    社員番号・氏名・メール・ロール・在籍状態を登録します。
                   </p>
 
                   <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
                     <Field label="社員番号" name="employee_code" required />
                     <Field label="氏名" name="name" required />
                     <Field label="メール" name="email" required type="email" />
-
-                    <Select
-                      label="所属組織"
-                      name="organization_unit_id"
-                      options={[
-                        ["", "未設定"],
-                        ...organizations.map(
-                          (org) => [org.id, org.name] as [string, string]
-                        ),
-                      ]}
-                    />
 
                     <Select
                       label="ロール"
@@ -204,6 +278,64 @@ export default async function EmployeeNewPage({
                         ["other", "other"],
                       ]}
                     />
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <h3 className="text-base font-black text-slate-900">
+                    組織・役職情報
+                  </h3>
+                  <p className="mt-1 text-sm font-medium text-slate-500">
+                    所属組織、直属上司、初期役職、役職開始日を登録します。
+                  </p>
+
+                  <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <Select
+                      label="所属組織"
+                      name="organization_unit_id"
+                      options={[
+                        ["", "未設定"],
+                        ...organizations.map(
+                          (org) => [org.id, org.name] as [string, string]
+                        ),
+                      ]}
+                    />
+
+                    <Select
+                      label="直属上司"
+                      name="manager_employee_id"
+                      options={[
+                        ["", "未設定"],
+                        ...managerOptions.map(
+                          (manager) =>
+                            [
+                              manager.id,
+                              `${manager.employee_code} / ${manager.name}${
+                                manager.status && manager.status !== "active"
+                                  ? `（${manager.status}）`
+                                  : ""
+                              }`,
+                            ] as [string, string]
+                        ),
+                      ]}
+                    />
+
+                    <Field
+                      label="初期役職"
+                      name="position_title"
+                      placeholder="例：主任、係長、課長、支店長"
+                    />
+
+                    <Field
+                      label="役職開始日"
+                      name="position_started_on"
+                      type="date"
+                    />
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-indigo-100 bg-white p-4 text-xs font-semibold leading-5 text-slate-500">
+                    初期役職と役職開始日を入力すると、登録時に役職履歴へ
+                    「任命」として自動登録されます。
                   </div>
                 </div>
 
@@ -253,7 +385,7 @@ export default async function EmployeeNewPage({
 
               <div className="mt-6 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-xs font-medium text-slate-400">
-                  登録後は社員一覧へ移動します。
+                  登録後は社員一覧へ移動します。初期役職を入力した場合は、役職履歴も作成されます。
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -298,16 +430,16 @@ export default async function EmployeeNewPage({
                   description="社員詳細ページのURLや検索に使うため、重複しない番号を登録してください。"
                 />
                 <GuideItem
-                  title="2. 所属組織を設定する"
-                  description="所属組織を設定すると、社員分析の組織別分析や所属組織フィルターに反映されます。"
+                  title="2. 所属組織・直属上司を設定する"
+                  description="組織別の社員確認や上司配下の管理に利用します。"
                 />
                 <GuideItem
-                  title="3. 分析項目を入力する"
+                  title="3. 初期役職を入力する"
+                  description="初期役職と役職開始日を入力すると、役職履歴に任命履歴が自動登録されます。"
+                />
+                <GuideItem
+                  title="4. 分析項目を入力する"
                   description="生年月日・性別・役職者フラグを入力すると、平均年齢や女性役職者率を正確に集計できます。"
-                />
-                <GuideItem
-                  title="4. メールはログイン連携に使用"
-                  description="認証ユーザーとの紐づけや通知機能で利用する想定です。"
                 />
                 <GuideItem
                   title="5. ロールは権限に影響"
@@ -349,11 +481,13 @@ function Field({
   name,
   required,
   type = "text",
+  placeholder,
 }: {
   label: string;
   name: string;
   required?: boolean;
   type?: string;
+  placeholder?: string;
 }) {
   return (
     <label className="grid gap-2">
@@ -365,6 +499,7 @@ function Field({
         name={name}
         type={type}
         required={required}
+        placeholder={placeholder}
         className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
       />
     </label>
