@@ -247,6 +247,31 @@ export default async function EmployeeEditPage({
         : beforeEmployee.position_started_on,
     };
 
+const positionChanged =
+  canEditRole &&
+  ((beforeEmployee.position_title ?? "") !==
+    (employeePayload.position_title ?? "") ||
+    (beforeEmployee.position_started_on ?? "") !==
+      (employeePayload.position_started_on ?? ""));
+
+const positionChangeType = normalizePositionChangeType(
+  formData.get("position_change_type")
+);
+
+const positionChangeReason = normalizeText(
+  formData.get("position_change_reason")
+);
+
+const positionChangeMemo = normalizeText(formData.get("position_change_memo"));
+
+if (positionChanged && !employeePayload.position_started_on) {
+  redirect(
+    `${baseUrl}?error=${encodeURIComponent(
+      "役職を変更する場合は、役職開始日を入力してください"
+    )}`
+  );
+}
+
     const profilePayload = {
       employee_id: beforeEmployee.id,
       phone_number: normalizeText(formData.get("phone_number")),
@@ -276,6 +301,54 @@ export default async function EmployeeEditPage({
       redirect(`${baseUrl}?error=${encodeURIComponent(empUpdateError.message)}`);
     }
 
+if (positionChanged) {
+  const startedOn = employeePayload.position_started_on;
+
+  if (!startedOn) {
+    redirect(
+      `${baseUrl}?error=${encodeURIComponent(
+        "役職履歴の登録に必要な役職開始日がありません"
+      )}`
+    );
+  }
+
+  const previousEndedOn = getPreviousDate(startedOn);
+
+  await admin
+    .from("employee_position_histories")
+    .update({
+      ended_on: previousEndedOn,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("employee_id", beforeEmployee.id)
+    .is("ended_on", null)
+    .neq("started_on", startedOn);
+
+  const { error: positionHistoryError } = await admin
+    .from("employee_position_histories")
+    .insert({
+      employee_id: beforeEmployee.id,
+      position_title:
+        employeePayload.position_title ||
+        (positionChangeType === "removed" ? "役職解除" : "未設定"),
+      change_type: positionChangeType,
+      started_on: startedOn,
+      ended_on: null,
+      previous_position_title: beforeEmployee.position_title,
+      reason: positionChangeReason,
+      memo: positionChangeMemo,
+      created_by_employee_id: me.employeeId ?? null,
+    });
+
+  if (positionHistoryError) {
+    redirect(
+      `${baseUrl}?error=${encodeURIComponent(
+        positionHistoryError.message
+      )}`
+    );
+  }
+}
+
     const { error: profileError } = await admin
       .from("employee_profiles")
       .upsert(profilePayload, { onConflict: "employee_id" });
@@ -297,8 +370,9 @@ export default async function EmployeeEditPage({
       actorEmployeeId: me.employeeId,
       activityType: "employee_updated",
       title: "社員基本情報を編集しました",
-      description:
-        "社員番号、氏名、メール、所属組織、直属上司、現在役職、役職開始日、分析項目、プロフィール、キャリア情報などを更新しました。",
+      description: positionChanged
+      ? "社員情報を更新し、役職変更履歴を登録しました。"
+      : "社員番号、氏名、メール、所属組織、直属上司、現在役職、役職開始日、分析項目、プロフィール、キャリア情報などを更新しました。",
       relatedType: "employee",
       relatedId: beforeEmployee.id,
       metadata: {
@@ -327,6 +401,8 @@ export default async function EmployeeEditPage({
           profile: profilePayload,
           career: careerPayload,
         },
+        position_history_created: positionChanged,
+        position_change_type: positionChanged ? positionChangeType : null,
         updated_at: new Date().toISOString(),
       },
     });
@@ -552,6 +628,43 @@ export default async function EmployeeEditPage({
                   className="input disabled:bg-slate-100 disabled:text-slate-500"
                 />
               </Field>
+
+              <Field label="役職変更区分">
+  <select
+    name="position_change_type"
+    defaultValue="changed"
+    disabled={!canEditRole}
+    className="input disabled:bg-slate-100 disabled:text-slate-500"
+  >
+    <option value="appointed">任命</option>
+    <option value="promotion">昇格</option>
+    <option value="demotion">降格</option>
+    <option value="transfer">異動</option>
+    <option value="changed">役職変更</option>
+    <option value="removed">役職解除</option>
+  </select>
+</Field>
+
+<Field label="役職変更理由">
+  <input
+    name="position_change_reason"
+    placeholder="例：組織変更に伴う昇格"
+    disabled={!canEditRole}
+    className="input disabled:bg-slate-100 disabled:text-slate-500"
+  />
+</Field>
+
+<div className="md:col-span-2">
+  <Field label="役職変更メモ">
+    <textarea
+      name="position_change_memo"
+      rows={3}
+      placeholder="補足があれば入力してください"
+      disabled={!canEditRole}
+      className="input disabled:bg-slate-100 disabled:text-slate-500"
+    />
+  </Field>
+</div>
             </div>
 
             {!canEditRole && (
@@ -759,4 +872,34 @@ function normalizeText(value: FormDataEntryValue | null) {
 function normalizeDate(value: string) {
   const text = String(value ?? "").trim();
   return text || null;
+}
+
+function normalizePositionChangeType(value: FormDataEntryValue | null) {
+  const text = String(value ?? "").trim();
+
+  if (
+    text === "appointed" ||
+    text === "promotion" ||
+    text === "demotion" ||
+    text === "transfer" ||
+    text === "changed" ||
+    text === "removed"
+  ) {
+    return text;
+  }
+
+  return "changed";
+}
+
+function getPreviousDate(value: string) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+
+  d.setDate(d.getDate() - 1);
+
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+
+  return `${y}-${m}-${day}`;
 }
