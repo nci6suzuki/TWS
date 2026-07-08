@@ -244,6 +244,9 @@ async function assignEmployee(formData: FormData) {
           right={
             <>
               <GhostButton href="/employees">社員一覧</GhostButton>
+              <GhostButton href="/employees?organization_unit_id=unassigned">
+              未所属社員
+              </GhostButton>
               <PrimaryButton href="/organization">最新表示</PrimaryButton>
             </>
           }
@@ -302,6 +305,7 @@ async function assignEmployee(formData: FormData) {
             label="未所属"
             value={unassignedCount}
             tone={unassignedCount > 0 ? "danger" : "ok"}
+            href="/employees?organization_unit_id=unassigned"
           />
         </div>
 
@@ -509,29 +513,43 @@ async function assignEmployee(formData: FormData) {
                             </select>
                           </td>
 
-                          <td className="px-4 py-3">
-                            <Chip tone={memberCount > 0 ? "info" : "gray"}>
-                              {memberCount}名
-                            </Chip>
-                          </td>
+<td className="px-4 py-3">
+  <Link
+    href={`/employees?organization_unit_id=${unit.id}`}
+    className="inline-flex"
+  >
+    <Chip tone={memberCount > 0 ? "info" : "gray"}>
+      {memberCount}名
+    </Chip>
+  </Link>
+</td>
 
                           <td className="px-4 py-3">
-                            <div className="flex flex-wrap gap-2">
-                              <FormSubmitButton form={`unit-${unit.id}`} pendingText="更新中...">
-  更新
-</FormSubmitButton>
+<div className="flex flex-wrap gap-2">
+  <FormSubmitButton form={`unit-${unit.id}`} pendingText="更新中...">
+    更新
+  </FormSubmitButton>
 
-                              <form action={deleteUnit}>
-                                <input type="hidden" name="id" value={unit.id} />
-                                <input type="hidden" name="name" value={unit.name} />
-                                <DeleteSubmitButton
-  pendingText="削除中..."
-  confirmMessage={`「${unit.name}」を削除します。配下の組織も削除される可能性があります。よろしいですか？`}
->
-  削除
-</DeleteSubmitButton>
-                              </form>
-                            </div>
+  <Link
+    href={`/employees?organization_unit_id=${unit.id}`}
+    className={buttonClassName(
+      "inline-flex h-8 items-center rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs font-black text-indigo-700 hover:bg-indigo-100"
+    )}
+  >
+    所属社員
+  </Link>
+
+  <form action={deleteUnit}>
+    <input type="hidden" name="id" value={unit.id} />
+    <input type="hidden" name="name" value={unit.name} />
+    <DeleteSubmitButton
+      pendingText="削除中..."
+      confirmMessage={`「${unit.name}」を削除します。配下の組織も削除される可能性があります。よろしいですか？`}
+    >
+      削除
+    </DeleteSubmitButton>
+  </form>
+</div>
                           </td>
                         </tr>
                       );
