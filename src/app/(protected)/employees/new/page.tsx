@@ -75,6 +75,10 @@ export default async function EmployeeNewPage({
       status: String(formData.get("status") ?? "active"),
       employment_type: String(formData.get("employment_type") ?? "full_time"),
       organization_unit_id: normalizeText(formData.get("organization_unit_id")),
+
+      birth_date: normalizeDate(String(formData.get("birth_date") ?? "")),
+      gender: normalizeText(formData.get("gender")) ?? "unknown",
+      is_management_role: formData.get("is_management_role") === "on",
     };
 
     if (!payload.employee_code || !payload.name || !payload.email) {
@@ -99,12 +103,12 @@ export default async function EmployeeNewPage({
       <div className="space-y-6">
         <Hero
           title="社員登録"
-          subtitle="社員番号・氏名・メール・権限・在籍状態・所属組織を登録します。"
+          subtitle="社員番号・氏名・メール・権限・在籍状態・所属組織・分析項目を登録します。"
           meta={
             <div className="flex flex-wrap gap-2">
               <Chip tone="info">Create Employee</Chip>
               <Chip>登録権限: {me.role}</Chip>
-              <Chip tone="gray">所属組織対応</Chip>
+              <Chip tone="gray">分析項目対応</Chip>
             </div>
           }
           right={
@@ -143,52 +147,108 @@ export default async function EmployeeNewPage({
             </div>
 
             <form action={createEmployee} className="p-5 md:p-6">
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <Field label="社員番号" name="employee_code" required />
-                <Field label="氏名" name="name" required />
-                <Field label="メール" name="email" required type="email" />
+              <div className="space-y-8">
+                <div>
+                  <h3 className="text-base font-black text-slate-900">
+                    基本情報
+                  </h3>
+                  <p className="mt-1 text-sm font-medium text-slate-500">
+                    社員番号・氏名・メール・所属組織などを登録します。
+                  </p>
 
-                <Select
-                  label="所属組織"
-                  name="organization_unit_id"
-                  options={[
-                    ["", "未設定"],
-                    ...organizations.map((org) => [org.id, org.name] as [string, string]),
-                  ]}
-                />
+                  <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <Field label="社員番号" name="employee_code" required />
+                    <Field label="氏名" name="name" required />
+                    <Field label="メール" name="email" required type="email" />
 
-                <Select
-                  label="ロール"
-                  name="app_role"
-                  options={[
-                    ["employee", "employee"],
-                    ["mentor", "mentor"],
-                    ["manager", "manager"],
-                    ["hr", "hr"],
-                    ["admin", "admin"],
-                  ]}
-                />
+                    <Select
+                      label="所属組織"
+                      name="organization_unit_id"
+                      options={[
+                        ["", "未設定"],
+                        ...organizations.map(
+                          (org) => [org.id, org.name] as [string, string]
+                        ),
+                      ]}
+                    />
 
-                <Select
-                  label="在籍状態"
-                  name="status"
-                  options={[
-                    ["active", "active"],
-                    ["leave", "leave"],
-                    ["inactive", "inactive"],
-                  ]}
-                />
+                    <Select
+                      label="ロール"
+                      name="app_role"
+                      options={[
+                        ["employee", "employee"],
+                        ["mentor", "mentor"],
+                        ["manager", "manager"],
+                        ["hr", "hr"],
+                        ["admin", "admin"],
+                      ]}
+                    />
 
-                <Select
-                  label="雇用区分"
-                  name="employment_type"
-                  options={[
-                    ["full_time", "full_time"],
-                    ["contract", "contract"],
-                    ["part_time", "part_time"],
-                    ["other", "other"],
-                  ]}
-                />
+                    <Select
+                      label="在籍状態"
+                      name="status"
+                      options={[
+                        ["active", "active"],
+                        ["leave", "leave"],
+                        ["inactive", "inactive"],
+                      ]}
+                    />
+
+                    <Select
+                      label="雇用区分"
+                      name="employment_type"
+                      options={[
+                        ["full_time", "full_time"],
+                        ["contract", "contract"],
+                        ["part_time", "part_time"],
+                        ["other", "other"],
+                      ]}
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <h3 className="text-base font-black text-slate-900">
+                    分析項目
+                  </h3>
+                  <p className="mt-1 text-sm font-medium text-slate-500">
+                    平均年齢、女性比率、女性役職者率などの社員分析に使用します。
+                  </p>
+
+                  <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <Field label="生年月日" name="birth_date" type="date" />
+
+                    <Select
+                      label="性別"
+                      name="gender"
+                      options={[
+                        ["unknown", "未設定"],
+                        ["male", "男性"],
+                        ["female", "女性"],
+                        ["other", "その他"],
+                      ]}
+                    />
+
+                    <div className="md:col-span-2">
+                      <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                        <input
+                          type="checkbox"
+                          name="is_management_role"
+                          className="mt-1 h-5 w-5 rounded border-slate-300 text-slate-900"
+                        />
+                        <span>
+                          <span className="block text-sm font-black text-slate-900">
+                            役職者として集計する
+                          </span>
+                          <span className="mt-1 block text-xs font-semibold leading-5 text-slate-500">
+                            チェックを入れると、女性役職者数・女性役職者率などの分析対象になります。
+                            app_role の manager/admin/hr とは別管理です。
+                          </span>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-6 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
@@ -242,11 +302,15 @@ export default async function EmployeeNewPage({
                   description="所属組織を設定すると、社員分析の組織別分析や所属組織フィルターに反映されます。"
                 />
                 <GuideItem
-                  title="3. メールはログイン連携に使用"
+                  title="3. 分析項目を入力する"
+                  description="生年月日・性別・役職者フラグを入力すると、平均年齢や女性役職者率を正確に集計できます。"
+                />
+                <GuideItem
+                  title="4. メールはログイン連携に使用"
                   description="認証ユーザーとの紐づけや通知機能で利用する想定です。"
                 />
                 <GuideItem
-                  title="4. ロールは権限に影響"
+                  title="5. ロールは権限に影響"
                   description="admin / hr / manager などは閲覧・登録範囲に関係するため慎重に設定してください。"
                 />
               </div>
@@ -270,7 +334,7 @@ export default async function EmployeeNewPage({
                 <p>・社員登録時に年間イベントテンプレートを適用</p>
                 <p>・資格情報、キャリア希望、面談予定を同時登録</p>
                 <p>・招待メール送信と初回ログイン設定</p>
-                <p>・分析項目の生年月日・性別も登録時に入力</p>
+                <p>・登録完了後にそのまま招待メールを送信</p>
               </div>
             </Card>
           </div>
@@ -352,6 +416,11 @@ function GuideItem({
 }
 
 function normalizeText(value: FormDataEntryValue | null) {
+  const text = String(value ?? "").trim();
+  return text || null;
+}
+
+function normalizeDate(value: string) {
   const text = String(value ?? "").trim();
   return text || null;
 }
