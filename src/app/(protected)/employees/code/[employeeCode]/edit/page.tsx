@@ -20,6 +20,13 @@ type OrganizationUnitRow = {
   is_active: boolean | null;
 };
 
+type EmployeeOptionRow = {
+  id: string;
+  employee_code: string;
+  name: string;
+  status: string | null;
+};
+
 export default async function EmployeeEditPage({
   params,
   searchParams,
@@ -43,27 +50,41 @@ export default async function EmployeeEditPage({
 
   const admin = createSupabaseAdminClient();
 
-  const [{ data: employee, error: employeeError }, { data: organizationUnits }] =
-    await Promise.all([
-      admin
-        .from("employees")
-        .select(
-          "id, employee_code, name, email, app_role, status, employment_type, hire_date, birth_date, gender, is_management_role, organization_unit_id"
-        )
-        .eq("employee_code", code)
-        .maybeSingle(),
-      admin
-        .from("organization_units")
-        .select("id, name, parent_id, sort_order, is_active")
-        .order("sort_order", { ascending: true })
-        .order("name", { ascending: true }),
-    ]);
+  const [
+    { data: employee, error: employeeError },
+    { data: organizationUnits, error: organizationError },
+    { data: employeeOptions, error: employeeOptionsError },
+  ] = await Promise.all([
+    admin
+      .from("employees")
+      .select(
+        "id, employee_code, name, email, app_role, status, employment_type, hire_date, birth_date, gender, is_management_role, organization_unit_id, manager_employee_id, position_title, position_started_on"
+      )
+      .eq("employee_code", code)
+      .maybeSingle(),
+    admin
+      .from("organization_units")
+      .select("id, name, parent_id, sort_order, is_active")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+    admin
+      .from("employees")
+      .select("id, employee_code, name, status")
+      .order("employee_code", { ascending: true })
+      .limit(5000),
+  ]);
 
   if (employeeError) throw employeeError;
+  if (organizationError) throw organizationError;
+  if (employeeOptionsError) throw employeeOptionsError;
   if (!employee) notFound();
 
   const organizations = ((organizationUnits ?? []) as OrganizationUnitRow[]).filter(
     (org) => org.is_active !== false
+  );
+
+  const managerOptions = ((employeeOptions ?? []) as EmployeeOptionRow[]).filter(
+    (option) => option.id !== employee.id
   );
 
   const canEdit =
@@ -105,7 +126,7 @@ export default async function EmployeeEditPage({
     const { data: beforeEmployee, error: beforeEmployeeError } = await admin
       .from("employees")
       .select(
-        "id, employee_code, name, email, app_role, status, employment_type, hire_date, birth_date, gender, is_management_role, organization_unit_id"
+        "id, employee_code, name, email, app_role, status, employment_type, hire_date, birth_date, gender, is_management_role, organization_unit_id, manager_employee_id, position_title, position_started_on"
       )
       .eq("id", targetEmployeeId)
       .maybeSingle();
@@ -162,6 +183,18 @@ export default async function EmployeeEditPage({
       redirect(`${baseUrl}?error=${encodeURIComponent("氏名を入力してください")}`);
     }
 
+    const nextManagerEmployeeId = normalizeText(
+      formData.get("manager_employee_id")
+    );
+
+    if (nextManagerEmployeeId && nextManagerEmployeeId === beforeEmployee.id) {
+      redirect(
+        `${baseUrl}?error=${encodeURIComponent(
+          "自分自身を直属上司に設定することはできません"
+        )}`
+      );
+    }
+
     const employeePayload = {
       employee_code: nextEmployeeCode,
       name: nextName,
@@ -200,6 +233,18 @@ export default async function EmployeeEditPage({
       organization_unit_id: canEditRole
         ? normalizeText(formData.get("organization_unit_id"))
         : beforeEmployee.organization_unit_id,
+
+      manager_employee_id: canEditRole
+        ? nextManagerEmployeeId
+        : beforeEmployee.manager_employee_id,
+
+      position_title: canEditRole
+        ? normalizeText(formData.get("position_title"))
+        : beforeEmployee.position_title,
+
+      position_started_on: canEditRole
+        ? normalizeDate(String(formData.get("position_started_on") ?? ""))
+        : beforeEmployee.position_started_on,
     };
 
     const profilePayload = {
@@ -253,7 +298,7 @@ export default async function EmployeeEditPage({
       activityType: "employee_updated",
       title: "社員基本情報を編集しました",
       description:
-        "社員番号、氏名、メール、所属組織、分析項目、プロフィール、キャリア情報などを更新しました。",
+        "社員番号、氏名、メール、所属組織、直属上司、現在役職、役職開始日、分析項目、プロフィール、キャリア情報などを更新しました。",
       relatedType: "employee",
       relatedId: beforeEmployee.id,
       metadata: {
@@ -270,6 +315,9 @@ export default async function EmployeeEditPage({
             gender: beforeEmployee.gender,
             is_management_role: beforeEmployee.is_management_role,
             organization_unit_id: beforeEmployee.organization_unit_id,
+            manager_employee_id: beforeEmployee.manager_employee_id,
+            position_title: beforeEmployee.position_title,
+            position_started_on: beforeEmployee.position_started_on,
           },
           profile: beforeProfile ?? null,
           career: beforeCareer ?? null,
@@ -303,7 +351,7 @@ export default async function EmployeeEditPage({
                 社員情報の編集
               </h1>
               <p className="mt-2 text-sm font-semibold text-slate-500">
-                基本情報、所属組織、分析項目、プロフィール、キャリア希望を編集できます。保存するとタイムラインに履歴が残ります。
+                基本情報、所属組織、直属上司、現在役職、分析項目、プロフィール、キャリア希望を編集できます。保存するとタイムラインに履歴が残ります。
               </p>
             </div>
 
@@ -356,7 +404,7 @@ export default async function EmployeeEditPage({
           <Card className="p-6">
             <h2 className="text-xl font-black text-slate-900">基本情報</h2>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              社員番号・氏名・メール・権限・状態・所属組織を管理します。
+              社員番号・氏名・メール・権限・状態を管理します。
             </p>
 
             <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -395,22 +443,6 @@ export default async function EmployeeEditPage({
                   disabled={!canEditRole}
                   className="input disabled:bg-slate-100 disabled:text-slate-500"
                 />
-              </Field>
-
-              <Field label="所属組織">
-                <select
-                  name="organization_unit_id"
-                  defaultValue={employee.organization_unit_id ?? ""}
-                  disabled={!canEditRole}
-                  className="input disabled:bg-slate-100 disabled:text-slate-500"
-                >
-                  <option value="">未設定</option>
-                  {organizations.map((org) => (
-                    <option key={org.id} value={org.id}>
-                      {org.name}
-                    </option>
-                  ))}
-                </select>
               </Field>
 
               <Field label="ロール">
@@ -455,10 +487,76 @@ export default async function EmployeeEditPage({
                 </select>
               </Field>
             </div>
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-xl font-black text-slate-900">
+              組織・役職情報
+            </h2>
+            <p className="mt-1 text-sm font-semibold text-slate-500">
+              所属組織、直属上司、現在役職、役職開始日を管理します。
+            </p>
+
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Field label="所属組織">
+                <select
+                  name="organization_unit_id"
+                  defaultValue={employee.organization_unit_id ?? ""}
+                  disabled={!canEditRole}
+                  className="input disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  <option value="">未設定</option>
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="直属上司">
+                <select
+                  name="manager_employee_id"
+                  defaultValue={employee.manager_employee_id ?? ""}
+                  disabled={!canEditRole}
+                  className="input disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  <option value="">未設定</option>
+                  {managerOptions.map((manager) => (
+                    <option key={manager.id} value={manager.id}>
+                      {manager.employee_code} / {manager.name}
+                      {manager.status && manager.status !== "active"
+                        ? `（${manager.status}）`
+                        : ""}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="現在役職">
+                <input
+                  name="position_title"
+                  defaultValue={employee.position_title ?? ""}
+                  placeholder="例：主任、係長、課長、支店長"
+                  disabled={!canEditRole}
+                  className="input disabled:bg-slate-100 disabled:text-slate-500"
+                />
+              </Field>
+
+              <Field label="役職開始日">
+                <input
+                  name="position_started_on"
+                  type="date"
+                  defaultValue={employee.position_started_on ?? ""}
+                  disabled={!canEditRole}
+                  className="input disabled:bg-slate-100 disabled:text-slate-500"
+                />
+              </Field>
+            </div>
 
             {!canEditRole && (
               <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-700">
-                権限・状態・雇用区分・入社日・所属組織・分析項目は、管理者または人事のみ変更できます。
+                所属組織・直属上司・現在役職・役職開始日は、管理者または人事のみ変更できます。
               </div>
             )}
           </Card>
