@@ -9,12 +9,58 @@ import { Hero, Card, Chip, GhostButton } from "@/components/ui/ux";
 import { buttonClassName } from "@/lib/ui/button-class";
 import { SubmitButton } from "@/components/ui/submit-button";
 
-export default async function EmployeeNewPage() {
+export const runtime = "nodejs";
+
+type OrganizationUnitRow = {
+  id: string;
+  name: string;
+  sort_order: number | null;
+  is_active: boolean | null;
+};
+
+export default async function EmployeeNewPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const me = await requireAuth();
+  const sp = await searchParams;
 
   if (me.role !== "admin" && me.role !== "hr") {
     redirect("/unauthorized");
   }
+
+  const getParam = (key: string) => {
+    const v = sp[key];
+    return Array.isArray(v) ? v[0] ?? "" : v ?? "";
+  };
+
+  const errorMessage = getParam("error");
+
+  const supabase = await createSupabaseServerDbClient();
+
+  const { data: organizationUnits, error: organizationError } = await supabase
+    .from("organization_units")
+    .select("id, name, sort_order, is_active")
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (organizationError) {
+    return (
+      <PageShell>
+        <Card className="p-6">
+          <div className="text-xl font-black text-slate-900">社員登録</div>
+          <div className="mt-2 text-sm font-semibold text-rose-600">
+            所属組織の読み込みに失敗：{organizationError.message}
+          </div>
+        </Card>
+      </PageShell>
+    );
+  }
+
+  const organizations = ((organizationUnits ?? []) as OrganizationUnitRow[]).filter(
+    (org) => org.is_active !== false
+  );
 
   async function createEmployee(formData: FormData) {
     "use server";
@@ -28,6 +74,7 @@ export default async function EmployeeNewPage() {
       app_role: String(formData.get("app_role") ?? "employee"),
       status: String(formData.get("status") ?? "active"),
       employment_type: String(formData.get("employment_type") ?? "full_time"),
+      organization_unit_id: normalizeText(formData.get("organization_unit_id")),
     };
 
     if (!payload.employee_code || !payload.name || !payload.email) {
@@ -52,12 +99,12 @@ export default async function EmployeeNewPage() {
       <div className="space-y-6">
         <Hero
           title="社員登録"
-          subtitle="社員番号・氏名・メール・権限・在籍状態を登録します。"
+          subtitle="社員番号・氏名・メール・権限・在籍状態・所属組織を登録します。"
           meta={
             <div className="flex flex-wrap gap-2">
               <Chip tone="info">Create Employee</Chip>
               <Chip>登録権限: {me.role}</Chip>
-              <Chip tone="gray">最小フォーム</Chip>
+              <Chip tone="gray">所属組織対応</Chip>
             </div>
           }
           right={
@@ -66,6 +113,17 @@ export default async function EmployeeNewPage() {
             </>
           }
         />
+
+        {errorMessage && (
+          <Card className="border-rose-200 bg-rose-50 p-5">
+            <div className="text-sm font-black text-rose-700">
+              エラーが発生しました
+            </div>
+            <div className="mt-1 text-sm font-semibold text-rose-600">
+              {errorMessage}
+            </div>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
           <Card className="overflow-hidden">
@@ -89,6 +147,15 @@ export default async function EmployeeNewPage() {
                 <Field label="社員番号" name="employee_code" required />
                 <Field label="氏名" name="name" required />
                 <Field label="メール" name="email" required type="email" />
+
+                <Select
+                  label="所属組織"
+                  name="organization_unit_id"
+                  options={[
+                    ["", "未設定"],
+                    ...organizations.map((org) => [org.id, org.name] as [string, string]),
+                  ]}
+                />
 
                 <Select
                   label="ロール"
@@ -158,7 +225,7 @@ export default async function EmployeeNewPage() {
                     登録のポイント
                   </h2>
                   <p className="mt-1 text-sm font-medium text-slate-500">
-                    社員カルテや権限制御に利用されます。
+                    社員カルテ・権限制御・社員分析に利用されます。
                   </p>
                 </div>
 
@@ -171,11 +238,15 @@ export default async function EmployeeNewPage() {
                   description="社員詳細ページのURLや検索に使うため、重複しない番号を登録してください。"
                 />
                 <GuideItem
-                  title="2. メールはログイン連携に使用"
+                  title="2. 所属組織を設定する"
+                  description="所属組織を設定すると、社員分析の組織別分析や所属組織フィルターに反映されます。"
+                />
+                <GuideItem
+                  title="3. メールはログイン連携に使用"
                   description="認証ユーザーとの紐づけや通知機能で利用する想定です。"
                 />
                 <GuideItem
-                  title="3. ロールは権限に影響"
+                  title="4. ロールは権限に影響"
                   description="admin / hr / manager などは閲覧・登録範囲に関係するため慎重に設定してください。"
                 />
               </div>
@@ -196,10 +267,10 @@ export default async function EmployeeNewPage() {
               </div>
 
               <div className="mt-5 space-y-2 text-sm font-medium leading-6 text-slate-600">
-                <p>・支店、部署、役職をマスタから選択</p>
                 <p>・社員登録時に年間イベントテンプレートを適用</p>
                 <p>・資格情報、キャリア希望、面談予定を同時登録</p>
                 <p>・招待メール送信と初回ログイン設定</p>
+                <p>・分析項目の生年月日・性別も登録時に入力</p>
               </div>
             </Card>
           </div>
@@ -254,7 +325,7 @@ function Select({
         className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
       >
         {options.map(([v, t]) => (
-          <option key={v} value={v}>
+          <option key={v || "empty"} value={v}>
             {t}
           </option>
         ))}
@@ -278,4 +349,9 @@ function GuideItem({
       </p>
     </div>
   );
+}
+
+function normalizeText(value: FormDataEntryValue | null) {
+  const text = String(value ?? "").trim();
+  return text || null;
 }
