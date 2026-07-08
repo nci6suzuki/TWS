@@ -71,6 +71,7 @@ export default async function EmployeeAnalyticsPage({
   const genderFilter = getParam("gender") || "all";
   const managementFilter = getParam("management") || "all";
   const employmentTypeFilter = getParam("employment_type") || "all";
+  const organizationUnitIdFilter = getParam("organization_unit_id") || "all";
 
   const admin = createSupabaseAdminClient();
 
@@ -95,9 +96,18 @@ export default async function EmployeeAnalyticsPage({
   const employees = (data ?? []) as EmployeeRow[];
   const organizations = (organizationUnits ?? []) as OrganizationUnitRow[];
 
-  const organizationById = new Map(
-    organizations.map((org) => [org.id, org])
+  const activeOrganizations = organizations.filter(
+    (org) => org.is_active !== false
   );
+
+  const organizationById = new Map(organizations.map((org) => [org.id, org]));
+
+  const selectedOrganizationName =
+    organizationUnitIdFilter === "all"
+      ? "すべて"
+      : organizationUnitIdFilter === "unassigned"
+        ? "未設定"
+        : organizationById.get(organizationUnitIdFilter)?.name ?? "不明な組織";
 
   const filteredEmployees = employees.filter((e) => {
     if (statusFilter !== "all" && e.status !== statusFilter) return false;
@@ -118,6 +128,14 @@ export default async function EmployeeAnalyticsPage({
       if (employmentTypeFilter === "unknown") {
         if (e.employment_type) return false;
       } else if (e.employment_type !== employmentTypeFilter) {
+        return false;
+      }
+    }
+
+    if (organizationUnitIdFilter !== "all") {
+      if (organizationUnitIdFilter === "unassigned") {
+        if (e.organization_unit_id) return false;
+      } else if (e.organization_unit_id !== organizationUnitIdFilter) {
         return false;
       }
     }
@@ -192,6 +210,7 @@ export default async function EmployeeAnalyticsPage({
     gender: genderFilter,
     management: managementFilter,
     employmentType: employmentTypeFilter,
+    organizationUnitId: organizationUnitIdFilter,
   });
 
   const incompleteExportHref = `${exportHref}${
@@ -228,6 +247,10 @@ export default async function EmployeeAnalyticsPage({
                   雇用区分: {getEmploymentLabel(employmentTypeFilter)}
                 </Chip>
               )}
+
+              {organizationUnitIdFilter !== "all" && (
+                <Chip tone="info">所属組織: {selectedOrganizationName}</Chip>
+              )}
             </div>
           }
           right={
@@ -254,6 +277,11 @@ export default async function EmployeeAnalyticsPage({
             gender={genderFilter}
             management={managementFilter}
             employmentType={employmentTypeFilter}
+            organizationUnitId={organizationUnitIdFilter}
+            organizations={activeOrganizations.map((org) => ({
+              id: org.id,
+              name: org.name,
+            }))}
           />
         </Card>
 
@@ -810,7 +838,9 @@ function buildOrganizationAnalyticsRows({
       ).length;
 
       const femaleRate =
-        rows.length > 0 ? Math.round((femaleCount / rows.length) * 1000) / 10 : 0;
+        rows.length > 0
+          ? Math.round((femaleCount / rows.length) * 1000) / 10
+          : 0;
 
       const managementRows = rows.filter(
         (e) => e.is_management_role === true
@@ -901,11 +931,13 @@ function buildExportHref({
   gender,
   management,
   employmentType,
+  organizationUnitId,
 }: {
   status: string;
   gender: string;
   management: string;
   employmentType: string;
+  organizationUnitId: string;
 }) {
   const p = new URLSearchParams();
 
@@ -914,6 +946,9 @@ function buildExportHref({
   if (management && management !== "all") p.set("management", management);
   if (employmentType && employmentType !== "all") {
     p.set("employment_type", employmentType);
+  }
+  if (organizationUnitId && organizationUnitId !== "all") {
+    p.set("organization_unit_id", organizationUnitId);
   }
 
   const qs = p.toString();
