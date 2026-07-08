@@ -19,11 +19,26 @@ type EmployeeRow = {
   gender: string | null;
   is_management_role: boolean | null;
   organization_unit_id: string | null;
+  manager_employee_id: string | null;
+  position_title: string | null;
+  position_started_on: string | null;
 };
 
 type OrganizationUnitRow = {
   id: string;
   name: string;
+};
+
+type ManagerRow = {
+  id: string;
+  employee_code: string | null;
+  name: string | null;
+};
+
+type PositionHistoryRow = {
+  id: string;
+  employee_id: string;
+  change_type: string | null;
 };
 
 export async function GET(req: NextRequest) {
@@ -52,7 +67,7 @@ export async function GET(req: NextRequest) {
       admin
         .from("employees")
         .select(
-          "id, employee_code, name, email, app_role, status, employment_type, hire_date, birth_date, gender, is_management_role, organization_unit_id"
+          "id, employee_code, name, email, app_role, status, employment_type, hire_date, birth_date, gender, is_management_role, organization_unit_id, manager_employee_id, position_title, position_started_on"
         )
         .order("employee_code", { ascending: true }),
       admin
@@ -69,6 +84,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: orgError.message }, { status: 500 });
   }
 
+  const allEmployees = (data ?? []) as EmployeeRow[];
+
   const organizationById = new Map(
     ((organizationUnits ?? []) as OrganizationUnitRow[]).map((org) => [
       org.id,
@@ -76,7 +93,55 @@ export async function GET(req: NextRequest) {
     ])
   );
 
-  const employees = ((data ?? []) as EmployeeRow[]).filter((e) => {
+  const managerIds = Array.from(
+    new Set(
+      allEmployees
+        .map((employee) => employee.manager_employee_id)
+        .filter(Boolean)
+    )
+  ) as string[];
+
+  const { data: managers, error: managersError } =
+    managerIds.length > 0
+      ? await admin
+          .from("employees")
+          .select("id, employee_code, name")
+          .in("id", managerIds)
+      : { data: [] as ManagerRow[], error: null };
+
+  if (managersError) {
+    return NextResponse.json({ error: managersError.message }, { status: 500 });
+  }
+
+  const managerById = new Map(
+    ((managers ?? []) as ManagerRow[]).map((manager) => [manager.id, manager])
+  );
+
+  const allEmployeeIds = allEmployees.map((employee) => employee.id);
+
+  const { data: positionHistoriesData, error: positionHistoriesError } =
+    allEmployeeIds.length > 0
+      ? await admin
+          .from("employee_position_histories")
+          .select("id, employee_id, change_type")
+          .in("employee_id", allEmployeeIds)
+      : { data: [] as PositionHistoryRow[], error: null };
+
+  if (positionHistoriesError) {
+    return NextResponse.json(
+      { error: positionHistoriesError.message },
+      { status: 500 }
+    );
+  }
+
+  const positionHistories =
+    (positionHistoriesData ?? []) as PositionHistoryRow[];
+
+  const positionHistorySummaryByEmployeeId = buildPositionHistorySummary(
+    positionHistories
+  );
+
+  const employees = allEmployees.filter((e) => {
     if (statusFilter !== "all" && e.status !== statusFilter) {
       return false;
     }
@@ -113,9 +178,9 @@ export async function GET(req: NextRequest) {
     }
 
     if (incompleteFilter === "analytics") {
-      const gender = normalizeGender(e.gender);
+      const missingItems = buildMissingItems(e);
 
-      if (e.birth_date && gender !== "unknown") {
+      if (missingItems.length === 0) {
         return false;
       }
     }
@@ -128,6 +193,9 @@ export async function GET(req: NextRequest) {
     "氏名",
     "メール",
     "所属組織",
+    "直属上司",
+    "現在役職",
+    "役職開始日",
     "在籍状態",
     "雇用区分",
     "システムロール",
@@ -136,6 +204,9 @@ export async function GET(req: NextRequest) {
     "年齢",
     "性別",
     "役職者",
+    "昇格回数",
+    "降格回数",
+    "役職履歴件数",
     "未入力項目",
   ];
 
@@ -143,12 +214,22 @@ export async function GET(req: NextRequest) {
     const age = calcAge(e.birth_date);
     const missingItems = buildMissingItems(e);
     const organizationName = getOrganizationName(e, organizationById);
+    const managerName = getManagerName(e.manager_employee_id, managerById);
+
+    const positionSummary = positionHistorySummaryByEmployeeId.get(e.id) ?? {
+      total: 0,
+      promotions: 0,
+      demotions: 0,
+    };
 
     return [
       e.employee_code ?? "",
       e.name ?? "",
       e.email ?? "",
       organizationName,
+      managerName,
+      e.position_title ?? "未設定",
+      e.position_started_on ?? "",
       getStatusLabel(e.status),
       getEmploymentLabel(e.employment_type),
       e.app_role ?? "",
@@ -157,6 +238,9 @@ export async function GET(req: NextRequest) {
       age === null ? "" : String(age),
       getGenderLabel(e.gender),
       e.is_management_role ? "対象" : "対象外",
+      positionSummary.promotions,
+      positionSummary.demotions,
+      positionSummary.total,
       missingItems.join(" / "),
     ];
   });
@@ -260,6 +344,20 @@ function getOrganizationName(
   return organizationById.get(employee.organization_unit_id) ?? "未設定";
 }
 
+function getManagerName(
+  managerEmployeeId: string | null | undefined,
+  managerById: Map<string, ManagerRow>
+) {
+  if (!managerEmployeeId) return "未設定";
+
+  const manager = managerById.get(managerEmployeeId);
+  if (!manager) return "未設定";
+
+  return manager.employee_code
+    ? `${manager.employee_code} / ${manager.name ?? ""}`
+    : manager.name ?? "未設定";
+}
+
 function buildMissingItems(employee: EmployeeRow) {
   const items: string[] = [];
 
@@ -271,7 +369,48 @@ function buildMissingItems(employee: EmployeeRow) {
     items.push("性別");
   }
 
+  if (!employee.manager_employee_id) {
+    items.push("直属上司");
+  }
+
+  if (!employee.position_title) {
+    items.push("現在役職");
+  }
+
   return items;
+}
+
+function buildPositionHistorySummary(positionHistories: PositionHistoryRow[]) {
+  const map = new Map<
+    string,
+    {
+      total: number;
+      promotions: number;
+      demotions: number;
+    }
+  >();
+
+  for (const history of positionHistories) {
+    const current = map.get(history.employee_id) ?? {
+      total: 0,
+      promotions: 0,
+      demotions: 0,
+    };
+
+    current.total += 1;
+
+    if (history.change_type === "promotion") {
+      current.promotions += 1;
+    }
+
+    if (history.change_type === "demotion") {
+      current.demotions += 1;
+    }
+
+    map.set(history.employee_id, current);
+  }
+
+  return map;
 }
 
 function buildFileName({
