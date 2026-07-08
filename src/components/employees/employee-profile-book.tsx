@@ -1,5 +1,6 @@
 // src/components/employees/employee-profile-book.tsx
 import Link from "next/link";
+import { createSupabaseServerDbClient } from "@/lib/supabase/server-db";
 import { DeleteAnnualEventButton } from "@/components/annual-events/delete-annual-event-button";
 import { DeleteQualificationButton } from "@/components/employees/delete-qualification-button";
 import { DeleteInterviewButton } from "@/components/employees/delete-interview-button";
@@ -18,6 +19,7 @@ type Props = {
   birth_date?: string | null;
   gender?: string | null;
   is_management_role?: boolean | null;
+  organization_unit_id?: string | null;
 };
   profile: any | null;
   goals: any | null;
@@ -230,7 +232,7 @@ function TimelineBadge({ type }: { type: string }) {
   );
 }
 
-export function EmployeeProfileBook({
+export async function EmployeeProfileBook({
   employee,
   profile,
   goals,
@@ -241,6 +243,18 @@ export function EmployeeProfileBook({
   activeTab,
 }: Props) {
   const tab = tabs.some((t) => t.key === activeTab) ? activeTab : "basic";
+
+  const supabase = await createSupabaseServerDbClient();
+
+  const { data: organizationUnit } = employee.organization_unit_id
+    ? await supabase
+        .from("organization_units")
+        .select("id, name")
+        .eq("id", employee.organization_unit_id)
+        .maybeSingle()
+    : { data: null as { id: string; name: string } | null };
+
+  const organizationName = organizationUnit?.name ?? "未設定";
 
   const today = getToday();
   const alertDate = getAlertDate();
@@ -368,6 +382,17 @@ const timelineItems = [
 
             <span className="rounded-xl border bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
               status: {employee.status}
+            </span>
+
+            <span
+              className={[
+              "rounded-xl border px-3 py-2 text-xs font-semibold",
+              organizationName === "未設定"
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : "bg-slate-50 text-slate-700",
+              ].join(" ")}
+            >
+             所属組織: {organizationName}
             </span>
 
             <Link
@@ -621,30 +646,31 @@ const timelineItems = [
 
           <div className="rounded-2xl border bg-slate-50 p-4">
             <Row label="社員番号" value={employee.employee_code} />
-<Row label="氏名" value={employee.name} />
-<Row label="メール" value={employee.email} />
-<Row label="入社日" value={employee.hire_date ?? "-"} />
-
-<Row
-  label="年齢"
-  value={
-    calcAge(employee.birth_date ?? null) === null
-      ? "未入力"
-      : `${calcAge(employee.birth_date ?? null)}歳`
-  }
-/>
-<Row
-  label="性別"
-  value={getGenderLabel(employee.gender ?? null)}
-/>
-<Row
-  label="役職者"
-  value={
-    employee.is_management_role === true
-      ? "対象"
-      : "対象外"
-  }
-/>
+            <Row label="氏名" value={employee.name} />
+            <Row label="メール" value={employee.email} />
+            <Row label="所属組織" value={organizationName} />
+            <Row label="入社日" value={employee.hire_date ?? "-"} />
+            
+            <Row
+              label="年齢"
+              value={
+                calcAge(employee.birth_date ?? null) === null
+                ? "未入力"
+                : `${calcAge(employee.birth_date ?? null)}歳`
+              }
+            />
+            <Row
+              label="性別"
+              value={getGenderLabel(employee.gender ?? null)}
+            />
+            <Row
+              label="役職者"
+              value={
+                employee.is_management_role === true
+                ? "対象"
+                : "対象外"
+              }
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -1251,6 +1277,7 @@ function calcAge(birthDate: string | null) {
   if (age < 0 || age > 120) return null;
 
   return age;
+
 }
 
 function getGenderLabel(value: string | null) {
