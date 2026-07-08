@@ -23,6 +23,9 @@ type EmployeeRow = {
   gender: string | null;
   is_management_role: boolean | null;
   organization_unit_id: string | null;
+  manager_employee_id: string | null;
+  position_title: string | null;
+  position_started_on: string | null;
 };
 
 type OrganizationUnitRow = {
@@ -46,8 +49,24 @@ type OrganizationAnalyticsRow = {
   femaleCount: number;
   femaleRate: number;
   managementCount: number;
+  managementRate: number;
   femaleManagementCount: number;
   femaleManagementRate: number;
+  managerUnsetCount: number;
+  positionUnsetCount: number;
+};
+
+type PositionHistoryRow = {
+  id: string;
+  employee_id: string;
+  position_title: string | null;
+  change_type: string | null;
+  started_on: string | null;
+  ended_on: string | null;
+  previous_position_title: string | null;
+  reason: string | null;
+  memo: string | null;
+  created_at: string | null;
 };
 
 export default async function EmployeeAnalyticsPage({
@@ -80,7 +99,7 @@ export default async function EmployeeAnalyticsPage({
       admin
         .from("employees")
         .select(
-          "id, employee_code, name, email, app_role, status, employment_type, birth_date, gender, is_management_role, organization_unit_id"
+            "id, employee_code, name, email, app_role, status, employment_type, birth_date, gender, is_management_role, organization_unit_id, manager_employee_id, position_title, position_started_on"
         )
         .order("employee_code", { ascending: true }),
       admin
@@ -95,6 +114,22 @@ export default async function EmployeeAnalyticsPage({
 
   const employees = (data ?? []) as EmployeeRow[];
   const organizations = (organizationUnits ?? []) as OrganizationUnitRow[];
+
+  const employeeIds = employees.map((employee) => employee.id);
+
+const { data: positionHistoriesData, error: positionHistoriesError } =
+  employeeIds.length > 0
+    ? await admin
+        .from("employee_position_histories")
+        .select(
+          "id, employee_id, position_title, change_type, started_on, ended_on, previous_position_title, reason, memo, created_at"
+        )
+        .in("employee_id", employeeIds)
+    : { data: [] as PositionHistoryRow[], error: null };
+
+if (positionHistoriesError) throw positionHistoriesError;
+
+const positionHistories = (positionHistoriesData ?? []) as PositionHistoryRow[];
 
   const activeOrganizations = organizations.filter(
     (org) => org.is_active !== false
@@ -164,6 +199,37 @@ export default async function EmployeeAnalyticsPage({
   );
 
   const managementCount = managementEmployees.length;
+
+const managementRate =
+  totalTarget > 0
+    ? Math.round((managementCount / totalTarget) * 1000) / 10
+    : 0;
+
+const managerUnsetCount = filteredEmployees.filter(
+  (employee) => !employee.manager_employee_id
+).length;
+
+const positionUnsetCount = filteredEmployees.filter(
+  (employee) => !employee.position_title
+).length;
+
+const filteredEmployeeIdSet = new Set(
+  filteredEmployees.map((employee) => employee.id)
+);
+
+const filteredPositionHistories = positionHistories.filter((history) =>
+  filteredEmployeeIdSet.has(history.employee_id)
+);
+
+const promotionCount = filteredPositionHistories.filter(
+  (history) => history.change_type === "promotion"
+).length;
+
+const demotionCount = filteredPositionHistories.filter(
+  (history) => history.change_type === "demotion"
+).length;
+
+const positionChangeCount = filteredPositionHistories.length;
 
   const femaleManagementEmployees = managementEmployees.filter(
     (e) => normalizeGender(e.gender) === "female"
@@ -285,36 +351,60 @@ export default async function EmployeeAnalyticsPage({
           />
         </Card>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            label="対象社員数"
-            value={`${totalTarget}名`}
-            sub="現在の絞り込み条件に一致する社員"
-          />
+<div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+  <StatCard
+    label="対象社員数"
+    value={`${totalTarget}名`}
+    sub="現在の絞り込み条件に一致する社員"
+  />
 
-          <StatCard
-            label="平均年齢"
-            value={averageAge === null ? "-" : `${averageAge.toFixed(1)}歳`}
-            sub={`年齢入力済み ${ageInputCount}名`}
-          />
+  <StatCard
+    label="平均年齢"
+    value={averageAge === null ? "-" : `${averageAge.toFixed(1)}歳`}
+    sub={`年齢入力済み ${ageInputCount}名`}
+  />
 
-          <StatCard
-            label="女性比率"
-            value={`${femaleRate}%`}
-            sub={`女性 ${femaleCount}名 / 対象 ${totalTarget}名`}
-          />
+  <StatCard
+    label="女性比率"
+    value={`${femaleRate}%`}
+    sub={`女性 ${femaleCount}名 / 対象 ${totalTarget}名`}
+  />
 
-          <StatCard
-            label="女性役職者率"
-            value={`${femaleManagementRate}%`}
-            sub={`女性役職者 ${femaleManagementCount}名 / 役職者 ${managementCount}名`}
-          />
-        </div>
+  <StatCard
+    label="女性役職者率"
+    value={`${femaleManagementRate}%`}
+    sub={`女性役職者 ${femaleManagementCount}名 / 役職者 ${managementCount}名`}
+  />
+
+  <StatCard
+    label="役職者数"
+    value={`${managementCount}名`}
+    sub={`役職者率 ${managementRate}%`}
+  />
+
+  <StatCard
+    label="上司未設定"
+    value={`${managerUnsetCount}名`}
+    sub="直属上司が未設定の社員"
+  />
+
+  <StatCard
+    label="役職未設定"
+    value={`${positionUnsetCount}名`}
+    sub="現在役職が未設定の社員"
+  />
+
+  <StatCard
+    label="役職履歴"
+    value={`${positionChangeCount}件`}
+    sub={`昇格 ${promotionCount}件 / 降格 ${demotionCount}件`}
+  />
+</div>
 
         <Card className="p-5">
           <SectionHeader
             title="組織別分析"
-            description="シナプスツリーの所属組織ごとに、人数・平均年齢・女性比率・役職者数を集計しています。"
+            description="シナプスツリーの所属組織ごとに、人数・平均年齢・女性比率・役職者数・上司未設定・役職未設定を集計しています。"
           />
 
           <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
@@ -327,8 +417,11 @@ export default async function EmployeeAnalyticsPage({
                   <th className="px-4 py-3 text-right">女性人数</th>
                   <th className="px-4 py-3 text-right">女性比率</th>
                   <th className="px-4 py-3 text-right">役職者</th>
+                  <th className="px-4 py-3 text-right">役職者率</th>
                   <th className="px-4 py-3 text-right">女性役職者</th>
                   <th className="px-4 py-3 text-right">女性役職者率</th>
+                  <th className="px-4 py-3 text-right">上司未設定</th>
+                  <th className="px-4 py-3 text-right">役職未設定</th>
                 </tr>
               </thead>
 
@@ -355,22 +448,31 @@ export default async function EmployeeAnalyticsPage({
                     <td className="px-4 py-3 text-right font-bold text-slate-700">
                       {row.femaleRate}%
                     </td>
-                    <td className="px-4 py-3 text-right font-bold text-slate-700">
-                      {row.managementCount}名
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold text-slate-700">
-                      {row.femaleManagementCount}名
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold text-slate-700">
-                      {row.femaleManagementRate}%
-                    </td>
+<td className="px-4 py-3 text-right font-bold text-slate-700">
+  {row.managementCount}名
+</td>
+<td className="px-4 py-3 text-right font-bold text-slate-700">
+  {row.managementRate}%
+</td>
+<td className="px-4 py-3 text-right font-bold text-slate-700">
+  {row.femaleManagementCount}名
+</td>
+<td className="px-4 py-3 text-right font-bold text-slate-700">
+  {row.femaleManagementRate}%
+</td>
+<td className="px-4 py-3 text-right font-bold text-slate-700">
+  {row.managerUnsetCount}名
+</td>
+<td className="px-4 py-3 text-right font-bold text-slate-700">
+  {row.positionUnsetCount}名
+</td>
                   </tr>
                 ))}
 
                 {organizationAnalyticsRows.length === 0 && (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={11}
                       className="px-4 py-8 text-center text-sm font-semibold text-slate-400"
                     >
                       集計対象の社員がいません。
@@ -462,6 +564,36 @@ export default async function EmployeeAnalyticsPage({
               ))}
             </div>
           </Card>
+
+          <Card className="p-5 xl:col-span-2">
+  <SectionHeader
+    title="役職変更履歴"
+    description="社員編集画面で登録された昇格・降格・任命・異動・役職変更の件数です。"
+  />
+
+  <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+      <div className="text-sm font-black text-emerald-700">昇格</div>
+      <div className="mt-2 text-3xl font-black text-emerald-700">
+        {promotionCount}件
+      </div>
+    </div>
+
+    <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+      <div className="text-sm font-black text-rose-700">降格</div>
+      <div className="mt-2 text-3xl font-black text-rose-700">
+        {demotionCount}件
+      </div>
+    </div>
+
+    <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+      <div className="text-sm font-black text-indigo-700">役職履歴合計</div>
+      <div className="mt-2 text-3xl font-black text-indigo-700">
+        {positionChangeCount}件
+      </div>
+    </div>
+  </div>
+</Card>
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
@@ -521,7 +653,7 @@ export default async function EmployeeAnalyticsPage({
               description="分析精度を上げるために、未入力の社員情報を確認します。"
             />
 
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-2xl bg-slate-50 p-4">
                 <div className="text-sm font-black text-slate-900">
                   生年月日未入力
@@ -545,10 +677,34 @@ export default async function EmployeeAnalyticsPage({
                   女性比率・女性役職者率に反映されません。
                 </p>
               </div>
-            </div>
+
+<div className="rounded-2xl bg-slate-50 p-4">
+  <div className="text-sm font-black text-slate-900">
+    上司未設定
+  </div>
+  <div className="mt-2 text-3xl font-black text-slate-900">
+    {managerUnsetCount}名
+  </div>
+  <p className="mt-1 text-xs font-semibold text-slate-500">
+    組織管理・配下管理に反映されません。
+  </p>
+</div>
+
+<div className="rounded-2xl bg-slate-50 p-4">
+  <div className="text-sm font-black text-slate-900">
+    役職未設定
+  </div>
+  <div className="mt-2 text-3xl font-black text-slate-900">
+    {positionUnsetCount}名
+  </div>
+  <p className="mt-1 text-xs font-semibold text-slate-500">
+    役職分析・昇格履歴の確認に影響します。
+  </p>
+</div>
+</div>
 
             <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-700">
-              正確な分析を行うには、社員編集画面で「生年月日」「性別」「役職者フラグ」を登録してください。
+              正確な分析を行うには、社員編集画面で「生年月日」「性別」「役職者フラグ」「直属上司」「現在役職」を登録してください。
             </div>
           </Card>
 
@@ -846,6 +1002,11 @@ function buildOrganizationAnalyticsRows({
         (e) => e.is_management_role === true
       );
 
+      const managementRate =
+        rows.length > 0
+          ? Math.round((managementRows.length / rows.length) * 1000) / 10
+          : 0;
+
       const femaleManagementCount = managementRows.filter(
         (e) => normalizeGender(e.gender) === "female"
       ).length;
@@ -856,6 +1017,14 @@ function buildOrganizationAnalyticsRows({
             10
           : 0;
 
+      const managerUnsetCount = rows.filter(
+        (employee) => !employee.manager_employee_id
+      ).length;
+
+      const positionUnsetCount = rows.filter(
+        (employee) => !employee.position_title
+      ).length;
+
       return {
         organizationUnitId: key === "unassigned" ? null : key,
         organizationName,
@@ -865,8 +1034,11 @@ function buildOrganizationAnalyticsRows({
         femaleCount,
         femaleRate,
         managementCount: managementRows.length,
+        managementRate,
         femaleManagementCount,
         femaleManagementRate,
+        managerUnsetCount,
+        positionUnsetCount,
       };
     })
     .sort((a, b) => {
