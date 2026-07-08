@@ -18,6 +18,12 @@ type EmployeeRow = {
   birth_date: string | null;
   gender: string | null;
   is_management_role: boolean | null;
+  organization_unit_id: string | null;
+};
+
+type OrganizationUnitRow = {
+  id: string;
+  name: string;
 };
 
 export async function GET(req: NextRequest) {
@@ -35,21 +41,38 @@ export async function GET(req: NextRequest) {
   const employmentTypeFilter =
     url.searchParams.get("employment_type") || "all";
 
-  // incomplete=analytics の場合、分析項目未入力者のみCSV出力
   const incompleteFilter = url.searchParams.get("incomplete") || "";
 
   const admin = createSupabaseAdminClient();
 
-  const { data, error } = await admin
-    .from("employees")
-    .select(
-      "id, employee_code, name, email, app_role, status, employment_type, hire_date, birth_date, gender, is_management_role"
-    )
-    .order("employee_code", { ascending: true });
+  const [{ data, error }, { data: organizationUnits, error: orgError }] =
+    await Promise.all([
+      admin
+        .from("employees")
+        .select(
+          "id, employee_code, name, email, app_role, status, employment_type, hire_date, birth_date, gender, is_management_role, organization_unit_id"
+        )
+        .order("employee_code", { ascending: true }),
+      admin
+        .from("organization_units")
+        .select("id, name")
+        .order("name", { ascending: true }),
+    ]);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  if (orgError) {
+    return NextResponse.json({ error: orgError.message }, { status: 500 });
+  }
+
+  const organizationById = new Map(
+    ((organizationUnits ?? []) as OrganizationUnitRow[]).map((org) => [
+      org.id,
+      org.name,
+    ])
+  );
 
   const employees = ((data ?? []) as EmployeeRow[]).filter((e) => {
     if (statusFilter !== "all" && e.status !== statusFilter) {
@@ -94,6 +117,7 @@ export async function GET(req: NextRequest) {
     "社員番号",
     "氏名",
     "メール",
+    "所属組織",
     "在籍状態",
     "雇用区分",
     "システムロール",
@@ -108,11 +132,13 @@ export async function GET(req: NextRequest) {
   const rows = employees.map((e) => {
     const age = calcAge(e.birth_date);
     const missingItems = buildMissingItems(e);
+    const organizationName = getOrganizationName(e, organizationById);
 
     return [
       e.employee_code ?? "",
       e.name ?? "",
       e.email ?? "",
+      organizationName,
       getStatusLabel(e.status),
       getEmploymentLabel(e.employment_type),
       e.app_role ?? "",
@@ -212,6 +238,15 @@ function getStatusLabel(value: string | null) {
   if (!value) return "未設定";
 
   return value;
+}
+
+function getOrganizationName(
+  employee: EmployeeRow,
+  organizationById: Map<string, string>
+) {
+  if (!employee.organization_unit_id) return "未設定";
+
+  return organizationById.get(employee.organization_unit_id) ?? "未設定";
 }
 
 function buildMissingItems(employee: EmployeeRow) {
