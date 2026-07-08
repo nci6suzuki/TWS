@@ -20,6 +20,11 @@ type Props = {
   gender?: string | null;
   is_management_role?: boolean | null;
   organization_unit_id?: string | null;
+
+  // 組織・役職用
+  manager_employee_id?: string | null;
+  position_title?: string | null;
+  position_started_on?: string | null;
 };
   profile: any | null;
   goals: any | null;
@@ -256,6 +261,18 @@ export async function EmployeeProfileBook({
 
   const organizationName = organizationUnit?.name ?? "未設定";
 
+  const { data: managerEmployee } = employee.manager_employee_id
+  ? await supabase
+      .from("employees")
+      .select("id, employee_code, name")
+      .eq("id", employee.manager_employee_id)
+      .maybeSingle()
+  : { data: null as { id: string; employee_code: string; name: string } | null };
+
+const managerName = managerEmployee
+  ? `${managerEmployee.employee_code} / ${managerEmployee.name}`
+  : "未設定";
+
   const today = getToday();
   const alertDate = getAlertDate();
 
@@ -394,6 +411,28 @@ const timelineItems = [
             >
              所属組織: {organizationName}
             </span>
+
+            <span
+  className={[
+    "rounded-xl border px-3 py-2 text-xs font-semibold",
+    managerName === "未設定"
+      ? "border-rose-200 bg-rose-50 text-rose-700"
+      : "bg-slate-50 text-slate-700",
+  ].join(" ")}
+>
+  直属上司: {managerName}
+</span>
+
+<span
+  className={[
+    "rounded-xl border px-3 py-2 text-xs font-semibold",
+    employee.position_title
+      ? "bg-slate-50 text-slate-700"
+      : "border-rose-200 bg-rose-50 text-rose-700",
+  ].join(" ")}
+>
+  役職: {employee.position_title || "未設定"}
+</span>
 
             <Link
               href={`/employees/code/${employee.employee_code}/edit`}
@@ -649,6 +688,9 @@ const timelineItems = [
             <Row label="氏名" value={employee.name} />
             <Row label="メール" value={employee.email} />
             <Row label="所属組織" value={organizationName} />
+            <Row label="直属上司" value={managerName} />
+            <Row label="現在役職" value={employee.position_title || "未設定"} />
+            <Row label="役職開始日" value={employee.position_started_on ?? "-"} />
             <Row label="入社日" value={employee.hire_date ?? "-"} />
             
             <Row
