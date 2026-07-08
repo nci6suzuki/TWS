@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
   const q = url.searchParams.get("q") ?? "";
   const invite = url.searchParams.get("invite") ?? "";
   const attention = url.searchParams.get("attention") ?? "";
+  const organizationUnitId = url.searchParams.get("organization_unit_id") ?? "all";
 
   const today = formatDate(new Date());
 
@@ -66,6 +67,14 @@ export async function GET(req: NextRequest) {
 
   if (invite === "uninvited") {
     query = query.is("user_id", null);
+  }
+
+  if (organizationUnitId !== "all") {
+    if (organizationUnitId === "unassigned") {
+      query = query.is("organization_unit_id", null);
+    } else {
+      query = query.eq("organization_unit_id", organizationUnitId);
+    }
   }
 
   const [{ data: employees, error }, { data: organizationUnits, error: orgError }] =

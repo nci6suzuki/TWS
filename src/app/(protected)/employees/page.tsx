@@ -52,6 +52,7 @@ export default async function EmployeesPage({
   const q = getParam("q").trim();
   const invite = getParam("invite");
   const attention = getParam("attention");
+  const organizationUnitId = getParam("organization_unit_id") || "all";
 
   const today = formatDate(new Date());
 
@@ -65,6 +66,7 @@ export default async function EmployeesPage({
         supabase,
         q,
         invite,
+        organizationUnitId,
       }),
       supabase
         .from("organization_units")
@@ -214,22 +216,28 @@ export default async function EmployeesPage({
   if (q) baseParams.set("q", q);
   if (invite) baseParams.set("invite", invite);
   if (attention) baseParams.set("attention", attention);
+  if (organizationUnitId !== "all") {
+    baseParams.set("organization_unit_id", organizationUnitId);
+  }
 
   const exportHref = `/api/employees/export${
     baseParams.toString() ? `?${baseParams.toString()}` : ""
   }`;
 
-  const filterHref = (params: Record<string, string>) => {
-    const p = new URLSearchParams();
+const filterHref = (params: Record<string, string>) => {
+  const p = new URLSearchParams();
 
-    if (q) p.set("q", q);
+  if (q) p.set("q", q);
+  if (organizationUnitId !== "all") {
+    p.set("organization_unit_id", organizationUnitId);
+  }
 
-    Object.entries(params).forEach(([key, value]) => {
-      if (value) p.set(key, value);
-    });
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) p.set(key, value);
+  });
 
-    return `/employees?${p.toString()}`;
-  };
+  return `/employees?${p.toString()}`;
+};
 
   return (
     <PageShell>
@@ -251,6 +259,15 @@ export default async function EmployeesPage({
 
               {attention === "required" && (
                 <Chip tone="danger">要対応のみ表示中</Chip>
+              )}
+
+              {organizationUnitId !== "all" && (
+                <Chip tone={organizationUnitId === "unassigned" ? "danger" : "info"}>
+                  所属組織:{" "}
+                  {organizationUnitId === "unassigned"
+                  ? "未設定"
+                  : organizationById.get(organizationUnitId) ?? "不明な組織"}
+                </Chip>
               )}
             </div>
           }
@@ -305,7 +322,7 @@ export default async function EmployeesPage({
             label="所属未設定"
             value={organizationUnsetCount}
             tone={organizationUnsetCount > 0 ? "danger" : "ok"}
-            href="/employee-analytics?organization_unit_id=unassigned"
+            href="/employees?organization_unit_id=unassigned"
           />
 
           <KPI
@@ -317,7 +334,7 @@ export default async function EmployeesPage({
         </div>
 
         <Card className="p-5">
-          <form className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto]">
+          <form className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_240px_auto_auto]">
             <input
               className="input"
               type="search"
@@ -325,6 +342,22 @@ export default async function EmployeesPage({
               placeholder="社員番号・氏名・メールで検索"
               defaultValue={q}
             />
+
+            <select
+            name="organization_unit_id"
+            defaultValue={organizationUnitId}
+            className="input"
+            >
+              <option value="all">すべての所属組織</option>
+              <option value="unassigned">未設定</option>
+              {organizations
+                  .filter((org) => org.is_active !== false)
+                  .map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+              ))}
+            </select>
 
             {invite && <input type="hidden" name="invite" value={invite} />}
 
@@ -654,10 +687,12 @@ function buildEmployeesQuery({
   supabase,
   q,
   invite,
+  organizationUnitId,
 }: {
   supabase: Awaited<ReturnType<typeof createSupabaseServerDbClient>>;
   q: string;
   invite: string;
+  organizationUnitId: string;
 }) {
   let query = supabase
     .from("employees")
@@ -675,6 +710,14 @@ function buildEmployeesQuery({
 
   if (invite === "uninvited") {
     query = query.is("user_id", null);
+  }
+
+  if (organizationUnitId !== "all") {
+    if (organizationUnitId === "unassigned") {
+      query = query.is("organization_unit_id", null);
+    } else {
+      query = query.eq("organization_unit_id", organizationUnitId);
+    }
   }
 
   return query;
