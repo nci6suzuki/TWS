@@ -25,6 +25,14 @@ type EmployeeOptionRow = {
   status: string | null;
 };
 
+type PositionMasterRow = {
+  id: string;
+  name: string;
+  rank_order: number | null;
+  is_management_role: boolean | null;
+  is_active: boolean | null;
+};
+
 export default async function EmployeeNewPage({
   searchParams,
 }: {
@@ -49,6 +57,7 @@ export default async function EmployeeNewPage({
   const [
     { data: organizationUnits, error: organizationError },
     { data: employeeOptions, error: employeeOptionsError },
+    { data: positionMasters, error: positionMastersError },
   ] = await Promise.all([
     supabase
       .from("organization_units")
@@ -60,6 +69,12 @@ export default async function EmployeeNewPage({
       .select("id, employee_code, name, status")
       .order("employee_code", { ascending: true })
       .limit(5000),
+    supabase
+      .from("position_masters")
+      .select("id, name, rank_order, is_management_role, is_active")
+      .eq("is_active", true)
+      .order("rank_order", { ascending: true })
+      .order("name", { ascending: true }),
   ]);
 
   if (organizationError) {
@@ -88,11 +103,28 @@ export default async function EmployeeNewPage({
     );
   }
 
+  if (positionMastersError) {
+    return (
+      <PageShell>
+        <Card className="p-6">
+          <div className="text-xl font-black text-slate-900">社員登録</div>
+          <div className="mt-2 text-sm font-semibold text-rose-600">
+            役職マスタの読み込みに失敗：{positionMastersError.message}
+          </div>
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-700">
+            先に Supabase SQL Editor で position_masters テーブル作成SQLを実行してください。
+          </div>
+        </Card>
+      </PageShell>
+    );
+  }
+
   const organizations = ((organizationUnits ?? []) as OrganizationUnitRow[]).filter(
     (org) => org.is_active !== false
   );
 
   const managerOptions = (employeeOptions ?? []) as EmployeeOptionRow[];
+  const positions = (positionMasters ?? []) as PositionMasterRow[];
 
   async function createEmployee(formData: FormData) {
     "use server";
@@ -118,6 +150,13 @@ export default async function EmployeeNewPage({
       );
     }
 
+    const selectedPosition = positionTitle
+      ? await findPositionByName(positionTitle)
+      : null;
+
+    const isManagementRoleFromPosition =
+      selectedPosition?.is_management_role === true;
+
     const payload = {
       employee_code: String(formData.get("employee_code") ?? "").trim(),
       name: String(formData.get("name") ?? "").trim(),
@@ -134,7 +173,9 @@ export default async function EmployeeNewPage({
 
       birth_date: normalizeDate(String(formData.get("birth_date") ?? "")),
       gender: normalizeText(formData.get("gender")) ?? "unknown",
-      is_management_role: formData.get("is_management_role") === "on",
+      is_management_role:
+        formData.get("is_management_role") === "on" ||
+        isManagementRoleFromPosition,
     };
 
     if (!payload.employee_code || !payload.name || !payload.email) {
@@ -193,6 +234,7 @@ export default async function EmployeeNewPage({
               <Chip tone="info">Create Employee</Chip>
               <Chip>登録権限: {me.role}</Chip>
               <Chip tone="gray">組織・役職対応</Chip>
+              <Chip tone="gray">役職マスタ対応</Chip>
               <Chip tone="gray">分析項目対応</Chip>
             </div>
           }
@@ -210,6 +252,17 @@ export default async function EmployeeNewPage({
             </div>
             <div className="mt-1 text-sm font-semibold text-rose-600">
               {errorMessage}
+            </div>
+          </Card>
+        )}
+
+        {positions.length === 0 && (
+          <Card className="border-amber-200 bg-amber-50 p-5">
+            <div className="text-sm font-black text-amber-800">
+              役職マスタが登録されていません
+            </div>
+            <div className="mt-1 text-sm font-semibold text-amber-700">
+              役職を選択式で登録するには、先に /settings/positions で役職マスタを登録してください。
             </div>
           </Card>
         )}
@@ -320,10 +373,23 @@ export default async function EmployeeNewPage({
                       ]}
                     />
 
-                    <Field
+                    <Select
                       label="初期役職"
                       name="position_title"
-                      placeholder="例：主任、係長、課長、支店長"
+                      options={[
+                        ["", "未設定"],
+                        ...positions.map(
+                          (position) =>
+                            [
+                              position.name,
+                              `${position.name}${
+                                position.is_management_role
+                                  ? "（役職者扱い）"
+                                  : ""
+                              }`,
+                            ] as [string, string]
+                        ),
+                      ]}
                     />
 
                     <Field
@@ -335,7 +401,8 @@ export default async function EmployeeNewPage({
 
                   <div className="mt-4 rounded-2xl border border-indigo-100 bg-white p-4 text-xs font-semibold leading-5 text-slate-500">
                     初期役職と役職開始日を入力すると、登録時に役職履歴へ
-                    「任命」として自動登録されます。
+                    「任命」として自動登録されます。役職マスタで
+                    「役職者扱い」にしている役職を選ぶと、社員分析の役職者フラグも自動でONになります。
                   </div>
                 </div>
 
@@ -373,7 +440,7 @@ export default async function EmployeeNewPage({
                             役職者として集計する
                           </span>
                           <span className="mt-1 block text-xs font-semibold leading-5 text-slate-500">
-                            チェックを入れると、女性役職者数・女性役職者率などの分析対象になります。
+                            役職マスタで「役職者扱い」の役職を選んだ場合は、自動で対象になります。
                             app_role の manager/admin/hr とは別管理です。
                           </span>
                         </span>
@@ -434,8 +501,8 @@ export default async function EmployeeNewPage({
                   description="組織別の社員確認や上司配下の管理に利用します。"
                 />
                 <GuideItem
-                  title="3. 初期役職を入力する"
-                  description="初期役職と役職開始日を入力すると、役職履歴に任命履歴が自動登録されます。"
+                  title="3. 初期役職を選択する"
+                  description="役職マスタから選択します。初期役職と役職開始日を入力すると、役職履歴に任命履歴が自動登録されます。"
                 />
                 <GuideItem
                   title="4. 分析項目を入力する"
@@ -474,6 +541,18 @@ export default async function EmployeeNewPage({
       </div>
     </PageShell>
   );
+}
+
+async function findPositionByName(name: string) {
+  const supabase = await createSupabaseServerDbClient();
+
+  const { data } = await supabase
+    .from("position_masters")
+    .select("id, name, is_management_role")
+    .eq("name", name)
+    .maybeSingle();
+
+  return data as { id: string; name: string; is_management_role: boolean } | null;
 }
 
 function Field({
