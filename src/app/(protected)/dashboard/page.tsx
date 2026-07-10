@@ -9,6 +9,25 @@ import { buttonClassName } from "@/lib/ui/button-class";
 
 export const runtime = "nodejs";
 
+type EmployeeRow = {
+  id: string;
+  employee_code: string | null;
+  name: string | null;
+  email: string | null;
+  status: string | null;
+  app_role: string | null;
+  organization_unit_id: string | null;
+  manager_employee_id: string | null;
+  position_title: string | null;
+  position_started_on: string | null;
+};
+
+type PositionHistoryRow = {
+  id: string;
+  employee_id: string;
+  change_type: string | null;
+};
+
 export default async function DashboardPage() {
   const me = await requireAuth();
   const supabase = await createSupabaseServerDbClient();
@@ -21,7 +40,9 @@ export default async function DashboardPage() {
 
   const { data: employees, error: employeesError } = await supabase
     .from("employees")
-    .select("id, employee_code, name, email, status, app_role")
+    .select(
+      "id, employee_code, name, email, status, app_role, organization_unit_id, manager_employee_id, position_title, position_started_on"
+    )
     .order("employee_code", { ascending: true })
     .limit(500);
 
@@ -40,7 +61,7 @@ export default async function DashboardPage() {
     );
   }
 
-  const allEmployees = employees ?? [];
+  const allEmployees = (employees ?? []) as EmployeeRow[];
   const employeeIds = allEmployees.map((e) => e.id);
 
   const { data: qualifications, error: qualificationsError } =
@@ -69,6 +90,14 @@ export default async function DashboardPage() {
           .in("employee_id", employeeIds)
       : { data: [] as any[], error: null };
 
+  const { data: positionHistories, error: positionHistoriesError } =
+    employeeIds.length > 0
+      ? await supabase
+          .from("employee_position_histories")
+          .select("id, employee_id, change_type")
+          .in("employee_id", employeeIds)
+      : { data: [] as PositionHistoryRow[], error: null };
+
   const { data: notifications, error: notificationsError } = await supabase
     .from("notifications")
     .select(
@@ -93,6 +122,7 @@ export default async function DashboardPage() {
     qualificationsError?.message ??
     annualEventsError?.message ??
     interviewsError?.message ??
+    positionHistoriesError?.message ??
     notificationsError?.message ??
     "";
 
@@ -112,6 +142,42 @@ export default async function DashboardPage() {
   const pendingInterviews = (interviews ?? []).filter(
     (i: any) => i.next_interview_date && !i.next_interview_completed_at
   );
+
+  const activeEmployees = allEmployees.filter((e) => e.status === "active");
+  const inactiveEmployees = allEmployees.filter((e) => e.status !== "active");
+
+  const organizationUnsetEmployees = activeEmployees.filter(
+    (employee) => !employee.organization_unit_id
+  );
+
+  const managerUnsetEmployees = activeEmployees.filter(
+    (employee) => !employee.manager_employee_id
+  );
+
+  const positionUnsetEmployees = activeEmployees.filter(
+    (employee) => !employee.position_title
+  );
+
+  const positionHistoryRows =
+    (positionHistories ?? []) as PositionHistoryRow[];
+
+  const promotionCount = positionHistoryRows.filter(
+    (history) => history.change_type === "promotion"
+  ).length;
+
+  const demotionCount = positionHistoryRows.filter(
+    (history) => history.change_type === "demotion"
+  ).length;
+
+  const positionHistoryCount = positionHistoryRows.length;
+
+  const managerIds = new Set(
+    activeEmployees
+      .map((employee) => employee.manager_employee_id)
+      .filter(Boolean)
+  );
+
+  const managerCount = managerIds.size;
 
   const attentionEmployeeIds = new Set<string>();
 
@@ -134,9 +200,6 @@ export default async function DashboardPage() {
   const attentionEmployees = allEmployees.filter((e) =>
     attentionEmployeeIds.has(e.id)
   );
-
-  const activeEmployees = allEmployees.filter((e) => e.status === "active");
-  const inactiveEmployees = allEmployees.filter((e) => e.status !== "active");
 
   function getAttentionForEmployee(employeeId: string) {
     const expired = expiredQualifications.filter(
@@ -168,7 +231,7 @@ export default async function DashboardPage() {
     <PageShell>
       <Hero
         title="ダッシュボード"
-        subtitle="社員カルテ、資格、年間イベント、面談予定、通知の要対応状況を確認できます。"
+        subtitle="社員カルテ、資格、年間イベント、面談予定、通知、組織・役職の要対応状況を確認できます。"
         meta={
           <div className="flex flex-wrap gap-2">
             <Chip tone="info">Talent Management</Chip>
@@ -178,14 +241,25 @@ export default async function DashboardPage() {
             {unreadNotificationCount > 0 && (
               <Chip tone="danger">未読通知: {unreadNotificationCount}</Chip>
             )}
+
+            {managerUnsetEmployees.length > 0 && (
+              <Chip tone="danger">
+                上司未設定: {managerUnsetEmployees.length}
+              </Chip>
+            )}
+
+            {positionUnsetEmployees.length > 0 && (
+              <Chip tone="danger">
+                役職未設定: {positionUnsetEmployees.length}
+              </Chip>
+            )}
           </div>
         }
         right={
           <>
             <PrimaryButton href="/employees">社員一覧</PrimaryButton>
-            <PrimaryButton href="/employees?attention=required">
-              要対応社員を見る
-            </PrimaryButton>
+            <PrimaryButton href="/manager-overview">上司別配下</PrimaryButton>
+            <PrimaryButton href="/employee-analytics">社員分析</PrimaryButton>
             <PrimaryButton href="/annual-events">年間イベント</PrimaryButton>
             <PrimaryButton href="/notifications">通知</PrimaryButton>
           </>
@@ -203,7 +277,7 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <KPI
           label="未読通知"
           value={unreadNotificationCount}
@@ -244,7 +318,7 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <KPI label="社員数" value={allEmployees.length} />
         <KPI label="在籍中" value={activeEmployees.length} tone="ok" />
         <KPI
@@ -252,7 +326,98 @@ export default async function DashboardPage() {
           value={inactiveEmployees.length}
           tone={inactiveEmployees.length > 0 ? "danger" : "ok"}
         />
+        <KPI
+          label="所属未設定"
+          value={organizationUnsetEmployees.length}
+          tone={organizationUnsetEmployees.length > 0 ? "danger" : "ok"}
+          href="/employees?organization_unit_id=unassigned"
+        />
+        <KPI
+          label="上司未設定"
+          value={managerUnsetEmployees.length}
+          tone={managerUnsetEmployees.length > 0 ? "danger" : "ok"}
+          href="/manager-overview"
+        />
+        <KPI
+          label="役職未設定"
+          value={positionUnsetEmployees.length}
+          tone={positionUnsetEmployees.length > 0 ? "danger" : "ok"}
+          href="/employee-analytics"
+        />
       </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <KPI
+          label="上司数"
+          value={managerCount}
+          tone="info"
+          href="/manager-overview"
+        />
+        <KPI
+          label="役職履歴"
+          value={positionHistoryCount}
+          tone="info"
+          href="/employee-analytics"
+        />
+        <KPI
+          label="昇格"
+          value={promotionCount}
+          tone="ok"
+          href="/employee-analytics"
+        />
+        <KPI
+          label="降格"
+          value={demotionCount}
+          tone={demotionCount > 0 ? "danger" : "ok"}
+          href="/employee-analytics"
+        />
+      </div>
+
+      {(organizationUnsetEmployees.length > 0 ||
+        managerUnsetEmployees.length > 0 ||
+        positionUnsetEmployees.length > 0) && (
+        <Card className="border-rose-200 bg-rose-50 p-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="text-sm font-black text-rose-700">
+                組織・役職情報に未設定があります
+              </div>
+              <p className="mt-1 text-sm font-semibold text-rose-600">
+                所属組織、直属上司、現在役職が未設定の社員は、社員編集画面から登録してください。
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/employees?organization_unit_id=unassigned"
+                className={buttonClassName(
+                  "inline-flex h-10 items-center rounded-xl border border-rose-200 bg-white px-4 text-sm font-black text-rose-700 hover:bg-rose-100"
+                )}
+              >
+                所属未設定
+              </Link>
+
+              <Link
+                href="/manager-overview"
+                className={buttonClassName(
+                  "inline-flex h-10 items-center rounded-xl bg-rose-600 px-4 text-sm font-black text-white hover:bg-rose-700"
+                )}
+              >
+                上司別配下へ
+              </Link>
+
+              <Link
+                href="/employee-analytics"
+                className={buttonClassName(
+                  "inline-flex h-10 items-center rounded-xl border border-rose-200 bg-white px-4 text-sm font-black text-rose-700 hover:bg-rose-100"
+                )}
+              >
+                社員分析へ
+              </Link>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card className="p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -280,7 +445,9 @@ export default async function DashboardPage() {
 
             <Link
               href="/notifications"
-              className={buttonClassName("inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800")}
+              className={buttonClassName(
+                "inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-black text-white hover:bg-slate-800"
+              )}
             >
               通知一覧へ
             </Link>
@@ -333,7 +500,9 @@ export default async function DashboardPage() {
           <form action="/api/notifications/generate" method="post">
             <button
               type="submit"
-              className={buttonClassName("inline-flex h-10 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-700 hover:bg-indigo-100")}
+              className={buttonClassName(
+                "inline-flex h-10 items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-black text-indigo-700 hover:bg-indigo-100"
+              )}
             >
               通知を生成・更新
             </button>
@@ -341,7 +510,9 @@ export default async function DashboardPage() {
 
           <Link
             href="/notifications"
-            className={buttonClassName("inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50")}
+            className={buttonClassName(
+              "inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+            )}
           >
             すべて見る
           </Link>
@@ -363,7 +534,9 @@ export default async function DashboardPage() {
 
               <Link
                 href="/employees?attention=required"
-                className={buttonClassName("inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50")}
+                className={buttonClassName(
+                  "inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+                )}
               >
                 一覧で見る
               </Link>
@@ -387,7 +560,9 @@ export default async function DashboardPage() {
                     <div>
                       <Link
                         href={`/employees/code/${employee.employee_code}?tab=timeline`}
-                        className={buttonClassName("font-black text-slate-900 hover:underline")}
+                        className={buttonClassName(
+                          "font-black text-slate-900 hover:underline"
+                        )}
                       >
                         {employee.employee_code} / {employee.name}
                       </Link>
@@ -449,6 +624,33 @@ export default async function DashboardPage() {
               description={`未読通知 ${unreadNotificationCount}件 / 重要 ${dangerNotificationCount}件`}
               href="/notifications"
               danger={unreadNotificationCount > 0}
+            />
+
+            <ActionCard
+              title="組織・上司・役職の未設定を確認"
+              description={`所属未設定 ${organizationUnsetEmployees.length}名 / 上司未設定 ${managerUnsetEmployees.length}名 / 役職未設定 ${positionUnsetEmployees.length}名`}
+              href="/manager-overview"
+              danger={
+                organizationUnsetEmployees.length > 0 ||
+                managerUnsetEmployees.length > 0 ||
+                positionUnsetEmployees.length > 0
+              }
+            />
+
+            <ActionCard
+              title="上司別の配下社員を確認"
+              description={`上司数 ${managerCount}名 / 配下設定済み ${
+                activeEmployees.length - managerUnsetEmployees.length
+              }名`}
+              href="/manager-overview"
+              danger={managerUnsetEmployees.length > 0}
+            />
+
+            <ActionCard
+              title="役職履歴・昇格降格を確認"
+              description={`役職履歴 ${positionHistoryCount}件 / 昇格 ${promotionCount}件 / 降格 ${demotionCount}件`}
+              href="/employee-analytics"
+              danger={demotionCount > 0}
             />
 
             <ActionCard
