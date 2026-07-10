@@ -1,5 +1,6 @@
 // src/app/(protected)/employees/code/[employeeCode]/edit/page.tsx
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
@@ -25,6 +26,14 @@ type EmployeeOptionRow = {
   employee_code: string;
   name: string;
   status: string | null;
+};
+
+type PositionMasterRow = {
+  id: string;
+  name: string;
+  rank_order: number | null;
+  is_management_role: boolean | null;
+  is_active: boolean | null;
 };
 
 export default async function EmployeeEditPage({
@@ -54,6 +63,7 @@ export default async function EmployeeEditPage({
     { data: employee, error: employeeError },
     { data: organizationUnits, error: organizationError },
     { data: employeeOptions, error: employeeOptionsError },
+    { data: positionMasters, error: positionMastersError },
   ] = await Promise.all([
     admin
       .from("employees")
@@ -72,11 +82,18 @@ export default async function EmployeeEditPage({
       .select("id, employee_code, name, status")
       .order("employee_code", { ascending: true })
       .limit(5000),
+    admin
+      .from("position_masters")
+      .select("id, name, rank_order, is_management_role, is_active")
+      .eq("is_active", true)
+      .order("rank_order", { ascending: true })
+      .order("name", { ascending: true }),
   ]);
 
   if (employeeError) throw employeeError;
   if (organizationError) throw organizationError;
   if (employeeOptionsError) throw employeeOptionsError;
+  if (positionMastersError) throw positionMastersError;
   if (!employee) notFound();
 
   const organizations = ((organizationUnits ?? []) as OrganizationUnitRow[]).filter(
@@ -86,6 +103,13 @@ export default async function EmployeeEditPage({
   const managerOptions = ((employeeOptions ?? []) as EmployeeOptionRow[]).filter(
     (option) => option.id !== employee.id
   );
+
+  const positions = (positionMasters ?? []) as PositionMasterRow[];
+
+  const positionOptions = buildPositionOptions({
+    currentPositionTitle: employee.position_title,
+    positions,
+  });
 
   const canEdit =
     me.role === "admin" || me.role === "hr" || me.employeeId === employee.id;
@@ -195,6 +219,17 @@ export default async function EmployeeEditPage({
       );
     }
 
+    const nextPositionTitle = canEditRole
+      ? normalizeText(formData.get("position_title"))
+      : beforeEmployee.position_title;
+
+    const selectedPosition = nextPositionTitle
+      ? await findPositionByName(nextPositionTitle)
+      : null;
+
+    const isManagementRoleFromPosition =
+      selectedPosition?.is_management_role === true;
+
     const employeePayload = {
       employee_code: nextEmployeeCode,
       name: nextName,
@@ -227,7 +262,8 @@ export default async function EmployeeEditPage({
         : beforeEmployee.gender,
 
       is_management_role: canEditRole
-        ? formData.get("is_management_role") === "on"
+        ? formData.get("is_management_role") === "on" ||
+          isManagementRoleFromPosition
         : beforeEmployee.is_management_role,
 
       organization_unit_id: canEditRole
@@ -238,39 +274,39 @@ export default async function EmployeeEditPage({
         ? nextManagerEmployeeId
         : beforeEmployee.manager_employee_id,
 
-      position_title: canEditRole
-        ? normalizeText(formData.get("position_title"))
-        : beforeEmployee.position_title,
+      position_title: nextPositionTitle,
 
       position_started_on: canEditRole
         ? normalizeDate(String(formData.get("position_started_on") ?? ""))
         : beforeEmployee.position_started_on,
     };
 
-const positionChanged =
-  canEditRole &&
-  ((beforeEmployee.position_title ?? "") !==
-    (employeePayload.position_title ?? "") ||
-    (beforeEmployee.position_started_on ?? "") !==
-      (employeePayload.position_started_on ?? ""));
+    const positionChanged =
+      canEditRole &&
+      ((beforeEmployee.position_title ?? "") !==
+        (employeePayload.position_title ?? "") ||
+        (beforeEmployee.position_started_on ?? "") !==
+          (employeePayload.position_started_on ?? ""));
 
-const positionChangeType = normalizePositionChangeType(
-  formData.get("position_change_type")
-);
+    const positionChangeType = normalizePositionChangeType(
+      formData.get("position_change_type")
+    );
 
-const positionChangeReason = normalizeText(
-  formData.get("position_change_reason")
-);
+    const positionChangeReason = normalizeText(
+      formData.get("position_change_reason")
+    );
 
-const positionChangeMemo = normalizeText(formData.get("position_change_memo"));
+    const positionChangeMemo = normalizeText(
+      formData.get("position_change_memo")
+    );
 
-if (positionChanged && !employeePayload.position_started_on) {
-  redirect(
-    `${baseUrl}?error=${encodeURIComponent(
-      "役職を変更する場合は、役職開始日を入力してください"
-    )}`
-  );
-}
+    if (positionChanged && !employeePayload.position_started_on) {
+      redirect(
+        `${baseUrl}?error=${encodeURIComponent(
+          "役職を変更する場合は、役職開始日を入力してください"
+        )}`
+      );
+    }
 
     const profilePayload = {
       employee_id: beforeEmployee.id,
@@ -301,53 +337,51 @@ if (positionChanged && !employeePayload.position_started_on) {
       redirect(`${baseUrl}?error=${encodeURIComponent(empUpdateError.message)}`);
     }
 
-if (positionChanged) {
-  const startedOn = employeePayload.position_started_on;
+    if (positionChanged) {
+      const startedOn = employeePayload.position_started_on;
 
-  if (!startedOn) {
-    redirect(
-      `${baseUrl}?error=${encodeURIComponent(
-        "役職履歴の登録に必要な役職開始日がありません"
-      )}`
-    );
-  }
+      if (!startedOn) {
+        redirect(
+          `${baseUrl}?error=${encodeURIComponent(
+            "役職履歴の登録に必要な役職開始日がありません"
+          )}`
+        );
+      }
 
-  const previousEndedOn = getPreviousDate(startedOn);
+      const previousEndedOn = getPreviousDate(startedOn);
 
-  await admin
-    .from("employee_position_histories")
-    .update({
-      ended_on: previousEndedOn,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("employee_id", beforeEmployee.id)
-    .is("ended_on", null)
-    .neq("started_on", startedOn);
+      await admin
+        .from("employee_position_histories")
+        .update({
+          ended_on: previousEndedOn,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("employee_id", beforeEmployee.id)
+        .is("ended_on", null)
+        .neq("started_on", startedOn);
 
-  const { error: positionHistoryError } = await admin
-    .from("employee_position_histories")
-    .insert({
-      employee_id: beforeEmployee.id,
-      position_title:
-        employeePayload.position_title ||
-        (positionChangeType === "removed" ? "役職解除" : "未設定"),
-      change_type: positionChangeType,
-      started_on: startedOn,
-      ended_on: null,
-      previous_position_title: beforeEmployee.position_title,
-      reason: positionChangeReason,
-      memo: positionChangeMemo,
-      created_by_employee_id: me.employeeId ?? null,
-    });
+      const { error: positionHistoryError } = await admin
+        .from("employee_position_histories")
+        .insert({
+          employee_id: beforeEmployee.id,
+          position_title:
+            employeePayload.position_title ||
+            (positionChangeType === "removed" ? "役職解除" : "未設定"),
+          change_type: positionChangeType,
+          started_on: startedOn,
+          ended_on: null,
+          previous_position_title: beforeEmployee.position_title,
+          reason: positionChangeReason,
+          memo: positionChangeMemo,
+          created_by_employee_id: me.employeeId ?? null,
+        });
 
-  if (positionHistoryError) {
-    redirect(
-      `${baseUrl}?error=${encodeURIComponent(
-        positionHistoryError.message
-      )}`
-    );
-  }
-}
+      if (positionHistoryError) {
+        redirect(
+          `${baseUrl}?error=${encodeURIComponent(positionHistoryError.message)}`
+        );
+      }
+    }
 
     const { error: profileError } = await admin
       .from("employee_profiles")
@@ -371,8 +405,8 @@ if (positionChanged) {
       activityType: "employee_updated",
       title: "社員基本情報を編集しました",
       description: positionChanged
-      ? "社員情報を更新し、役職変更履歴を登録しました。"
-      : "社員番号、氏名、メール、所属組織、直属上司、現在役職、役職開始日、分析項目、プロフィール、キャリア情報などを更新しました。",
+        ? "社員情報を更新し、役職変更履歴を登録しました。"
+        : "社員番号、氏名、メール、所属組織、直属上司、現在役職、役職開始日、分析項目、プロフィール、キャリア情報などを更新しました。",
       relatedType: "employee",
       relatedId: beforeEmployee.id,
       metadata: {
@@ -465,6 +499,17 @@ if (positionChanged) {
             </div>
             <div className="mt-1 text-sm font-semibold text-emerald-600">
               更新内容をタイムラインに履歴として保存しました。
+            </div>
+          </Card>
+        )}
+
+        {positions.length === 0 && (
+          <Card className="border-amber-200 bg-amber-50 p-5">
+            <div className="text-sm font-black text-amber-800">
+              役職マスタが登録されていません
+            </div>
+            <div className="mt-1 text-sm font-semibold text-amber-700">
+              役職を選択式で変更するには、先に /settings/positions で役職マスタを登録してください。
             </div>
           </Card>
         )}
@@ -610,13 +655,19 @@ if (positionChanged) {
               </Field>
 
               <Field label="現在役職">
-                <input
+                <select
                   name="position_title"
                   defaultValue={employee.position_title ?? ""}
-                  placeholder="例：主任、係長、課長、支店長"
                   disabled={!canEditRole}
                   className="input disabled:bg-slate-100 disabled:text-slate-500"
-                />
+                >
+                  <option value="">未設定</option>
+                  {positionOptions.map((position) => (
+                    <option key={position.value} value={position.value}>
+                      {position.label}
+                    </option>
+                  ))}
+                </select>
               </Field>
 
               <Field label="役職開始日">
@@ -630,41 +681,46 @@ if (positionChanged) {
               </Field>
 
               <Field label="役職変更区分">
-  <select
-    name="position_change_type"
-    defaultValue="changed"
-    disabled={!canEditRole}
-    className="input disabled:bg-slate-100 disabled:text-slate-500"
-  >
-    <option value="appointed">任命</option>
-    <option value="promotion">昇格</option>
-    <option value="demotion">降格</option>
-    <option value="transfer">異動</option>
-    <option value="changed">役職変更</option>
-    <option value="removed">役職解除</option>
-  </select>
-</Field>
+                <select
+                  name="position_change_type"
+                  defaultValue="changed"
+                  disabled={!canEditRole}
+                  className="input disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  <option value="appointed">任命</option>
+                  <option value="promotion">昇格</option>
+                  <option value="demotion">降格</option>
+                  <option value="transfer">異動</option>
+                  <option value="changed">役職変更</option>
+                  <option value="removed">役職解除</option>
+                </select>
+              </Field>
 
-<Field label="役職変更理由">
-  <input
-    name="position_change_reason"
-    placeholder="例：組織変更に伴う昇格"
-    disabled={!canEditRole}
-    className="input disabled:bg-slate-100 disabled:text-slate-500"
-  />
-</Field>
+              <Field label="役職変更理由">
+                <input
+                  name="position_change_reason"
+                  placeholder="例：組織変更に伴う昇格"
+                  disabled={!canEditRole}
+                  className="input disabled:bg-slate-100 disabled:text-slate-500"
+                />
+              </Field>
 
-<div className="md:col-span-2">
-  <Field label="役職変更メモ">
-    <textarea
-      name="position_change_memo"
-      rows={3}
-      placeholder="補足があれば入力してください"
-      disabled={!canEditRole}
-      className="input disabled:bg-slate-100 disabled:text-slate-500"
-    />
-  </Field>
-</div>
+              <div className="md:col-span-2">
+                <Field label="役職変更メモ">
+                  <textarea
+                    name="position_change_memo"
+                    rows={3}
+                    placeholder="補足があれば入力してください"
+                    disabled={!canEditRole}
+                    className="input disabled:bg-slate-100 disabled:text-slate-500"
+                  />
+                </Field>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 text-sm font-semibold leading-6 text-indigo-700">
+              役職マスタで「役職者扱い」にしている役職を選ぶと、社員分析の役職者フラグも自動でONになります。
+              役職や役職開始日を変更した場合は、役職履歴が自動登録されます。
             </div>
 
             {!canEditRole && (
@@ -719,7 +775,7 @@ if (positionChanged) {
                       役職者として集計する
                     </span>
                     <span className="mt-1 block text-xs font-semibold leading-5 text-slate-500">
-                      チェックを入れると、女性役職者数・女性役職者率などの分析対象になります。
+                      役職マスタで「役職者扱い」の役職を選んだ場合は、自動で対象になります。
                       app_role の manager/admin/hr とは別管理です。
                     </span>
                   </span>
@@ -849,12 +905,51 @@ if (positionChanged) {
   );
 }
 
+async function findPositionByName(name: string) {
+  const admin = createSupabaseAdminClient();
+
+  const { data } = await admin
+    .from("position_masters")
+    .select("id, name, is_management_role")
+    .eq("name", name)
+    .maybeSingle();
+
+  return data as { id: string; name: string; is_management_role: boolean } | null;
+}
+
+function buildPositionOptions({
+  currentPositionTitle,
+  positions,
+}: {
+  currentPositionTitle: string | null;
+  positions: PositionMasterRow[];
+}) {
+  const options = positions.map((position) => ({
+    value: position.name,
+    label: `${position.name}${
+      position.is_management_role ? "（役職者扱い）" : ""
+    }`,
+  }));
+
+  if (
+    currentPositionTitle &&
+    !options.some((option) => option.value === currentPositionTitle)
+  ) {
+    options.unshift({
+      value: currentPositionTitle,
+      label: `${currentPositionTitle}（現在登録中・マスタ未登録）`,
+    });
+  }
+
+  return options;
+}
+
 function Field({
   label,
   children,
 }: {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <label className="block">
